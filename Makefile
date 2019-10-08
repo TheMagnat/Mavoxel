@@ -18,6 +18,12 @@ LFLAGS_LINUX = -lGL -lGLU -lglfw -ldl
 
 OS 			:= $(shell uname)
 
+init: createFolder all
+
+createFolder:
+	@- mkdir -p $(BUILD_DIR)
+	@- mkdir -p $(OBJ_DIR)
+
 all: $(OBJS)
 ifeq ($(OS), Darwin)
 	$(CC) $(OBJS) -o $(OUT_PATH) $(macLFLAGS)
