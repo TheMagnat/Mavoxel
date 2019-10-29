@@ -1,13 +1,15 @@
 
-BUILD_DIR	?= ./build
+BUILD_DIR	?= .
 OBJ_DIR		?= ./build/obj
-SRC_DIRS	?= ./src
+SRC_DIR	?= ./src
 
 OUT			 = executable.out
 OUT_PATH	 = $(addprefix $(BUILD_DIR)/, $(OUT))
 
-SRCSPATH	:= $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s)
-SRCS 		:= $(notdir $(SRCSPATH))
+SRCSPATH	:= $(shell find $(SRC_DIR) -name *.cpp)
+SRCDIRS 	:= $(shell find . -name '*.cpp' -exec dirname {} \; | uniq)
+OBJDIRS		:= $(patsubst $(SRC_DIR)%, $(OBJ_DIR)%, $(SRCDIRS))
+SRCS 		:= $(patsubst $(SRC_DIR)/%, %, $(SRCSPATH))
 OBJS 		:= $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 CC	 		 = g++
 
@@ -18,33 +20,37 @@ LFLAGS_LINUX = -lGL -lGLU -lglfw -ldl
 
 OS 			:= $(shell uname)
 
-init: createFolder all
+all: $(OUT)
 
-createFolder:
-	@- mkdir -p $(BUILD_DIR)
-	@- mkdir -p $(OBJ_DIR)
-
-all: $(OBJS)
+$(OUT): buildrepo $(OBJS)
 ifeq ($(OS), Darwin)
-	$(CC) $(OBJS) -o $(OUT_PATH) $(macLFLAGS)
+	$(CC) $(OBJS) -o $(OUT_PATH) $(LFLAGS_MACOS)
 else
-	$(CC) $(OBJS) -o $(OUT_PATH) $(linuxLFLAGS)
+	$(CC) $(OBJS) -o $(OUT_PATH) $(LFLAGS_LINUX)
 endif
 
-$(OBJ_DIR)/%.o:	$(SRC_DIRS)/%.cpp $(SRC_DIRS)/%.hpp
+$(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp $(SRC_DIR)/%.hpp
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-$(OBJ_DIR)/%.o:	$(SRC_DIRS)/%.cpp $(SRC_DIRS)/%.h
+$(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp $(SRC_DIR)/%.h
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-$(OBJ_DIR)/%.o:	$(SRC_DIRS)/%.cpp
+$(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-$(OBJ_DIR)/glad.o: $(SRC_DIRS)/glad.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+
+buildrepo:
+	$(call make-repo)
 
 clean:
 	rm -f $(OBJS)
 
 cleanall:
-	rm -f $(OBJS) $(OUT)
+	rm -f $(OBJS) $(OUT_PATH)
+
+define make-repo
+        for dir in $(OBJDIRS); \
+        do \
+                mkdir -p $$dir; \
+        done
+endef
