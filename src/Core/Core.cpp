@@ -9,7 +9,7 @@
 
 namespace mav {
 	
-	Window::Window(std::string const& windowName /*= "default"*/, int width/* = 800*/, int height/* = 600*/){
+	Window::Window(std::string const& windowName /*= "default"*/, int width/* = 800*/, int height/* = 600*/) : mouseEventFunction_(nullptr) {
 
 		glfwInit();
 	    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -32,6 +32,16 @@ namespace mav {
 
 		glfwMakeContextCurrent(window_);
 
+
+		glfwSetWindowUserPointer(window_, this);
+
+		auto mouse_callback = [](GLFWwindow* w, double xpos, double ypos){
+			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseMovingCallback(xpos, ypos);
+		};
+
+		glfwSetCursorPosCallback(window_, mouse_callback);
+		//Desactivate the mouse
+		glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		
 		//FPS 60
 	    glfwSwapInterval(1);
@@ -61,6 +71,10 @@ namespace mav {
 		graphicLoopFunction_ = newFunction;
 	}
 
+	void Window::setMouseCallback(functionDoubleDouble newFunction){
+		mouseEventFunction_ = newFunction;
+	}
+
 	void Window::startLoop(){
 
 		float deltaTime, lastFrame;
@@ -84,7 +98,12 @@ namespace mav {
 
 
 
-
+	//CALLBACK
+	void Window::mouseMovingCallback(double xpos, double ypos){
+		if(mouseEventFunction_){
+			mouseEventFunction_(xpos, ypos);
+		}
+	}
 
 
 }

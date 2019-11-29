@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Chunk.hpp"
+#include "World/Chunk.hpp"
 
 #include <vector>
 #include <unordered_map>

@@ -1,7 +1,7 @@
 
 BUILD_DIR	?= .
 OBJ_DIR		?= ./build/obj
-SRC_DIR	?= ./src
+SRC_DIR		?= ./src
 
 OUT			 = executable.out
 OUT_PATH	 = $(addprefix $(BUILD_DIR)/, $(OUT))
@@ -13,7 +13,7 @@ SRCS 		:= $(patsubst $(SRC_DIR)/%, %, $(SRCSPATH))
 OBJS 		:= $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 CC	 		 = g++
 
-CFLAGS 		 = -O3 -Wall -W -pedantic -std=c++17
+CFLAGS 		 = -O3 -Wall -W -pedantic -std=c++17 -I$(SRC_DIR)
 
 LFLAGS_MACOS = -framework openGL -lglfw
 LFLAGS_LINUX = -lGL -lGLU -lglfw -ldl

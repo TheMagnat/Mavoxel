@@ -7,6 +7,7 @@
 
 typedef void(*functionFloat)(float);
 typedef void(*function)();
+typedef void(*functionDoubleDouble)(double, double);
 
 namespace mav{
 
@@ -27,11 +28,19 @@ namespace mav{
 
 
 
+			///Callback
+			void setMouseCallback(functionDoubleDouble newFunction);
+			void mouseMovingCallback(double xpos, double ypos);
+
+
 		private:
 
 			GLFWwindow* window_;
 
 			functionFloat graphicLoopFunction_;
+
+			//Input
+			functionDoubleDouble mouseEventFunction_;
 
 	};
 
