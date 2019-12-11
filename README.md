@@ -9,8 +9,9 @@ One Paragraph of project description goes here
 
 To compile this project, you need have installed this library :
 
--[GLFW](https://www.glfw.org/)
--[Glad](https://glad.dav1d.de/)
+- [GLFW](https://www.glfw.org/)
+
+- [Glad](https://glad.dav1d.de/)
 
 ### Installing
 
