@@ -1,7 +1,7 @@
 # Mavoxel
 > A project of a voxel game engine.
 
-One Paragraph of project description goes here
+Mavoxel aims to be a complete game engine to produce voxel-based games
 
 ## Getting Started
 
