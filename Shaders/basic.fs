@@ -30,6 +30,8 @@ uniform Light light;
 
 uniform vec3 viewPos;
 
+uniform float water;
+
 //Venant du vertex shader
 in vec3 FragPos;
 in vec3 Normal;
@@ -43,24 +45,39 @@ out vec4 FragColor;
 
 
 void main(){
+
+    vec3 color;
+    float d2;
     
-    float delta = (FragPos.y+15)/30.0;
+    if(water == 1.0f){
 
-    vec3 bas = normalize(vec3(139, 255, 82));
-    vec3 haut = normalize(vec3(255, 151, 71));
+        float delta = (FragPos.y+5.0f)/10.0f;
+        d2 = 0;
 
-    //vec3 color = bas * (1 - delta) + haut * delta;
+        color = normalize(vec3(99, 203, 255));
+    }
+    else{
 
-    float d2 = (1 - cos(delta * 3.141592))/2;
+        float delta = (FragPos.y+15.0f)/30.0f;
 
-    vec3 color = bas * (1 - d2) + haut * d2;
+        vec3 bas = normalize(vec3(139, 255, 82));
+        vec3 haut = normalize(vec3(255, 151, 71));
+
+        d2 = (1 - cos(delta * 3.141592))/2;
+
+        color = bas * (1 - d2) + haut * d2;
+
+    }
+
+
+    
 
 
     //vec3 color = normalize(vec3(delta*0.7, 1 - delta*0.5, 0));
 
     vec3 colorAmbient = color;
     vec3 colorDiffuse = color*0.4;
-    vec3 colorSpecular = material.specular;
+    vec3 colorSpecular = vec3(((1 - d2)*0.3));
     
     // ambient
     vec3 ambient = light.ambient * colorAmbient;

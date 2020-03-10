@@ -1,5 +1,6 @@
 
-#include "Core.hpp"
+#include "Core/Core.hpp"
+#include "Core/Global.hpp"
 
 #include <iostream>
 
@@ -9,7 +10,7 @@
 
 namespace mav {
 	
-	Window::Window(std::string const& windowName /*= "default"*/, int width/* = 800*/, int height/* = 600*/) : mouseEventFunction_(nullptr) {
+	Window::Window(std::string const& windowName /*= "default"*/, int width/* = 800*/, int height/* = 600*/) : mouseEventFunction_(nullptr), keyEventFunction_(nullptr) {
 
 		glfwInit();
 	    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -30,6 +31,11 @@ namespace mav {
 		    throw 1;
 		}
 
+		glfwGetWindowSize(window_, &width, &height);
+
+		Global::width	= width;
+		Global::height	= height;
+
 		glfwMakeContextCurrent(window_);
 
 
@@ -38,8 +44,14 @@ namespace mav {
 		auto mouse_callback = [](GLFWwindow* w, double xpos, double ypos){
 			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseMovingCallback(xpos, ypos);
 		};
-
 		glfwSetCursorPosCallback(window_, mouse_callback);
+		
+		auto key_callback = [](GLFWwindow* w, int key, int scancode, int action, int mods){
+			static_cast<Window*>(glfwGetWindowUserPointer(w))->keyCallback(key, scancode, action, mods);
+		};
+		glfwSetKeyCallback(window_, key_callback);
+
+
 		//Desactivate the mouse
 		glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		
@@ -75,6 +87,10 @@ namespace mav {
 		mouseEventFunction_ = newFunction;
 	}
 
+	void Window::setKeyCallback(functionIntIntIntInt newFunction){
+		keyEventFunction_ = newFunction;
+	}
+
 	void Window::startLoop(){
 
 		float deltaTime, lastFrame;
@@ -104,6 +120,14 @@ namespace mav {
 			mouseEventFunction_(xpos, ypos);
 		}
 	}
+
+
+	void Window::keyCallback(int key, int scancode, int action, int mods){
+		if(keyEventFunction_){
+			keyEventFunction_(key, scancode, action, mods);
+		}
+	}
+
 
 
 }

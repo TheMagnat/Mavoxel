@@ -1,6 +1,8 @@
 
 #include "Mesh/Plane.hpp"
 
+#include "Core/Global.hpp"
+
 #include <array>
 
 
@@ -251,8 +253,8 @@ namespace mav {
 		shaderPtr_->use();
 
 		shaderPtr_->setVec3("material.diffuse", 0.3, 0.32, 0.29);
-		shaderPtr_->setVec3("material.specular", 0, 0, 0);
-		shaderPtr_->setFloat("material.shininess", 2.0f);
+		shaderPtr_->setVec3("material.specular", 0.1, 0.1, 0.1);
+		shaderPtr_->setFloat("material.shininess", 16.0f);
 
 
 		shaderPtr_->setVec3("light.ambient",  0.3f, 0.3f, 0.3f);
@@ -282,7 +284,7 @@ namespace mav {
 		//Position de la cam
 		shaderPtr_->setVec3("viewPos", cameraPtr_->Position);
 
-		shaderPtr_->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)800 / (float)600, 0.1f, 500.0f));
+		shaderPtr_->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 500.0f));
 
 
 		glDrawElements(GL_TRIANGLES, (int)indicesNb_, GL_UNSIGNED_INT, 0);
