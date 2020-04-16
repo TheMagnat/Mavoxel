@@ -27,11 +27,15 @@ namespace mav {
 			*/
 			// void set();
 
-			/*
-				Set a plane which containe a number verticeNb of vertices,
-				and each vertices got it's y position set in picked in the height vector.
-			*/
+			/**
+			 *	Set a plane which containe a number verticeNb of vertices,
+			 *	and each vertices got it's y position set in picked in the height vector.
+			 */
 			void set(size_t verticesNb, size_t len, std::vector<float> const& height);
+
+			void setPosition(float x, float y);
+
+			void setRotationMatrice(glm::mat4 const& rotaMat);
 
 			//NORMALS
 			void calculateNormals();
@@ -45,12 +49,14 @@ namespace mav {
 
 			void draw();
 
-		private:
+		protected:
 
 			//Size and position of the Plane in the world
 			size_t size_;
-			int x_;
-			int y_;
+			float x_;
+			float y_;
+
+			glm::mat4 rotationMat_;
 
 
 			//Vertices info
@@ -69,6 +75,21 @@ namespace mav {
 			std::vector<int> indices_;
 
 
+
+	};
+
+
+	class ColorPlane : public Plane {
+		
+		public:
+			//Not sure if it work in every compiler.
+			using Plane::Plane;
+
+			//ColorPlane(Shader* shaderPtr, Camera* cameraPtr, size_t size = 1);
+
+			void set(size_t verticesNb, size_t len, std::vector<float> const& height, std::vector<glm::vec3> const& colors);
+
+			void update();
 
 	};
 

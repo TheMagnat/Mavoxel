@@ -7,14 +7,14 @@ layout (triangle_strip, max_vertices = 3) out;
 
 in vec3 FragPosG[];
 in vec3 NormalG[];
-in vec3 ColorsG[];
+in vec2 texPosG[];
 
 in vec3 verti[];
 
 
 out vec3 FragPos;
 out vec3 Normal;
-out vec3 Colors;
+out vec2 texPos;
 
 
 
@@ -24,7 +24,7 @@ void sameTriangle(int index){
 
 		FragPos = FragPosG[index*3 + i];
 		//Normal = NormalG[index*3 + i];
-		Colors = ColorsG[index*3 + i];
+		texPos = texPosG[index*3 + i];
 
 		gl_Position = gl_in[index*3 + i].gl_Position;
 

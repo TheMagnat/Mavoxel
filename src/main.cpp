@@ -26,9 +26,11 @@ you can use a totally different main file.
 
 #include <iostream>
 
+#include "Neural/Neural.hpp"
 
-#define VERT_LEN 700
-#define VERT_ROW 700
+
+#define VERT_LEN 300
+#define VERT_ROW 300
 
 
 
@@ -42,24 +44,29 @@ void input(float deltaTime);
 std::vector<float> generateHeight(size_t len, size_t row, size_t seed);
 std::vector<float> cubeGenerateHeight(size_t len, size_t row, size_t seed);
 std::vector<float> coneGenerateHeight(size_t len, size_t row, size_t seed);
+std::vector<float> generateHeightFromNeural();
 
-
-static size_t actualSeed = 1;
+//static size_t actualSeed = 1;
 
 //
 
 
-static mav::Window myWindow("Mavoxel", 1200, 700);
+static mav::Window myWindow("Neural Network Viewer", 1200, 700);
 
 //INTERPOLATE
+
+static bool linear = true;
 
 static bool water = false;
 static int mode = 0;
 
 static float actualDelta = 0.0;
 static bool isInterpolate = false;
+
 static std::vector<float> oldValue;
 static std::vector<float> newValue;
+
+static std::vector<glm::vec3> allColors;
 
 
 ///
@@ -67,12 +74,15 @@ static std::vector<float> newValue;
 
 //static mav::World myWorld(32);
 
+static Neural myNeur;
+
 static mav::Shader myShader;
 static mav::Camera myCam(glm::vec3(0, 20, 0));
 
-static mav::Plane myPlane(&myShader, &myCam, 100);
+static mav::ColorPlane myPlane(&myShader, &myCam, 100);
+static mav::ColorPlane leftPlane(&myShader, &myCam, 100);
 
-static int octaveNumber = 0;
+static int AdditionalArgument = 0;
 
 static float speed = 1.0f;
 
@@ -99,7 +109,7 @@ std::vector<float> cosInterpolateVector(std::vector<float> const& first, std::ve
 
 	float cosDelta;
 
-	cosDelta = (1.0f - cos(delta * 3.1415926f)) / 2.0f;
+	cosDelta = (1.0f - cos(delta * M_PI)) / 2.0f;
 
 
 	for(size_t i(0); i < first.size(); ++i){
@@ -134,23 +144,25 @@ void mouseMoving(double xpos, double ypos){
     myCam.ProcessMouseMovement(xoffset, yoffset);
 }
 
-void stratInterpolate(){
+void startInterpolate(){
 
 	isInterpolate = true;
 	actualDelta = 0.0f;
 
 	oldValue = newValue;
 
-	if(mode == 0){
-		newValue = generateHeight(VERT_LEN, VERT_ROW, actualSeed);
+	newValue = generateHeightFromNeural();
+
+	// if(mode == 0){
+	// 	newValue = generateHeight(VERT_LEN, VERT_ROW, actualSeed);
 		
-	}
-	else if(mode == 1){
-		newValue = cubeGenerateHeight(VERT_LEN, VERT_ROW, actualSeed);
-	}
-	else if(mode == 2){
-		newValue = coneGenerateHeight(VERT_LEN, VERT_ROW, actualSeed);
-	}
+	// }
+	// else if(mode == 1){
+	// 	newValue = cubeGenerateHeight(VERT_LEN, VERT_ROW, actualSeed);
+	// }
+	// else if(mode == 2){
+	// 	newValue = coneGenerateHeight(VERT_LEN, VERT_ROW, actualSeed);
+	// }
 	
 
 }
@@ -159,54 +171,33 @@ void key_callback(int key, int scancode, int action, int mods){
 
 	if (key == GLFW_KEY_UP && action == GLFW_PRESS){
 
-		++octaveNumber;
+		++AdditionalArgument;
 
-    	stratInterpolate();
+    	startInterpolate();
 
     }
 
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS){
 
-		if(--octaveNumber < 0){
-			octaveNumber = 0;
+		if(--AdditionalArgument < 0){
+			AdditionalArgument = 0;
 		}
 		else{
-			stratInterpolate();	
+			startInterpolate();	
 		}
 
     	
 
     }
 
-    if (key == GLFW_KEY_Y && action == GLFW_PRESS){
-    	
-    	actualSeed = rand()%1000000;
+	if (key == GLFW_KEY_O && action == GLFW_PRESS){
 
-    	stratInterpolate();
+		myNeur.learnOneByOne();
 
-    }
+		allColors = myNeur.getColorVector(VERT_LEN, VERT_ROW);
 
-	if (key == 161 && action == GLFW_PRESS){
-    	
-    	water = 1 - water;
+    	startInterpolate();
 
-    	if(water){
-
-    		myShader.setFloat("water",  1.0f);
-
-    		speed = 0.5f;
-    		maxHeight = 10.0f;
-
-    		actualSeed = rand()%1000000;
-    		stratInterpolate();
-    	}
-    	else{
-    		myShader.setFloat("water",  0.0f);
-    		speed = 1.0f;
-    		maxHeight = 30.0f;
-
-    		stratInterpolate();
-    	}	
 
     }
 
@@ -214,7 +205,7 @@ void key_callback(int key, int scancode, int action, int mods){
 
 		mode = 0;
 
-    	stratInterpolate();
+    	startInterpolate();
 
     }
 
@@ -222,130 +213,82 @@ void key_callback(int key, int scancode, int action, int mods){
 
 		mode = 1;
 
-    	stratInterpolate();
+    	startInterpolate();
 
     }
     if (key == GLFW_KEY_3 && action == GLFW_PRESS){
 
 		mode = 2;
 
-    	stratInterpolate();
+    	startInterpolate();
+
+    }
+	if (key == GLFW_KEY_L && action == GLFW_PRESS){
+
+		linear = 1 - linear;
+
+    	startInterpolate();
 
     }
 
 }
 
 
-std::vector<float> cubeGenerateHeight(size_t len, size_t row, size_t seed){
+std::vector<float> generateHeightFromNeural(){
+	
+	return myNeur.generateHeight(VERT_LEN, VERT_ROW, linear, mode, AdditionalArgument, maxHeight);
 
-
-
-	siv::PerlinNoise test(seed);
-
-	std::vector<float> heightResult;
-
-	for (size_t i = 0; i < row; ++i) {
-		for (size_t j = 0; j < len; ++j) {
-
-			double x((j/(double)len)*3.0);
-			double y((i/(double)row)*3.0);
-
-			x -= fmod(x, 0.05);
-			y -= fmod(y, 0.05);
-
-
-			double tempoHeight(test.octaveNoise(x, y, octaveNumber));
-
-			tempoHeight = tempoHeight*maxHeight;
-
-			tempoHeight -= fmod(tempoHeight, 1.25);
-
-
-			heightResult.emplace_back(tempoHeight);
-
-
-		}
-	}
-
-	return heightResult;
 }
-
-std::vector<float> coneGenerateHeight(size_t len, size_t row, size_t seed){
-
-
-
-	siv::PerlinNoise test(seed);
-
-	std::vector<float> heightResult;
-
-	for (size_t i = 0; i < row; ++i) {
-		for (size_t j = 0; j < len; ++j) {
-
-			double x((j/(double)len)*3.0);
-			double y((i/(double)row)*3.0);
-
-			double tempoHeight(test.octaveNoise(x, y, octaveNumber));
-
-			tempoHeight = tempoHeight*maxHeight;
-
-			tempoHeight -= fmod(tempoHeight, 1.0);
-
-
-			heightResult.emplace_back(tempoHeight);
-
-
-		}
-	}
-
-	return heightResult;
-}
-
-
-std::vector<float> generateHeight(size_t len, size_t row, size_t seed){
-
-
-
-	siv::PerlinNoise test(seed);
-
-	std::vector<float> heightResult;
-
-	for (size_t i = 0; i < row; ++i) {
-		for (size_t j = 0; j < len; ++j) {
-
-
-			float tempoHeight(test.octaveNoise((j/(double)len)*3, (i/(double)row)*3, octaveNumber));
-
-			heightResult.emplace_back(tempoHeight*maxHeight);
-
-
-		}
-	}
-
-	return heightResult;
-}
-
 
 
 int main(int argc, char const *argv[]){
 
 	srand(time(NULL));
 
-	myShader.load("Shaders/basic.vs", "Shaders/basic.fs", "Shaders/basic.gs");
+	//Neural part
+	myNeur.init({20, 5}, {-0.05, 0.025});
+	myNeur.generate("iris.data", 150, 4, {"Iris-setosa", "Iris-versicolor", "Iris-virginica"});
+	
+	std::cout << "1\n";
+	myNeur.initOneByOne();
+	std::cout << "2\n";
+	//myNeur.learn();
 
+	//myNeur.print();
+
+
+
+	//Graphic Part
+	myShader.load("Shaders/basic.vs", "Shaders/basic.fs", "Shaders/basic.gs");
 	myShader.setFloat("water",  0.0f);
 
+
 	myPlane.init();
+
+	// myPlane.setPosition(0, -100);
+
+
+	leftPlane.init();
+	leftPlane.setPosition(-50, 0);
+	leftPlane.setRotationMatrice(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+	leftPlane.set(2*2, 2, std::vector<float>{0, 0, 0, 0}, std::vector<glm::vec3>(4, glm::vec3(0.0f, 0.0f, 1.0f)));
+	leftPlane.update();
 
 	//myWorld.createChunk(0, 0);
 	// myWorld.createChunk(1, 0);
 	// myWorld.createChunk(0, 1);
 	// myWorld.createChunk(1, 1);
 
-	std::vector<float> height(generateHeight(VERT_LEN, VERT_ROW, actualSeed));
 
+
+	// std::vector<float> height(generateHeight(VERT_LEN, VERT_ROW, actualSeed));
+	std::vector<float> height(generateHeightFromNeural());
 	newValue = height;
 
-	myPlane.set(VERT_LEN*VERT_ROW, VERT_LEN, height);
+	std::cout << "get color\n";
+	allColors = myNeur.getColorVector(VERT_LEN, VERT_ROW);
+	std::cout << "fin get color\n";
+	myPlane.set(VERT_LEN*VERT_ROW, VERT_LEN, height, allColors);
 	myPlane.update();
 
 	myWindow.setMouseCallback(mouseMoving);
@@ -354,10 +297,14 @@ int main(int argc, char const *argv[]){
 
 	myWindow.startLoop();
 
+
+	
+
 	return 0;
 }
 
 void mainGraphicLoop(float elapsedTime){
+	
 	input(elapsedTime);
 
 	glEnable(GL_DEPTH_TEST);
@@ -369,31 +316,22 @@ void mainGraphicLoop(float elapsedTime){
 		actualDelta += elapsedTime * speed;
 
 		if(actualDelta > 1.0){
-
-			if(water){
-				actualSeed = rand()%1000000;
-				stratInterpolate();
-			}
-			else{
-				actualDelta = 1.0;
-				isInterpolate = false;
-			}
-
+			actualDelta = 1.0;
+			isInterpolate = false;
 		}
 
 		std::vector<float> height(cosInterpolateVector(oldValue, newValue, actualDelta));
 
-		myPlane.set(VERT_LEN*VERT_ROW, VERT_LEN, height);
+		myPlane.set(VERT_LEN*VERT_ROW, VERT_LEN, height, allColors);
 		myPlane.update();
 
 	}
 
 
 
-
 	myPlane.draw();
+	leftPlane.draw();
 	//std::cout << "Je ne fais rien : " << elapsedTime << std::endl;
-
 	//myWorld.drawAll();
 
 }

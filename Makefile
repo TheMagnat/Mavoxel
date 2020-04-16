@@ -13,10 +13,10 @@ SRCS 		:= $(patsubst $(SRC_DIR)/%, %, $(SRCSPATH))
 OBJS 		:= $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 CC	 		 = g++
 
-CFLAGS 		 = -O3 -Wall -W -pedantic -std=c++17 -I$(SRC_DIR)
+CFLAGS 		 = -O3 -Wall -W -pedantic -std=c++17 -I$(SRC_DIR) -I./lib
 
-LFLAGS_MACOS = -framework openGL -lglfw
-LFLAGS_LINUX = -lGL -lGLU -lglfw -ldl
+LFLAGS_MACOS = -framework openGL -lglfw -L./lib/Neural -lneural
+LFLAGS_LINUX = -lGL -lGLU -lglfw -ldl -L./lib/Neural -lneural
 
 OS 			:= $(shell uname)
 
@@ -24,6 +24,7 @@ all: $(OUT)
 
 $(OUT): buildrepo $(OBJS)
 ifeq ($(OS), Darwin)
+	echo $(SRCSPATH)
 	$(CC) $(OBJS) -o $(OUT_PATH) $(LFLAGS_MACOS)
 else
 	$(CC) $(OBJS) -o $(OUT_PATH) $(LFLAGS_LINUX)

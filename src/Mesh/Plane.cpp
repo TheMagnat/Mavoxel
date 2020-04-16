@@ -8,7 +8,7 @@
 
 namespace mav {
 	
-	Plane::Plane(Shader* shaderPtr, Camera* cameraPtr, size_t size) : size_(size), shaderPtr_(shaderPtr), cameraPtr_(cameraPtr) {
+	Plane::Plane(Shader* shaderPtr, Camera* cameraPtr, size_t size) : size_(size), rotationMat_(1.0f), shaderPtr_(shaderPtr), cameraPtr_(cameraPtr) {
 
 	}
 
@@ -232,6 +232,15 @@ namespace mav {
 		vao_.setAll(vertices_, 8, allAttribute, indices_);
 
 	}
+	
+	void Plane::setPosition(float x, float y){
+		x_ = x;
+		y_ = y;
+	}
+
+	void Plane::setRotationMatrice(glm::mat4 const& rotaMat){
+		rotationMat_ = rotaMat;
+	}
 
 	void Plane::draw(){
 
@@ -240,9 +249,9 @@ namespace mav {
 		//SET LE SHADER
 		shaderPtr_->use();
     
-		glm::vec3 position(0, 0, 0);
+		glm::vec3 position(x_, 0, y_);
 		glm::mat4 model(glm::translate(glm::mat4(1.0f), position));
-		//model = model * rotationMat_;
+		model = model * rotationMat_;
 		model = glm::scale(model, glm::vec3(size_/2.0f, 1.0, size_/2.0f));
 
 
@@ -288,6 +297,99 @@ namespace mav {
 
 
 		glDrawElements(GL_TRIANGLES, (int)indicesNb_, GL_UNSIGNED_INT, 0);
+
+	}
+
+
+	// ColorPlane::ColorPlane(Shader* shaderPtr, Camera* cameraPtr, size_t size = 1){
+
+	// }
+
+	void ColorPlane::set(size_t verticesNb, size_t len, std::vector<float> const& height, std::vector<glm::vec3> const& colors){
+
+		len_ = len;
+		row_ = verticesNb/len_;
+
+		vertices_.resize(verticesNb * 9);
+
+		//SAVE
+		indicesNb_ = 6 * (len_ - 1)*(row_ - 1);
+		
+		//SAVE
+		indices_.resize(indicesNb_);
+
+		//float middle(size_/2);
+
+
+		size_t vertexPointer = 0;
+		for (size_t i = 0; i < row_; ++i) {
+		    for (size_t j = 0; j < len_; ++j) {
+		        
+		        float tempoX((float)j * 2 / ((float)len_ - 1) - 1);
+		        float tempoZ((float)i * 2 / ((float)row_ - 1) - 1);
+		        
+		        
+		        //float x(tempoX * middle), y(tempoZ * middle);
+		        
+		        //float verticeWorldX(x_ * size_ + x), verticeWorldZ(y_ * size_ + y);
+		        
+		        //float tempoHeight(heightGenerator_->generateHeight(verticeWorldX, verticeWorldZ));
+		        float tempoHeight(height[i * len_ + j]);
+				glm::vec3 tempoColor(colors[i * len_ + j]);
+		        
+		        //Position
+		        vertices_[vertexPointer * 9] = tempoX;
+		        vertices_[vertexPointer * 9 + 1] = tempoHeight;
+		        vertices_[vertexPointer * 9 + 2] = tempoZ;
+		        
+		        //Normals     
+		        vertices_[vertexPointer * 9 + 3] = 0.0f;
+		        vertices_[vertexPointer * 9 + 4] = 1.0f;
+		        vertices_[vertexPointer * 9 + 5] = 0.0f;
+		        
+				//Colors
+				vertices_[vertexPointer * 9 + 6] = tempoColor[0];
+		        vertices_[vertexPointer * 9 + 7] = tempoColor[1];
+		        vertices_[vertexPointer * 9 + 8] = tempoColor[2];
+
+		        
+		        //Texture
+		        // vertices_[vertexPointer * 8 + 6] = (float)j / ((float)len_ - 1);
+		        // vertices_[vertexPointer * 8 + 7] = (float)i / ((float)row_ - 1);
+		        
+		        ++vertexPointer;
+		    }
+		}
+
+		size_t pointer = 0;
+		for (size_t gz = 0; gz < row_ - 1; ++gz) {
+		    for (size_t gx = 0; gx < len_ - 1; ++gx) {
+		        
+		        int topLeft = (gz * len_) + gx;
+		        int topRight = topLeft + 1;
+		        int bottomLeft = ((gz + 1) * len_) + gx;
+		        int bottomRight = bottomLeft + 1;
+		        
+		        indices_[pointer++] = topLeft;
+		        indices_[pointer++] = bottomLeft;
+		        indices_[pointer++] = topRight;
+		        indices_[pointer++] = topRight;
+		        indices_[pointer++] = bottomLeft;
+		        indices_[pointer++] = bottomRight;
+		        
+		    }
+		}
+
+		//calculateNormals();
+		//Fin methode set
+	}
+
+
+	void ColorPlane::update(){
+
+		std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {3}};
+
+		vao_.setAll(vertices_, 9, allAttribute, indices_);
 
 	}
 
