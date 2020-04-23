@@ -27,6 +27,8 @@ typedef struct list list;
 
 void createList(list *l);
 
+void deleteList(list *l);
+
 void pushFront(list* l, int val);
 
 int getList(list* l, unsigned int index);

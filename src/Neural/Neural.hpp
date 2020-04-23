@@ -25,6 +25,8 @@ class Neural {
 		void initOneByOne();
 		void learnOneByOne();
 
+		void dataOneByOne();
+
 		void learn();
 
 		void print();
@@ -58,7 +60,8 @@ class Neural {
 
 		
 		//This part is for the step by step learn function.
-		unsigned int counter;
+		unsigned int learnCounter;
+		unsigned int dataCounter;
 		vector indexVector;
 
 };

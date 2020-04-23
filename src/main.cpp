@@ -10,6 +10,7 @@ you can use a totally different main file.
 //TESTTT
 
 #include "PerlinNoise.hpp"
+#include "Neural/Neural.hpp"
 
 //FIN TESTTT
 
@@ -26,7 +27,6 @@ you can use a totally different main file.
 
 #include <iostream>
 
-#include "Neural/Neural.hpp"
 
 
 #define VERT_LEN 300
@@ -56,6 +56,8 @@ static mav::Window myWindow("Neural Network Viewer", 1200, 700);
 //INTERPOLATE
 
 static bool linear = true;
+static bool inAnimation = false;
+static unsigned int counter = 0;
 
 static bool water = false;
 static int mode = 0;
@@ -190,6 +192,33 @@ void key_callback(int key, int scancode, int action, int mods){
 
     }
 
+	if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
+
+		if(myWindow.isPressed(GLFW_KEY_LEFT_ALT)){
+			speed += 1.0;
+		}
+		else{
+
+			speed += 0.1;
+		}
+
+    }
+
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS){
+		
+		if(myWindow.isPressed(GLFW_KEY_LEFT_ALT)){
+			if((speed -= 1.0) < 0.0){
+				speed = 0.0;
+			}
+		}
+		else{
+			if((speed -= 0.1) < 0.0){
+				speed = 0.0;
+			}
+		}
+
+    }
+
 	if (key == GLFW_KEY_O && action == GLFW_PRESS){
 
 		myNeur.learnOneByOne();
@@ -198,7 +227,28 @@ void key_callback(int key, int scancode, int action, int mods){
 
     	startInterpolate();
 
+		inAnimation = true;
+		
+    }
 
+	if (key == GLFW_KEY_P && action == GLFW_PRESS){
+
+		myNeur.dataOneByOne();
+
+		allColors = myNeur.getColorVector(VERT_LEN, VERT_ROW);
+
+    	startInterpolate();
+		
+    }
+
+	if (key == GLFW_KEY_M && action == GLFW_PRESS){
+
+		myNeur.learnOneByOne();
+
+		allColors = myNeur.getColorVector(VERT_LEN, VERT_ROW);
+
+    	startInterpolate();
+		
     }
 
     if (key == GLFW_KEY_1 && action == GLFW_PRESS){
@@ -236,14 +286,61 @@ void key_callback(int key, int scancode, int action, int mods){
 
 std::vector<float> generateHeightFromNeural(){
 	
-	return myNeur.generateHeight(VERT_LEN, VERT_ROW, linear, mode, AdditionalArgument, maxHeight);
+	return myNeur.generateHeight(VERT_LEN, VERT_ROW, linear, 2, 30, maxHeight);
 
 }
 
+void updateAnimation(float elapsedTime){
+
+	if(isInterpolate){
+
+		actualDelta += elapsedTime * speed;
+
+		if(actualDelta > 1.0){
+
+			actualDelta = 1.0;
+			isInterpolate = false;
+
+
+
+		}
+
+		std::vector<float> height(cosInterpolateVector(oldValue, newValue, actualDelta));
+
+		myPlane.set(VERT_LEN*VERT_ROW, VERT_LEN, height, allColors);
+		myPlane.update();
+
+
+
+	}
+
+
+			//The animation just finished
+	if(inAnimation){
+		if(!isInterpolate){
+
+			++counter;
+
+			myNeur.learnOneByOne();
+
+			allColors = myNeur.getColorVector(VERT_LEN, VERT_ROW);
+
+			startInterpolate();
+
+			if(counter == 2000){
+				inAnimation = false;
+			}
+
+		}
+	}
+	
+
+}
 
 int main(int argc, char const *argv[]){
 
 	srand(time(NULL));
+	srand(rand()%100000);
 
 	//Neural part
 	myNeur.init({20, 5}, {-0.05, 0.025});
@@ -310,24 +407,7 @@ void mainGraphicLoop(float elapsedTime){
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
-
-	if(isInterpolate){
-
-		actualDelta += elapsedTime * speed;
-
-		if(actualDelta > 1.0){
-			actualDelta = 1.0;
-			isInterpolate = false;
-		}
-
-		std::vector<float> height(cosInterpolateVector(oldValue, newValue, actualDelta));
-
-		myPlane.set(VERT_LEN*VERT_ROW, VERT_LEN, height, allColors);
-		myPlane.update();
-
-	}
-
-
+	updateAnimation(elapsedTime);
 
 	myPlane.draw();
 	leftPlane.draw();

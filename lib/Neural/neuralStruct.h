@@ -66,6 +66,12 @@ void spread(neuralMat* neurMat, learningVec* learnVec, int winnerIndex, int area
 */
 void learn(neuralMat* neurMat, learningMat* learnMat, vector* indexVec, int areaSize, double alpha);
 
+/**
+ * To learn data by data
+ */
+int oneByOneSplitedLearning(neuralMat* neurMat, learningMat* learnMat, vector* indexVector, unsigned int* currentData, unsigned int* currentIteration, unsigned int maxIteration);
+void oneByOneLearn(neuralMat* neurMat, learningMat* learnMat, vector* indexVec, int areaSize, double alpha, unsigned int currentData);
+
 /*
 	This function set the id of the neural matrice after the learning phase
 */

@@ -66,9 +66,8 @@ void Neural::generate(std::string filename, unsigned int nbLine, unsigned int nb
 
 void Neural::initOneByOne(){
 
-	counter = 0;
-
-	std::cout << "size : " << allIris.size << std::endl;
+	learnCounter = 0;
+	dataCounter = 0;
 
 	createVec(&indexVector, allIris.size);
 	fillVecWithIndex(&indexVector);
@@ -77,14 +76,26 @@ void Neural::initOneByOne(){
 
 void Neural::learnOneByOne(){
 
-	std::cout << "shuffle\n";
 	shuffleVec(&indexVector);
 
-	for(int i = 0; i < 50; ++i)
-		splitedLearning(&neurMat, &allIris, &indexVector, &counter, 2000);
+	//for(int i = 0; i < 50; ++i)
+	splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
 
 
-	std::cout << "count : " << counter << std::endl; 
+}
+
+void Neural::dataOneByOne(){
+
+	if(dataCounter == 0)
+		shuffleVec(&indexVector);
+
+	oneByOneSplitedLearning(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+
+	//std::cout << "Phase : " << learnCounter << " data : " << dataCounter << std::endl;
+
+	//for(int i = 0; i < 50; ++i)
+	//splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
+
 
 }
 
