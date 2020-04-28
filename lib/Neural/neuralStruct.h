@@ -40,12 +40,17 @@ typedef struct neuralMat neuralMat;
 	size contain the number of neurone, matLen contain the width and the height of the neural matrice
 	and bound the bounds of the random value to add to the average of the learning matrice.
 */
-void generateNeuralMat(neuralMat* neurMat, learningMat* learnMat, unsigned int size, unsigned int matLen[2], double bound[2]);
+void generateNeuralMat(neuralMat* neurMat, learningMat* learnMat, unsigned int matLen[2], double bound[2]);
+
+/**
+ * This function free all the memory allocated to the neurMat variable.
+*/
+void deleteNeuralMat(neuralMat* neurMat);
 
 /*
 	This function start the learning on the neural matrice (neurMat) with the learning matrice (learnMat)
 */
-void startLearning(neuralMat* neurMat, learningMat* learnMat);
+void startLearning(neuralMat* neurMat, learningMat* learnMat, unsigned int maxIt, float maxAlpha, unsigned int maxArea);
 
 /**
  * This do function do the learning on the neural matrice but step
@@ -53,7 +58,7 @@ void startLearning(neuralMat* neurMat, learningMat* learnMat);
  * 
  * @return 1 if it's finished and labeled, 0 otherwise.
  */
-int splitedLearning(neuralMat* neurMat, learningMat* learnMat, vector* indexVector, unsigned int* currentIteration, unsigned int maxIteration);
+int splitedLearning(neuralMat* neurMat, learningMat* learnMat, vector* indexVector, unsigned int* currentIteration, unsigned int maxIteration, float maxAlpha, int maxArea);
 
 /*
 	This function spread the win of a neurone to it's neighbors in an area of size areaSize.
@@ -69,13 +74,23 @@ void learn(neuralMat* neurMat, learningMat* learnMat, vector* indexVec, int area
 /**
  * To learn data by data
  */
-int oneByOneSplitedLearning(neuralMat* neurMat, learningMat* learnMat, vector* indexVector, unsigned int* currentData, unsigned int* currentIteration, unsigned int maxIteration);
+int oneByOneSplitedLearning(neuralMat* neurMat, learningMat* learnMat, vector* indexVector, unsigned int* currentData, unsigned int* currentIteration, unsigned int maxIteration, float maxAlpha, int maxArea);
 void oneByOneLearn(neuralMat* neurMat, learningMat* learnMat, vector* indexVec, int areaSize, double alpha, unsigned int currentData);
+/**
+ * To comeback to a all data by all data iteration,
+ * we need to first call this function to finish the current data by data iteration.
+*/
+int finishCurrentOneByOneLearnPhase(neuralMat* neurMat, learningMat* learnMat, vector* indexVector, unsigned int* currentData, unsigned int* currentIteration, unsigned int maxIteration, float maxAlpha, int maxArea);
 
 /*
 	This function set the id of the neural matrice after the learning phase
 */
-void setId(neuralMat* neurMat, learningMat* learnMat);
+void setId(neuralMat* neurMat, learningMat* learnMat, vector* indexVec);
+
+/**
+ * This function reset the id of the neural matrice to 0
+ */
+void resetId(neuralMat* neurMat);
 
 /*
 	This function print all the neural vector with each attribute.

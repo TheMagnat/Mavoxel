@@ -50,6 +50,11 @@ typedef struct learningMat learningMat;
 */
 void generateLearningMat(learningMat* mat, char* fileName, unsigned int nbLine, unsigned int nbData, dataLabel allLabels);
 
+/**
+ * This function delete all the memory allocated to the mat variable.
+*/
+void deleteLearningMat(learningMat* mat);
+
 /*
 	This function open and read the learning file and will fill the learning matrice (learnMat) with it.
 */

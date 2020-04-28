@@ -37,6 +37,8 @@ namespace mav {
 
 			void setRotationMatrice(glm::mat4 const& rotaMat);
 
+			void setSizeVec(glm::vec3 const& sizeVec);
+
 			//NORMALS
 			void calculateNormals();
 			glm::vec3 calculateNormal(int x1, int z1, int x2, int z2, int x3, int z3);
@@ -55,6 +57,9 @@ namespace mav {
 			size_t size_;
 			float x_;
 			float y_;
+
+
+			glm::vec3 sizeVec_;
 
 			glm::mat4 rotationMat_;
 

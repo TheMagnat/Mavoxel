@@ -4,17 +4,17 @@
 #include <cmath>
 #include <iostream>
 
-Neural::Neural() {
+					//Default values
+Neural::Neural() : maxIteration(2000), maxAlpha(0.9), maxArea(3), dataOneBOne(false) {
 
 }
 
 Neural::Neural(std::pair<unsigned int, unsigned int> matLen, std::pair<double, double> bound)
-: nbNeur_(matLen.first * matLen.second) {
+: nbNeur_(matLen.first * matLen.second), maxIteration(2000), maxAlpha(0.9), maxArea(3), dataOneBOne(false) {
 
 	matLen_[0] = matLen.first;
 	matLen_[1] = matLen.second;
 	
-
 	bound_[0] = bound.first;
 	bound_[1] = bound.second;
 
@@ -31,8 +31,25 @@ void Neural::init(std::pair<unsigned int, unsigned int> matLen, std::pair<double
 	bound_[1] = bound.second;
 
 }
+
+void Neural::setLearningParam(unsigned int maxIteration_, float maxAlpha_, unsigned int maxArea_){
+
+	maxIteration = maxIteration_;
+	maxAlpha = maxAlpha_;
+	maxArea = maxArea_;
+
+}
 		
 Neural::~Neural(){
+
+	deleteLearningMat(&allIris);
+	deleteNeuralMat(&neurMat);
+
+
+	deleteVec(&indexVector);
+	deleteVec(&labelIndexVector);
+
+
 	///delete neural and learning
 }
 
@@ -59,12 +76,12 @@ void Neural::generate(std::string filename, unsigned int nbLine, unsigned int nb
 	tempo.labels 	= ptr.get();
 
 	generateLearningMat(&allIris, filename.data(), nbLine, nbData, tempo);
-	generateNeuralMat(&neurMat, &allIris, nbNeur_, matLen_, bound_);
+	generateNeuralMat(&neurMat, &allIris, matLen_, bound_);
 
 	//Note : The unique_ptr ptr will delete the allocated memory here.
 }
 
-void Neural::initOneByOne(){
+void Neural::initAfterGenerate(){
 
 	learnCounter = 0;
 	dataCounter = 0;
@@ -72,30 +89,82 @@ void Neural::initOneByOne(){
 	createVec(&indexVector, allIris.size);
 	fillVecWithIndex(&indexVector);
 
-}
-
-void Neural::learnOneByOne(){
-
-	shuffleVec(&indexVector);
-
-	//for(int i = 0; i < 50; ++i)
-	splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
-
+	createVec(&labelIndexVector, allIris.size);
+	fillVecWithIndex(&labelIndexVector);
 
 }
 
-void Neural::dataOneByOne(){
+void Neural::reset(){
+
+	dataOneBOne = false;
+	dataCounter = 0;
+	learnCounter = 0;
+
+	deleteNeuralMat(&neurMat);
+
+	generateNeuralMat(&neurMat, &allIris, matLen_, bound_);
+
+}
+
+int Neural::learnOneByOne(){
+
+	if(dataOneBOne){
+
+		dataOneBOne = false;
+
+		return finishCurrentOneByOneLearnPhase(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+		
+	}
+	else{
+		
+		shuffleVec(&indexVector);
+
+		return splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
+
+	}
+
+
+
+}
+
+int Neural::dataOneByOne(){
+
+	dataOneBOne = true;
 
 	if(dataCounter == 0)
 		shuffleVec(&indexVector);
 
-	oneByOneSplitedLearning(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+	return oneByOneSplitedLearning(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
 
-	//std::cout << "Phase : " << learnCounter << " data : " << dataCounter << std::endl;
 
-	//for(int i = 0; i < 50; ++i)
-	//splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
+}
 
+void Neural::finishAll(){
+	
+	int end;
+
+	if(dataOneBOne){
+
+		finishCurrentOneByOneLearnPhase(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+		dataOneBOne = false;
+
+	}
+
+	do{
+		end = splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
+	}
+	while(!end);
+
+
+}
+
+void Neural::reLabelize(){
+
+	resetId(&neurMat);
+
+	shuffleVec(&labelIndexVector);
+
+	setId(&neurMat, &allIris, &labelIndexVector);
 
 }
 
@@ -105,7 +174,7 @@ void Neural::learn(){
 
 }
 
-void Neural::print(){
+void Neural::printLabels(){
 
 	unsigned int i;
 
@@ -118,7 +187,7 @@ void Neural::print(){
 
 }
 
-void Neural::printLearn(){
+void Neural::printLearn() const {
 
 	unsigned int i;
 
@@ -132,10 +201,8 @@ float Neural::getNeuronLen(size_t index) const {
 
 	float result(0);
 	
-	// std::cout << "Index: " << index << std::endl;
 	for(unsigned int i(0); i < neurMat.data[index].size; ++i){
 
-		// std::cout << "i: " << i << " value: " << neurMat.data[index].data[i] << std::endl;
 		result += neurMat.data[index].data[i] * neurMat.data[index].data[i];
 
 	}
@@ -194,9 +261,8 @@ double cubicInterpolate (double p[4], double x) {
 
 /**
  * This method will generate a height vector with the choosen method.
- * 
 */
-std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, int method, int methodArg,  float heightMultiplicator) const {
+std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, int method, int methodArg,  float heightMultiplicator, float heightAdd) const {
 	
 
 	std::vector<float> heightResult;
@@ -214,7 +280,6 @@ std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, i
 			}
 			else{
 				xRatio = getRangedValue(x, len-1, neurMat.width-1);
-				// std::cout << "xRatio: " << xRatio << std::endl;
 				trueX = (unsigned int)xRatio;
 				xRatio = xRatio - trueX; //This work because getRangedValue will allaway return a positive value
 			}
@@ -227,7 +292,6 @@ std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, i
 			else{
 
 				yRatio = getRangedValue(y, row-1, neurMat.height-1);
-				// std::cout << "yRatio: " << yRatio << std::endl;
 				trueY = (unsigned int)yRatio;
 				yRatio = yRatio - trueY;
 			}
@@ -236,7 +300,6 @@ std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, i
 			float height(0);
 
 			if(linear){
-				///LINEAR
 				//0 0
 				height += (1 - xRatio) * (1 - yRatio) 	* callGoodMethod(trueX + trueY * neurMat.width, method, methodArg);
 
@@ -248,8 +311,6 @@ std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, i
 				//1 1
 				
 				height += xRatio * yRatio				*  callGoodMethod(trueX+1 + (trueY+1) * neurMat.width, method, methodArg);
-
-			///LINEAR
 			}
 			else{
 			///COSINE
@@ -286,16 +347,13 @@ std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, i
 
 				height = (interA + interB)/2.0;
 
-			///COSINE
 			}
 
 
 			height *= heightMultiplicator;
-			
-			// std::cout << "X: " << x << " Y: " << y << " Height: " << height << std::endl;
-			
-			// height = cubicInterpolate(allHeight, 0.5);
 
+			height += heightAdd;
+			
 			heightResult.emplace_back(height);
 
 		}
@@ -306,7 +364,7 @@ std::vector<float> Neural::generateHeight(size_t len, size_t row, bool linear, i
 
 }
 
-std::vector<glm::vec3> Neural::getColorVector(size_t len, size_t row) const {
+std::vector<glm::vec3> Neural::getColorVector(size_t len, size_t row, bool linear) const {
 	
 	std::vector<glm::vec3> colors;
 
@@ -317,7 +375,7 @@ std::vector<glm::vec3> Neural::getColorVector(size_t len, size_t row) const {
 	allPossibleColors[0] = glm::vec3(219.0f/255.0f, 206.0f/255.0f, 211.0f/255.0f);
 	allPossibleColors[1] = glm::vec3(138.0f/255.0f, 46.0f/255.0f, 242.0f/255.0f);
 	
-	allPossibleColors[2] = glm::vec3(182.0f/255.0f, 143.0f/255.0f, 227.0f/255.0f);
+	allPossibleColors[2] = glm::vec3(245.0f/255.0f, 126.0f/255.0f, 66.0f/255.0f);
 	allPossibleColors[3] = glm::vec3(184.0f/255.0f, 51.0f/255.0f, 153.0f/255.0f);
 
 	for(size_t y(0); y < row; ++y){
@@ -333,7 +391,6 @@ std::vector<glm::vec3> Neural::getColorVector(size_t len, size_t row) const {
 			}
 			else{
 				xRatio = getRangedValue(x, len-1, neurMat.width-1);
-				// std::cout << "xRatio: " << xRatio << std::endl;
 				trueX = (unsigned int)xRatio;
 				xRatio = xRatio - trueX; //This work because getRangedValue will allaway return a positive value
 			}
@@ -346,9 +403,24 @@ std::vector<glm::vec3> Neural::getColorVector(size_t len, size_t row) const {
 			else{
 
 				yRatio = getRangedValue(y, row-1, neurMat.height-1);
-				// std::cout << "yRatio: " << yRatio << std::endl;
 				trueY = (unsigned int)yRatio;
 				yRatio = yRatio - trueY;
+			}
+
+			if(linear){
+				if(xRatio > 0.5){
+					xRatio = 1;
+				}
+				else{
+					xRatio = 0;
+				}
+
+				if(yRatio > 0.5){
+					yRatio = 1;
+				}
+				else{
+					yRatio = 0;
+				}
 			}
 
 			glm::vec3 color(0.0f);
@@ -365,11 +437,7 @@ std::vector<glm::vec3> Neural::getColorVector(size_t len, size_t row) const {
 			
 			color += xRatio * yRatio			*  allPossibleColors[neurMat.data[trueX+1 + (trueY+1) * neurMat.width].id];
 
-			// std::cout << "x: " << trueX << " y: " << trueY << " index: " << trueX + trueY * neurMat.width << std::endl;
-
-			//allPossibleColors[neurMat.data[trueX + trueY * neurMat.width].id]
 			colors.emplace_back(color);
-			// std::cout << "emplaced\n";
 		}
 
 		

@@ -8,7 +8,7 @@
 
 namespace mav {
 	
-	Plane::Plane(Shader* shaderPtr, Camera* cameraPtr, size_t size) : size_(size), rotationMat_(1.0f), shaderPtr_(shaderPtr), cameraPtr_(cameraPtr) {
+	Plane::Plane(Shader* shaderPtr, Camera* cameraPtr, size_t size) : size_(size), sizeVec_(size_/2.0f, 1.0, size_/2.0f), rotationMat_(1.0f), shaderPtr_(shaderPtr), cameraPtr_(cameraPtr) {
 
 	}
 
@@ -242,6 +242,12 @@ namespace mav {
 		rotationMat_ = rotaMat;
 	}
 
+	void Plane::setSizeVec(glm::vec3 const& sizeVec){
+
+		sizeVec_ = sizeVec;
+
+	}
+
 	void Plane::draw(){
 
 		glBindVertexArray(vao_.get());
@@ -252,7 +258,7 @@ namespace mav {
 		glm::vec3 position(x_, 0, y_);
 		glm::mat4 model(glm::translate(glm::mat4(1.0f), position));
 		model = model * rotationMat_;
-		model = glm::scale(model, glm::vec3(size_/2.0f, 1.0, size_/2.0f));
+		model = glm::scale(model, sizeVec_);
 
 
 		shaderPtr_->setMat4("model", model);
@@ -270,7 +276,7 @@ namespace mav {
 		shaderPtr_->setVec3("light.diffuse",  1.f, 1.f, 1.f); // assombri un peu la lumière pour correspondre à la scène
 		shaderPtr_->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
-		shaderPtr_->setVec3("light.direction", 0.f, -1.0f, 0.f);
+		shaderPtr_->setVec3("light.direction", 0.1f, -0.8f, -0.2f);
 
 		shaderPtr_->setFloat("light.constant",  1.0f);
 		shaderPtr_->setFloat("light.linear",    0.09f);
