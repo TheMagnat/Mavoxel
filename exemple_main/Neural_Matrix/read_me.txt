@@ -1,0 +1,1 @@
+To compile this main you will also need to get the library from this project (which is under the MIT licence) : https://github.com/TheMagnat/Neural-Network-SOM-in-C

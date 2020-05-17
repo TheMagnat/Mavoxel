@@ -112,14 +112,14 @@ int Neural::learnOneByOne(){
 
 		dataOneBOne = false;
 
-		return finishCurrentOneByOneLearnPhase(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+		return finishCurrentOneByOneLearnPhase(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, maxIteration, maxAlpha, maxArea);
 		
 	}
 	else{
 		
 		shuffleVec(&indexVector);
 
-		return splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
+		return splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, maxIteration, maxAlpha, maxArea);
 
 	}
 
@@ -134,7 +134,7 @@ int Neural::dataOneByOne(){
 	if(dataCounter == 0)
 		shuffleVec(&indexVector);
 
-	return oneByOneSplitedLearning(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+	return oneByOneSplitedLearning(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, maxIteration, maxAlpha, maxArea);
 
 
 }
@@ -145,13 +145,13 @@ void Neural::finishAll(){
 
 	if(dataOneBOne){
 
-		finishCurrentOneByOneLearnPhase(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, 2000);
+		finishCurrentOneByOneLearnPhase(&neurMat, &allIris, &indexVector, &dataCounter, &learnCounter, maxIteration, maxAlpha, maxArea);
 		dataOneBOne = false;
 
 	}
 
 	do{
-		end = splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, 2000);
+		end = splitedLearning(&neurMat, &allIris, &indexVector, &learnCounter, maxIteration, maxAlpha, maxArea);
 	}
 	while(!end);
 
@@ -170,7 +170,7 @@ void Neural::reLabelize(){
 
 void Neural::learn(){
 
-	startLearning(&neurMat, &allIris);
+	startLearning(&neurMat, &allIris, maxIteration, maxAlpha, maxArea);
 
 }
 
