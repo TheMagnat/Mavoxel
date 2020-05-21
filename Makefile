@@ -6,7 +6,7 @@ SRC_DIR		?= ./src
 OUT			 = executable.out
 OUT_PATH	 = $(addprefix $(BUILD_DIR)/, $(OUT))
 
-SRCSPATH	:= $(shell find $(SRC_DIR) -name *.cpp)
+SRCSPATH	:= $(shell find $(SRC_DIR) -name "*.cpp")
 SRCDIRS 	:= $(shell find . -name '*.cpp' -exec dirname {} \; | uniq)
 OBJDIRS		:= $(patsubst $(SRC_DIR)%, $(OBJ_DIR)%, $(SRCDIRS))
 SRCS 		:= $(patsubst $(SRC_DIR)/%, %, $(SRCSPATH))
@@ -20,15 +20,16 @@ LFLAGS_LINUX = -lGL -lGLU -lglfw -ldl
 
 OS 			:= $(shell uname)
 
-all: $(OUT)
+all: buildrepo $(OUT)
 
-$(OUT): buildrepo $(OBJS)
+$(OUT): $(OBJS)
 ifeq ($(OS), Darwin)
-	echo $(SRCSPATH)
 	$(CC) $(OBJS) -o $(OUT_PATH) $(LFLAGS_MACOS)
 else
 	$(CC) $(OBJS) -o $(OUT_PATH) $(LFLAGS_LINUX)
 endif
+
+
 
 $(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp $(SRC_DIR)/%.hpp
 	$(CC) -o $@ -c $< $(CFLAGS)
@@ -41,13 +42,15 @@ $(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp
 
 
 buildrepo:
-	$(call make-repo)
+	@$(call make-repo)
 
 clean:
 	rm -f $(OBJS)
 
 cleanall:
 	rm -f $(OBJS) $(OUT_PATH)
+
+
 
 define make-repo
         for dir in $(OBJDIRS); \
