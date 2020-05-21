@@ -13,6 +13,8 @@ To compile this project, you need have installed this library :
 
 - [Glad](https://glad.dav1d.de/)
 
+- [GLM](https://glm.g-truc.net/)
+
 ### Installing
 
 #### Linux and Macos
