@@ -69,9 +69,9 @@ vec3 calculNormal(){
 
 void main(){
 
-	Normal = cross(FragPosG[1].xyz - FragPosG[0].xyz, FragPosG[2].xyz - FragPosG[0].xyz);
+	//Normal = cross(FragPosG[1].xyz - FragPosG[0].xyz, FragPosG[2].xyz - FragPosG[0].xyz);
 
-	//Normal = calculNormal();
+	Normal = calculNormal();
 
     sameTriangle(0); // first vertex normal
 

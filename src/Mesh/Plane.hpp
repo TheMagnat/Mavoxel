@@ -87,8 +87,6 @@ namespace mav {
 	class ColorPlane : public Plane {
 		
 		public:
-			//Not sure if it work in every compiler.
-			using Plane::Plane;
 
 			//ColorPlane(Shader* shaderPtr, Camera* cameraPtr, size_t size = 1);
 

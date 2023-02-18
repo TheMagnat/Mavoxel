@@ -70,7 +70,7 @@ void main(){
     }
 
 
-	color = Colors;
+	//color = Colors;
     
 
 
