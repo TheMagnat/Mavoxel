@@ -56,7 +56,6 @@ $(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp $(SRC_DIR)/%.h
 $(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-
 buildrepo:
 	@$(call make-repo)
 
@@ -65,26 +64,6 @@ clean:
 
 cleanall:
 	rm -f $(OBJS) $(BUILD_DIR)/*.$(EXT)
-
-maregle:
-	@echo $(MAIN_OBJ)
-
-
-MY_VAR := initial_value
-
-# Define a target that modifies the variable
-modify_var:
-	# Some command that modifies MY_VAR
-	$(eval MY_VAR := ok)
-
-# Define a target that uses the modified variable
-use_var:
-	@echo $(MY_VAR)
-
-# Define a target that runs both modify_var and use_var
-run_both:
-	$(MAKE) modify_var
-	$(MAKE) use_var
 
 define make-repo
         for dir in $(OBJDIRS); \
