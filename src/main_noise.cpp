@@ -16,7 +16,7 @@ you can use a totally different main file.
 #include "Core/Global.hpp"
 
 #include "Core/Core.hpp"
-#include "World/World.hpp"
+//#include "World/World.hpp"
 #include "Mesh/Plane.hpp"
 #include "GLObject/Shader.hpp"
 #include "GLObject/Camera.hpp"
@@ -64,7 +64,7 @@ static std::vector<float> newValue;
 ///
 
 
-static mav::World myWorld(32);
+//static mav::World myWorld(32);
 
 static mav::Shader myShader;
 static mav::Camera myCam(glm::vec3(0, 20, 0));
@@ -335,7 +335,7 @@ int main(int argc, char const *argv[]){
 
 	myPlane.init();
 
-	myWorld.createChunk(0, 0);
+	//myWorld.createChunk(0, 0);
 	// myWorld.createChunk(1, 0);
 	// myWorld.createChunk(0, 1);
 	// myWorld.createChunk(1, 1);

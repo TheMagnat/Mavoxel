@@ -70,9 +70,6 @@ void main(){
     }
 
 
-    
-
-
     //vec3 color = normalize(vec3(delta*0.7, 1 - delta*0.5, 0));
 
     vec3 colorAmbient = color;
