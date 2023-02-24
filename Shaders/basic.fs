@@ -35,7 +35,7 @@ uniform float water;
 //Venant du vertex shader
 in vec3 FragPos;
 in vec3 Normal;
-in vec3 Colors;
+in vec2 texPos;
 
 in float visibility;
 
@@ -70,7 +70,6 @@ void main(){
     }
 
 
-	color = Colors;
     
 
 
@@ -78,7 +77,7 @@ void main(){
 
     vec3 colorAmbient = color;
     vec3 colorDiffuse = color*0.4;
-    vec3 colorSpecular = color*0.9;
+    vec3 colorSpecular = vec3(((1 - d2)*0.3));
     
     // ambient
     vec3 ambient = light.ambient * colorAmbient;
@@ -87,8 +86,8 @@ void main(){
     //Ici c'est la normal normalement..
     vec3 norm = normalize(Normal);
     
-    vec3 lightDir = normalize(-light.direction);
-    // vec3 lightDir = normalize(light.position - FragPos);
+    //vec3 lightDir = normalize(-light.direction);
+    vec3 lightDir = normalize(light.position - FragPos);
     
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = light.diffuse * diff * colorDiffuse;

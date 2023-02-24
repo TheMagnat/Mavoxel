@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec3 aColors;
+layout (location = 2) in vec2 aTex;
 
 uniform mat3 modelNormal;
 
@@ -12,7 +12,7 @@ uniform mat4 projection;
 
 out vec3 FragPosG;
 out vec3 NormalG;
-out vec3 ColorsG;
+out vec2 texPosG;
 
 
 void main(){
@@ -26,7 +26,7 @@ void main(){
     
     NormalG = modelNormal * aNormal;
     
-    ColorsG = aColors;
+    texPosG = aTex;
     
 }
 

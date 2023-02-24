@@ -57,7 +57,6 @@ namespace mav {
 		        vertices_[vertexPointer * 8 + 4] = 1.0f;
 		        vertices_[vertexPointer * 8 + 5] = 0.0f;
 		        
-		        
 		        //Texture
 		        vertices_[vertexPointer * 8 + 6] = (float)j / ((float)len_ - 1);
 		        vertices_[vertexPointer * 8 + 7] = (float)i / ((float)row_ - 1);

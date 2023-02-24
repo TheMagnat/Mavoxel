@@ -22,7 +22,7 @@ namespace mav{
 			std::vector<Chunk> allChunk_;
 
 			std::unordered_map<int, std::unordered_map<int, size_t>> chunkCoordToIndex_;
-
+			
 	};
 
 }
