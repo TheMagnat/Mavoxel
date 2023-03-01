@@ -1,3 +1,4 @@
+#pragma once
 
 #include "../GLObject/GLObject.hpp"
 
@@ -45,7 +46,7 @@ namespace mav {
 			glm::vec3 calculateNormal(int face);
 
 			/*
-				Update the openGL object when and edition is done to the data.
+				Update the openGL object when an edition is done to the data.
 			*/
 			void update();
 

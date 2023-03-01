@@ -1,3 +1,4 @@
+#pragma once
 
 #include <vector>
 #include <cstddef>
@@ -10,8 +11,6 @@ namespace mav {
 
 			static size_t width;
 			static size_t height;
-
-
 		
 	};
 

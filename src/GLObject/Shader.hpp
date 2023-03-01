@@ -1,5 +1,4 @@
-#ifndef SHADER_H    // Évite d'inclure plusieurs fois ce fichier
-#define SHADER_H
+#pragma once
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -52,5 +51,3 @@ private:
 };
 
 }
-  
-#endif

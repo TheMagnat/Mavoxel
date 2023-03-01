@@ -1,5 +1,5 @@
 
-BUILD_DIR	?= ./build
+BUILD_DIR	?= .
 OBJ_DIR		?= ./build/obj
 SRC_DIR		?= ./src
 
@@ -23,8 +23,8 @@ CC	 	 = g++
 MAIN_OBJ = $(OBJ_DIR)/main.o
 
 ifeq ($(OS), Darwin)
-CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR)
-LFLAGS = -framework openGL -lglfw
+CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR) -g
+LFLAGS = -framework openGL -lglfw -g
 EXT    = .out
 else ifeq ($(OS), Linux)
 CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR)
@@ -38,12 +38,12 @@ endif
 
 
 all: buildrepo app
-noise: buildrepo noise_app
+noise: buildrepo app_noise
 
 app: $(OBJS) $(OBJ_DIR)/main.o
 	$(CC) $(OBJS) $(OBJ_DIR)/main.o -o $(BUILD_DIR)/$@$(EXT) $(LFLAGS)
 
-noise_app: $(OBJS) $(OBJ_DIR)/main_noise.o
+app_noise: $(OBJS) $(OBJ_DIR)/main_noise.o
 	$(CC) $(OBJS) $(OBJ_DIR)/main_noise.o -o $(BUILD_DIR)/$@$(EXT) $(LFLAGS)
 	
 
@@ -60,10 +60,10 @@ buildrepo:
 	@$(call make-repo)
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) $(OBJ_DIR)/*.o
 
 cleanall:
-	rm -f $(OBJS) $(BUILD_DIR)/*.$(EXT)
+	rm -f $(OBJS) $(OBJ_DIR)/*.o $(BUILD_DIR)/*$(EXT)
 
 define make-repo
         for dir in $(OBJDIRS); \
