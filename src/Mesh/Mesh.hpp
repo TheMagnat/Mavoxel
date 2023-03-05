@@ -27,7 +27,6 @@ namespace mav {
             virtual void init();
             virtual void updateVAO() = 0;
 
-
             void setPosition(glm::vec3 newPosition);
             void setPosition(float x, float y, float z);
             void updatePosition();

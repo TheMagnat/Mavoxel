@@ -6,16 +6,18 @@
 namespace mav {
 
 	World::World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, size_t voxelSize)
-		: chunkSize_(chunkSize), voxelSize_(voxelSize), shaderPtr(shaderPtrP), environment(environmentP) {}
+		: chunkSize_(chunkSize), voxelSize_(voxelSize), shader(shaderPtrP), environment(environmentP) {}
 
-	void World::createChunk(int chunkPosX, int chunkPosZ){
+	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ){
 
-		size_t newIndex = allChunk_.size();
+		size_t newChunkIndex = allChunk_.size();
 
 		allChunk_.emplace_back(this, chunkPosX, chunkPosZ, chunkSize_, voxelSize_);
-		allChunk_.back().generate();
+		allChunk_.back().generateVoxels();
+		allChunk_.back().generateVertices();
+		allChunk_.back().graphicUpdate();
 
-		chunkCoordToIndex_[chunkPosX][chunkPosZ] = newIndex;
+		chunkCoordToIndex_[chunkPosX][chunkPosY][chunkPosZ] = newChunkIndex;
 
 	}
 
@@ -26,7 +28,7 @@ namespace mav {
 			// allChunk_[i].describe();
 			allChunk_[i].draw();
 		}
-		std::cout << "hey" << std::endl;
+
 	}
 	
 }

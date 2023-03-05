@@ -18,7 +18,7 @@ namespace mav{
 		public:
 			World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize = 32, size_t voxelSize = 1);
 
-			void createChunk(int chunkPosX, int chunkPosZ);
+			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ);
 
 			void drawAll();
 		
@@ -28,11 +28,11 @@ namespace mav{
 
 			std::vector<Chunk> allChunk_;
 
-			std::unordered_map<int, std::unordered_map<int, size_t>> chunkCoordToIndex_;
+			std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, size_t>>> chunkCoordToIndex_;
 
 		public:
 			//World generation data
-			Shader* shaderPtr;
+			Shader* shader;
 			Environment* environment;
 			//Material material;
 			

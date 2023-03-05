@@ -64,7 +64,8 @@ namespace mav {
 	void VAO::setAttribute(unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute){
 		
 		for(size_t i(0), acc(0); i < allAttribute.size(); acc += allAttribute[i].size, ++i){
-
+			
+			//TODO: verify if size is correct ??
 			glVertexAttribPointer(i, allAttribute[i].size, GL_FLOAT, GL_FALSE, totalAttributeSize * sizeof(float), (void*)(acc*sizeof(float)));
 			glEnableVertexAttribArray(i);
 

@@ -2,9 +2,12 @@
 #pragma once
 
 #include <World/World.hpp>
-#include <Mesh/Voxel.hpp>
+#include <World/SimpleVoxel.hpp>
+
+#include <GLObject/GLObject.hpp>
 
 #include <vector>
+#include <unordered_map>
 #include <cstddef>
 
 namespace mav{
@@ -15,12 +18,15 @@ namespace mav{
 	class Chunk{
 
 		public:
-			Chunk(World* world, int posX, int posZ, size_t size, size_t voxelSize);
+			Chunk(World* world, int posX, int posZ, size_t size, size_t voxelSize); //TODO: Add Y
 
-			void generate();
+			void generateVoxels();
+			void generateVertices();
 
 			void describe();
 
+			//OpenGL
+			void graphicUpdate();
 			void draw();
 			
 		private:
@@ -29,8 +35,18 @@ namespace mav{
 			size_t size_;
 			size_t voxelSize_;
 
-			std::vector<Voxel> data_;
+			//Voxels informations
+			std::vector<SimpleVoxel> voxels_;
+			std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, size_t>>> voxelCoordToIndex_;
 
+			//OpenGL
+			VAO vao_;
+            std::vector<float> vertices_;
+
+            size_t indicesNb_;
+            std::vector<int> indices_;
+
+			//Reference to the world
 			World* world_;
 	};
 

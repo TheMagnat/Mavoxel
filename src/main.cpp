@@ -106,7 +106,7 @@ int main(int argc, char const *argv[]){
 	srand(time(NULL));
 
     //Init shaders
-	myShader.load("Shaders/basic_color.vs", "Shaders/basic_color.fs");
+	myShader.load("Shaders/simple_voxel.vs", "Shaders/simple_voxel.fs");
 	sunShader.load("Shaders/basic_color.vs", "Shaders/sun_color.fs");
 
     //Init environment
@@ -114,7 +114,7 @@ int main(int argc, char const *argv[]){
     environment.camera = &myCam;
 
     //Init world
-	myWorld.createChunk(0, 0);
+	myWorld.createChunk(0, 0, 0);
 
     myVoxel.init();
     sun.init();
@@ -137,6 +137,7 @@ int main(int argc, char const *argv[]){
 	myWindow.setKeyCallback(key_callback);
 	myWindow.setGraphicLoop(mainGraphicLoop);
 
+    std::cout << "Starting main loop..." << std::endl;
 	myWindow.startLoop();
 
 	return 0;

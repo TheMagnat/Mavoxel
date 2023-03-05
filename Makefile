@@ -18,7 +18,7 @@ SRCDIRS 	:= $(shell find . -name '*.cpp' -exec dirname {} \; | uniq)
 OBJDIRS		:= $(patsubst $(SRC_DIR)%, $(OBJ_DIR)%, $(SRCDIRS))
 SRCS 		:= $(patsubst $(SRC_DIR)/%, %, $(SRCSPATH))
 OBJS 		:= $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
-CC	 	 = g++
+CC	 	 	 = g++
 
 MAIN_OBJ = $(OBJ_DIR)/main.o
 
@@ -31,8 +31,8 @@ CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR)
 LFLAGS = -lGL -lGLU -lglfw -ldl
 EXT    = .out
 else
-CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR) -IC:\\libs\\headers
-LFLAGS = -lopengl32 -lglfw3 -lgdi32 -LC:\\libs\\dlls
+CFLAGS = -O0 -Wall -W -std=c++17 -I$(SRC_DIR) -IC:\\libs\\headers -g
+LFLAGS = -lopengl32 -lglfw3 -lgdi32 -LC:\\libs\\dlls -g
 EXT    = .exe
 endif
 
