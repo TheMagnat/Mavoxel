@@ -23,21 +23,27 @@ CC	 	 	 = g++
 MAIN_OBJ = $(OBJ_DIR)/main.o
 
 ifeq ($(OS), Darwin)
-CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR) -g
-LFLAGS = -framework openGL -lglfw -g
+CFLAGS = -Wall -W -std=c++17 -I$(SRC_DIR)
+LFLAGS = -framework openGL -lglfw
 EXT    = .out
 else ifeq ($(OS), Linux)
-CFLAGS = -O3 -Wall -W -std=c++17 -I$(SRC_DIR)
+CFLAGS = -Wall -W -std=c++17 -I$(SRC_DIR)
 LFLAGS = -lGL -lGLU -lglfw -ldl
 EXT    = .out
 else
-CFLAGS = -O0 -Wall -W -std=c++17 -I$(SRC_DIR) -IC:\\libs\\headers -g
-LFLAGS = -lopengl32 -lglfw3 -lgdi32 -LC:\\libs\\dlls -g
+CFLAGS = -Wall -W -std=c++17 -I$(SRC_DIR) -IC:\\libs\\headers -DFASTNOISE_STATIC_LIB
+LFLAGS = -lopengl32 -lglfw3 -lgdi32 -lFastNoise -LC:\\libs\\dlls -LC:\\libs\\dlls\\FastNoise -DFASTNOISE_STATIC_LIB
 EXT    = .exe
 endif
 
 
+all: CFLAGS += -O3
 all: buildrepo app
+
+debug: CFLAGS += -O0 -g
+debug: LFLAGS += -g
+debug: buildrepo app
+
 noise: buildrepo app_noise
 
 app: $(OBJS) $(OBJ_DIR)/main.o

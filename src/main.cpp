@@ -6,10 +6,12 @@ you can use a totally different main file.
 
 */
 
+//TODO: Ajouter dans le Cmake un projet app qui buildera ce main qui utilisera la lib Mavoxel. (et renomer le projet src en Mavoxel)
 
 //TESTTT
 
-#include "PerlinNoise.hpp"
+//#include "PerlinNoise.hpp"
+#include <FastNoise/FastNoise.h>
 
 //FIN TESTTT
 
@@ -32,10 +34,16 @@ you can use a totally different main file.
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <chrono>
 
+#include <Helper/ThreadPool.hpp>
 
+// Parameters
 #define VERT_LEN 700
 #define VERT_ROW 700
+
+float voxelSize = 2.0f;
+size_t chunkSize = 64;
 
 
 //DECLARE FUNC
@@ -53,7 +61,7 @@ static mav::Shader sunShader;
 
 static mav::Environment environment;
 
-static mav::Camera myCam(glm::vec3(0, 0, 10));
+static mav::Camera myCam(glm::vec3(0, 0, 0));
 
 static mav::Material grassMaterial {
     {0.0f, 1.0f, 0.0f},
@@ -68,7 +76,7 @@ static mav::Material sunMaterial {
     {1.0f, 1.0f, 1.0f}
 };
 
-static mav::World myWorld(&myShader, &environment, 32, 5);
+static mav::World myWorld(&myShader, &environment, chunkSize, voxelSize);
 static mav::Voxel myVoxel(&myShader, &environment, grassMaterial, 100);
 static mav::LightVoxel sun(&sunShader, &environment, sunMaterial, 50);
 //static mav::Plane myPlane(&myShader, &myCam, 100);
@@ -98,8 +106,126 @@ void mouseMoving(double xpos, double ypos){
 
 void key_callback(int key, int scancode, int action, int mods){
 
+    if(key == GLFW_KEY_ESCAPE){
+        //TODO: etudier la possibiliter de kills les threads avant de tout fermer pour vite les stops
+		myWindow.closeWindow();
+	}
+
 }
 
+auto perlinGenerator = FastNoise::New<FastNoise::Perlin>();
+// siv::PerlinNoise test(seed);
+
+int generateHeight(float x, float y, float z, size_t seed = 0) {
+
+    // auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
+    // float testValue = fnFractal->GenSingle2D(1.f, 2.f, 10);
+
+    // auto gen = FastNoise::New<FastNoise::Perlin>();
+
+    // float testValue = gen->GenSingle2D(x, z, seed);
+    // float testValue_2 = gen->GenSingle2D(x/100.0, z/100.0, seed);
+    // float testValue_3 = gen->GenSingle2D(x/100.0, z/100.0, seed) * 32;
+
+    // auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
+    // auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
+
+    return ((perlinGenerator->GenSingle3D(x/100.0, y/100.0, z/100.0, seed) * 32.0f) >= 0);
+
+
+}
+
+std::vector<std::vector<std::vector<int>>> generateHeight_v2(float xGlobal, float yGlobal, float zGlobal) {
+
+    int seed = 0;
+
+    std::vector<std::vector<std::vector<int>>> output;
+
+    float factor = 100.0f;
+    float positionOffsets = - ((chunkSize) / 2.0f) * voxelSize;
+
+    output.resize(chunkSize);
+    for (size_t x = 0; x < chunkSize; ++x) {
+
+        output[x].resize(chunkSize);
+        for (size_t y = 0; y < chunkSize; ++y) {
+
+            output[x][y].resize(chunkSize);
+            for (size_t z = 0; z < chunkSize; ++z) {
+
+                float xPos = (x * voxelSize) + positionOffsets + (xGlobal * chunkSize * voxelSize);
+                float yPos = (y * voxelSize) + positionOffsets + (yGlobal * chunkSize * voxelSize);
+                float zPos = (z * voxelSize) + positionOffsets + (zGlobal * chunkSize * voxelSize);
+
+                //float testValue = perlinGenerator->GenSingle2D(xPos/factor, zPos/factor, seed);
+                float testValue = perlinGenerator->GenSingle3D(xPos/factor, yPos/factor, zPos/factor, seed);
+
+                //if (yPos < testValue * 32.0f)
+                if (testValue >= 0.0f)
+                    output[x][y][z] = 1;
+                else
+                    output[x][y][z] = 0;
+
+            }
+        }
+    }
+
+    return output;
+
+}
+
+void input(float deltaTime){
+
+	if (myWindow.isPressed(GLFW_KEY_W)){
+        myCam.ProcessKeyboard(mav::FORWARD, deltaTime);
+    }
+
+    if (myWindow.isPressed(GLFW_KEY_S)){
+        myCam.ProcessKeyboard(mav::BACKWARD, deltaTime);
+    }
+
+    if (myWindow.isPressed(GLFW_KEY_A)){
+        myCam.ProcessKeyboard(mav::LEFT, deltaTime);
+    }
+
+    if (myWindow.isPressed(GLFW_KEY_D)){
+        myCam.ProcessKeyboard(mav::RIGHT, deltaTime);
+    }
+
+}
+
+float tempoTotalTime = 0;
+void mainGraphicLoop(float elapsedTime){
+
+    //To modify
+    tempoTotalTime += elapsedTime;
+    //
+
+    //Loading phase
+    myWorld.updateReadyChunk(1);
+
+    //Logic phase
+	input(elapsedTime);
+    
+    sun.setPosition(300.f, 400.f, 100.0f); // Simulate a sun rotation
+    // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + myCam.Position.x, sin(tempoTotalTime/5.0f) * 400.f + myCam.Position.y, 0.0f + myCam.Position.z); // Simulate a sun rotation
+    // sun.setPosition(myCam.Position.x, myCam.Position.y, myCam.Position.z); // Light on yourself
+
+    //Drawing phase
+	glEnable(GL_DEPTH_TEST);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+
+	//myVoxel.draw();
+    //myPlane.draw();
+
+    myWorld.drawAll();
+
+    sun.draw();
+
+    //std::cout << "Position = x: " << myCam.Position.x << " y: " << myCam.Position.y << " z: " << myCam.Position.z << std::endl;
+
+}
 
 int main(int argc, char const *argv[]){
 
@@ -113,8 +239,52 @@ int main(int argc, char const *argv[]){
     environment.sun = &sun;
     environment.camera = &myCam;
 
+    //Generators
+    mav::VoxelGeneratorFunc worldGenerator = [](float x, float y, float z){
+        if(y == (x + z)) {
+            return true;
+        }
+        return false;
+    };
+
+    mav::VoxelGeneratorFunc worldGeneratorNoise = [](float x, float y, float z){
+        return generateHeight(x, y, z);
+    };
+
+
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+
     //Init world
-	myWorld.createChunk(0, 0, 0);
+    mav::SimpleVoxel::generateGeneralFaces(voxelSize);
+
+    ThreadPool threadPool = ThreadPool(8);
+
+	//myWorld.createChunk(0, 0, 0, worldGeneratorNoise);
+    //myWorld.createChunk(0, 0, 0, generateHeight_v2);
+
+	//myWorld.createChunk(0, 0, 0, generateHeight_v2(0, 0, 0));
+
+    int len = 5;
+    for (int x = -len; x <= len; ++x) {
+        for (int y = -len; y <= len; ++y) {
+            for (int z = -len; z <= len; ++z) {
+                myWorld.createChunk(x, y, z, generateHeight_v2);
+            }
+        }
+    }
+    
+
+	// myWorld.createChunk(0, 1, 0, generateHeight_v2);
+	// myWorld.createChunk(1, 0, 0, generateHeight_v2);
+	// myWorld.createChunk(0, 0, -1, generateHeight_v2);
+	// myWorld.createChunk(0, -1, 0, worldGeneratorNoise);
+	// myWorld.createChunk(-1, 0, 0, worldGeneratorNoise);
+
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<float> fsec = end - begin;
+
+    std::cout << "Time difference = " << fsec.count() << "s" << std::endl;
 
     myVoxel.init();
     sun.init();
@@ -141,54 +311,4 @@ int main(int argc, char const *argv[]){
 	myWindow.startLoop();
 
 	return 0;
-}
-
-float tempoTotalTime = 0;
-void mainGraphicLoop(float elapsedTime){
-
-    //To modify
-    tempoTotalTime += elapsedTime;
-    //
-
-    //Logic phase
-	input(elapsedTime);
-    
-    sun.setPosition(0.0f, cos(tempoTotalTime/5.0f) * 400.f, sin(tempoTotalTime/5.0f) * 400.f);
-
-    //Drawing phase
-	glEnable(GL_DEPTH_TEST);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-
-	//myVoxel.draw();
-    //myPlane.draw();
-
-    myWorld.drawAll();
-
-    sun.draw();
-
-}
-
-void input(float deltaTime){
-
-	if(myWindow.isPressed(GLFW_KEY_ESCAPE)){
-		myWindow.closeWindow();
-	}
-
-	if (myWindow.isPressed(GLFW_KEY_W)){
-        myCam.ProcessKeyboard(mav::FORWARD, deltaTime);
-    }
-
-    if (myWindow.isPressed(GLFW_KEY_S)){
-        myCam.ProcessKeyboard(mav::BACKWARD, deltaTime);
-    }
-
-    if (myWindow.isPressed(GLFW_KEY_A)){
-        myCam.ProcessKeyboard(mav::LEFT, deltaTime);
-    }
-
-    if (myWindow.isPressed(GLFW_KEY_D)){
-        myCam.ProcessKeyboard(mav::RIGHT, deltaTime);
-    }
-
 }

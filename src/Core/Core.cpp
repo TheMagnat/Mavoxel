@@ -10,7 +10,7 @@
 
 namespace mav {
 	
-	Window::Window(std::string const& windowName /*= "default"*/, int width/* = 800*/, int height/* = 600*/) : mouseEventFunction_(nullptr), keyEventFunction_(nullptr) {
+	Window::Window(std::string const& windowName, int width, int height) : mouseEventFunction_(nullptr), keyEventFunction_(nullptr) {
 
 		glfwInit();
 	    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -93,7 +93,7 @@ namespace mav {
 
 	void Window::startLoop(){
 
-		float deltaTime, lastFrame;
+		float deltaTime, lastFrame = glfwGetTime();
 
 		while(!glfwWindowShouldClose(window_)){
 

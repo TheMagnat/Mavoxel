@@ -5,61 +5,146 @@
 #include <iostream>
 
 namespace mav{
+
+	//TODO: Move this to SimpleVoxel ?
+	//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
+	std::array<std::pair<int, int>, 6> Chunk::faceToNeighborOffset = {{
+		{1, -1},
+		{2, 1},
+		{0, 1},
+		{2, -1},
+		{0, -1},
+		{1, 1}
+	}};
+
+	//TODO: Move this to SimpleVoxel.
+	//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
+	std::array<uint8_t, 6> Chunk::faceToInverseFace = {
+		{5, 3, 4, 1, 2, 0}
+	};
+
 	
-	Chunk::Chunk(World* world, int posX, int posZ, size_t size, size_t voxelSize)
-		: posX_(posX), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world) {
+	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize)
+		: state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world) {
 
 		vao_.init(true);
 
 	}
 
-	//TODO: User a generator function (that take an X, Y and Z function)
-	void Chunk::generateVoxels(){
+	void Chunk::generateVoxels(VoxelGeneratorFunc generator) {
 
-		Material grassMaterial {
-			{0.0f, 1.0f, 0.0f},
-			{0.0f, 1.0f, 0.0f},
-			{0.5f, 0.5f, 0.5f},
-			32.0f
-		};
+		voxels_.initializeIndices(size_);
+		voxels_.initializeMap(size_);
 
-		for (size_t x = 0; x < size_; ++x)
-		{
-			for (size_t z = 0; z < size_; ++z)
-			{
+		float positionOffsets = - ((size_) / 2.0f) * voxelSize_;
 
-				float xPos = x*voxelSize_;
-				float zPos = z*voxelSize_;
-				float yPos = (x+z)*voxelSize_;
+		// Calculate the coordinates of each points
+		for (size_t x = 0; x < size_; ++x) {
+			for (size_t y = 0; y < size_; ++y) {
+				for (size_t z = 0; z < size_; ++z) {
 
-				size_t newIndex = voxels_.size();
+					// Position in the chunk + Offset to center the chunk + position in the world
+					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * size_ * voxelSize_);
+					float yPos = (y * voxelSize_) + positionOffsets + (posY_ * size_ * voxelSize_);
+					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
 
-				//TODO: Also fill the faces state with setFaceState
-				voxels_.emplace_back(glm::vec3(xPos, yPos, zPos));
-				
-				voxelCoordToIndex_[x][0][z] = newIndex;
+					int genValue = generator(xPos, yPos, zPos);
+					if(genValue == 0)
+						continue;
 
+					voxels_.voxelMap[x][y][z] = genValue;
+					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
+					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), 0, voxelSize_);
+
+					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
+					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
+
+						glm::vec3 positionToCheck = glm::vec3(xPos, yPos, zPos);
+						positionToCheck[Chunk::faceToNeighborOffset[faceIndex].first] += Chunk::faceToNeighborOffset[faceIndex].second * voxelSize_;
+
+						bool foundVoxel = generator(positionToCheck.x, positionToCheck.y, positionToCheck.z);
+						if(foundVoxel) {
+							voxels_.data.back().setFaceState(faceIndex, false);							
+						}
+
+					}
+
+				}
 			}
-			
+		}
+
+
+
+	}
+
+	//TODO: Aussi recevoir le generator pour les côtés du chunk
+	void Chunk::generateVoxels(VoxelMap& voxelsMap) {
+		
+		// Move voxelMap and prepare indices size
+		voxels_.voxelMap = std::move(voxelsMap);
+		voxels_.initializeIndices(size_);
+
+		// Calculate the coordinates of each points
+		float positionOffsets = - ((size_) / 2.0f) * voxelSize_;
+		for (size_t x = 0; x < size_; ++x) {
+			for (size_t y = 0; y < size_; ++y) {
+				for (size_t z = 0; z < size_; ++z) {
+					
+					if( voxels_.voxelMap[x][y][z] == 0 ) continue;
+
+					// Position in the chunk + Offset to center the chunk + position in the world
+					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * size_ * voxelSize_);
+					float yPos = (y * voxelSize_) + positionOffsets + (posY_ * size_ * voxelSize_);
+					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
+
+					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
+					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), 0, voxelSize_);
+
+					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
+					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
+
+						glm::vec3 positionToCheck = glm::vec3(x, y, z);
+						positionToCheck[Chunk::faceToNeighborOffset[faceIndex].first] += Chunk::faceToNeighborOffset[faceIndex].second;
+
+						bool foundVoxel = findVoxel(positionToCheck);
+						if(foundVoxel) {
+							voxels_.data.back().setFaceState(faceIndex, false);							
+						}
+
+					}
+
+				}
+			}
+
 		}
 
 	}
 
+	bool Chunk::findVoxel(glm::vec3 const& position) {
+
+		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return false;
+
+		return voxels_.voxelMap[position.x][position.y][position.z] != 0;
+	}
+
 	void Chunk::generateVertices() {
-	
-		for (size_t i = 0; i < voxels_.size(); ++i) {
-			SimpleVoxel const& voxel = voxels_[i];
-			std::array<std::vector<float>, 6> const& faces = voxel.getFaces();
-			
-			for (size_t j = 0; j < faces.size(); ++j) {
-				std::vector<float> const& face = faces[j];
+		
+		size_t insertedFaces = 0;
+		for (size_t i = 0; i < voxels_.data.size(); ++i) {
+			SimpleVoxel const& voxel = voxels_.data[i];
+
+			for (uint8_t faceIndex = 0; faceIndex < 6; ++faceIndex) {
+				
+				// Here the face is not shown
+				if (!voxel.getFaceState(faceIndex)) continue;
+
+				std::vector<float> face = voxel.getFace(faceIndex);
 
 				//We insert the face vertices...
-				//TODO: Maybe use the information on the face to see if we need to insert it or not			
-				vertices_.insert(vertices_.end(), face.begin(), face.end());
+				vertices_.insert(vertices_.end(), std::make_move_iterator(face.begin()), std::make_move_iterator(face.end()));
 
 				//...And it's corresponding indices for the EBO
-				size_t currentIndexOffset = (i * 6 * 4) + (j * 4);
+				size_t currentIndexOffset = (insertedFaces++ * 4);
 				for (uint8_t indice : SimpleVoxel::verticesIndices) {
 					indices_.push_back(currentIndexOffset + indice);
 				}
@@ -92,7 +177,7 @@ namespace mav{
 		//model = glm::rotate(model, 45.0f, glm::vec3(0.0f, 1.0f, 1.0f));
 		//model = model * rotationMat_;
 		//TODO: Size ?
-		//model = glm::scale(model, glm::vec3(100));
+		//model = glm::scale(model, glm::vec3(voxelSize_));
 
 
 		world_->shader->setMat4("model", model);

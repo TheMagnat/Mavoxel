@@ -6,6 +6,7 @@ struct Material {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
+
     float shininess;
 };
 
@@ -22,11 +23,18 @@ in vec3 Normal;
 in float Id;
 
 uniform vec3 viewPos;
-uniform Material material;
+//uniform Material material;
 uniform Light light;
 
+Material material = Material(
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.0f, 1.0f, 0.0f),
+    vec3(0.1f, 0.1f, 0.1f),
+    32.0f
+);
+
 void main() {
-    /*
+
     // ambient
     vec3 ambient = light.ambient * material.ambient;
   	
@@ -46,8 +54,8 @@ void main() {
         
     vec3 result = ambient + diffuse + specular;
     outFragColor = vec4(result, 1.0);
-    */
 
-    outFragColor = vec4(0.5);
+
+    //outFragColor = vec4(0.5);
 
 }

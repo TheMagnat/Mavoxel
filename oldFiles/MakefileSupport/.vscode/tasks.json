@@ -4,7 +4,7 @@
         {
             "label": "Build Debug (Makefile)",
             "type": "shell",
-            "command": "make",
+            "command": "make debug -j8",
             "group": "build",
             "problemMatcher": {
                 "owner": "cpp",
