@@ -16,9 +16,21 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 
 if ( MSVC )
+
+    message("MSVC Detected : ${MSVC}") 
+
+
     #TODO: Faire plusieurs conf en fonction du système
     set(LIB_PATH "C:/libs/dlls")
     set(LIB_HEADERS_PATH "C:/libs/headers")
+
+elseif ( APPLE )
+
+    message("Apple detected") 
+
+    set(LIB_PATH "/usr/local/lib")
+    set(LIB_HEADERS_PATH "/usr/local/include")
+
 endif ( MSVC )
 
 

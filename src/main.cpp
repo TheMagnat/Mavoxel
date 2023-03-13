@@ -42,8 +42,11 @@ you can use a totally different main file.
 #define VERT_LEN 700
 #define VERT_ROW 700
 
-float voxelSize = 2.0f;
+float voxelSize = 10.0f;
 size_t chunkSize = 64;
+
+//TEMPO:
+int nbChunkPerAxis = 10;
 
 
 //DECLARE FUNC
@@ -116,8 +119,9 @@ void key_callback(int key, int scancode, int action, int mods){
 auto perlinGenerator = FastNoise::New<FastNoise::Perlin>();
 // siv::PerlinNoise test(seed);
 
-int generateHeight(float x, float y, float z, size_t seed = 0) {
-
+size_t seed = 0;
+inline bool testIfVoxelIn(float x, float y, float z) {
+    
     // auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
     // float testValue = fnFractal->GenSingle2D(1.f, 2.f, 10);
 
@@ -128,27 +132,27 @@ int generateHeight(float x, float y, float z, size_t seed = 0) {
     // float testValue_3 = gen->GenSingle2D(x/100.0, z/100.0, seed) * 32;
 
     // auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
-    // auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
+    auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
+    fnFractal->SetSource(perlinGenerator);
+    fnFractal->SetOctaveCount(9);
 
-    return ((perlinGenerator->GenSingle3D(x/100.0, y/100.0, z/100.0, seed) * 32.0f) >= 0);
+    float factor = 400.0f;
 
-
+    return fnFractal->GenSingle3D(x/factor, y/factor, z/factor, seed) >= 0.0f;
 }
 
-std::vector<std::vector<std::vector<int>>> generateHeight_v2(float xGlobal, float yGlobal, float zGlobal) {
-
-    int seed = 0;
+std::vector<std::vector<std::vector<int>>> generateVoxelMap(float xGlobal, float yGlobal, float zGlobal) {
 
     std::vector<std::vector<std::vector<int>>> output;
 
-    float factor = 100.0f;
+
     float positionOffsets = - ((chunkSize) / 2.0f) * voxelSize;
 
     output.resize(chunkSize);
     for (size_t x = 0; x < chunkSize; ++x) {
 
         output[x].resize(chunkSize);
-        for (size_t y = 0; y < chunkSize; ++y) {
+        for (int y = chunkSize - 1; y >= 0; --y) {
 
             output[x][y].resize(chunkSize);
             for (size_t z = 0; z < chunkSize; ++z) {
@@ -158,15 +162,42 @@ std::vector<std::vector<std::vector<int>>> generateHeight_v2(float xGlobal, floa
                 float zPos = (z * voxelSize) + positionOffsets + (zGlobal * chunkSize * voxelSize);
 
                 //float testValue = perlinGenerator->GenSingle2D(xPos/factor, zPos/factor, seed);
-                float testValue = perlinGenerator->GenSingle3D(xPos/factor, yPos/factor, zPos/factor, seed);
+                bool isIn = testIfVoxelIn(xPos, yPos, zPos);
 
                 //if (yPos < testValue * 32.0f)
-                if (testValue >= 0.0f)
-                    output[x][y][z] = 1;
-                else
+                if (isIn) {
+                    
+                    //TODO: Gérer le cas du début
+                    if (y == chunkSize - 1) {
+                        output[x][y][z] = 1;
+                    }
+                    else {
+                        int upperVoxelId = output[x][y+1][z];
+                        output[x][y][z] = upperVoxelId + 1;
+
+                        if(upperVoxelId > 2) output[x][y+1][z] = 2;
+                    }
+
+                }
+                else {
                     output[x][y][z] = 0;
 
+                    //TODO: Améliorer la boucle entière pour la rendre plus propre/opti
+                    if (y != chunkSize - 1) {
+                        if(output[x][y+1][z] > 2) output[x][y+1][z] = 2;
+                    }
+
+                }
+
             }
+        }
+    }
+
+    //Corect last y level
+    for (size_t x = 0; x < chunkSize; ++x) {
+        for (size_t z = 0; z < chunkSize; ++z) {
+            if (output[x][0][z] > 2)
+                output[x][0][z] = 2;
         }
     }
 
@@ -202,16 +233,19 @@ void mainGraphicLoop(float elapsedTime){
     //
 
     //Loading phase
-    myWorld.updateReadyChunk(1);
+    myWorld.updateReadyChunk(3);
 
     //Logic phase
 	input(elapsedTime);
     
-    sun.setPosition(300.f, 400.f, 100.0f); // Simulate a sun rotation
+    // sun.setPosition(300.f, 400.f, 100.0f); // Simulate a sun rotation
+    // sun.setPosition(0.f, 0.f, 0.0f); // Simulate a sun rotation
     // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + myCam.Position.x, sin(tempoTotalTime/5.0f) * 400.f + myCam.Position.y, 0.0f + myCam.Position.z); // Simulate a sun rotation
-    // sun.setPosition(myCam.Position.x, myCam.Position.y, myCam.Position.z); // Light on yourself
+    // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f, sin(tempoTotalTime/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
+    sun.setPosition(myCam.Position.x, myCam.Position.y, myCam.Position.z); // Light on yourself
 
     //Drawing phase
+    //glClearColor(0.5, 0.5, 0.5, 1);
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -240,16 +274,6 @@ int main(int argc, char const *argv[]){
     environment.camera = &myCam;
 
     //Generators
-    mav::VoxelGeneratorFunc worldGenerator = [](float x, float y, float z){
-        if(y == (x + z)) {
-            return true;
-        }
-        return false;
-    };
-
-    mav::VoxelGeneratorFunc worldGeneratorNoise = [](float x, float y, float z){
-        return generateHeight(x, y, z);
-    };
 
 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
@@ -257,18 +281,12 @@ int main(int argc, char const *argv[]){
     //Init world
     mav::SimpleVoxel::generateGeneralFaces(voxelSize);
 
-    ThreadPool threadPool = ThreadPool(8);
+	//myWorld.createChunk(0, 0, 0, generateVoxelMap, testIfVoxelIn);
 
-	//myWorld.createChunk(0, 0, 0, worldGeneratorNoise);
-    //myWorld.createChunk(0, 0, 0, generateHeight_v2);
-
-	//myWorld.createChunk(0, 0, 0, generateHeight_v2(0, 0, 0));
-
-    int len = 5;
-    for (int x = -len; x <= len; ++x) {
-        for (int y = -len; y <= len; ++y) {
-            for (int z = -len; z <= len; ++z) {
-                myWorld.createChunk(x, y, z, generateHeight_v2);
+    for (int x = 0; x <= nbChunkPerAxis; ++x) {
+        for (int y = 0; y <= nbChunkPerAxis; ++y) {
+            for (int z = 0; z <= nbChunkPerAxis; ++z) {
+                myWorld.createChunk(x, y, z, generateVoxelMap, testIfVoxelIn);
             }
         }
     }

@@ -23,7 +23,7 @@ namespace mav {
 
 			//TODO: Ne plus utiliser que celle avec le generator mais s'en servir pour générer la VoxelMap
 			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, VoxelGeneratorFunc generator);
-			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, VoxelMapGeneratorFunc voxelMapGenerator);
+			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, VoxelMapGeneratorFunc voxelMapGenerator, VoxelTestFunc voxelTester);
 
 			void drawAll();
 

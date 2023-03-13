@@ -26,14 +26,33 @@ uniform vec3 viewPos;
 //uniform Material material;
 uniform Light light;
 
-Material material = Material(
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.0f, 1.0f, 0.0f),
-    vec3(0.1f, 0.1f, 0.1f),
-    32.0f
+Material materials[] = Material[](
+    //0 - Default / Error
+    Material(
+        vec3(0.0f, 0.0f, 0.0f),
+        vec3(0.0f, 0.0f, 0.0f),
+        vec3(0.1f, 0.1f, 0.1f),
+        32.0f
+    ),
+    //1 - Grass
+    Material(
+        vec3(0.0f, 1.0f, 0.0f),
+        vec3(0.0f, 1.0f, 0.0f),
+        vec3(0.1f, 0.1f, 0.1f),
+        32.0f
+    ),
+    //2 - Dirt
+    Material(
+        vec3(0.819f, 0.466f, 0.263f),
+        vec3(0.819f, 0.466f, 0.263f),
+        vec3(0.1f, 0.1f, 0.1f),
+        32.0f
+    )
 );
 
 void main() {
+
+    Material material = materials[int(round(Id))];
 
     // ambient
     vec3 ambient = light.ambient * material.ambient;
@@ -54,8 +73,5 @@ void main() {
         
     vec3 result = ambient + diffuse + specular;
     outFragColor = vec4(result, 1.0);
-
-
-    //outFragColor = vec4(0.5);
 
 }

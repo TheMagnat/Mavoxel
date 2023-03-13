@@ -62,13 +62,14 @@ namespace mav {
 			Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize);
 
 			void generateVoxels(VoxelGeneratorFunc generator);
-			void generateVoxels(VoxelMap& voxels);
+			void generateVoxels(VoxelMap& voxels, VoxelTestFunc voxelTester);
 			void generateVertices();
 
 			/**
-			 * Reeturn false if nothing found, true if another voxel was found or if out of bound.
+			 * Reeturn 0 if nothing found, 1 if another voxel was found and 2 if out of bound.
 			*/
-			bool findVoxel(glm::vec3 const& position);
+			int findVoxel(glm::vec3 const& position) const;
+			int findVoxel(int x, int y, int z) const;
 
 			//OpenGL
 			void graphicUpdate();

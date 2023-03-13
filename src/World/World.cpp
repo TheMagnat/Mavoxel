@@ -36,7 +36,7 @@ namespace mav {
 
 	}
 
-	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, VoxelMapGeneratorFunc voxelMapGenerator){
+	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, VoxelMapGeneratorFunc voxelMapGenerator, VoxelTestFunc voxelTester){
 
 		size_t newChunkIndex = allChunk_.size();
 
@@ -45,10 +45,12 @@ namespace mav {
 
 		Chunk* currentChunkPtr = allChunk_.back().get();
 
-		auto rez = Global::threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ, voxelMapGenerator](){
+		auto rez = Global::threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ, voxelMapGenerator, voxelTester](){
 			
+			VoxelMap voxelMap = voxelMapGenerator(chunkPosX, chunkPosY, chunkPosZ);
+
 			std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-			currentChunkPtr->generateVoxels( voxelMapGenerator(chunkPosX, chunkPosY, chunkPosZ) );
+			currentChunkPtr->generateVoxels( voxelMap, voxelTester );
 			std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> fsec = end - begin;
 			std::cout << "Time difference (generateVoxels) = " << fsec.count() << "s" << std::endl;

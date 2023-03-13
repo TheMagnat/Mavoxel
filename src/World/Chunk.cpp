@@ -77,8 +77,8 @@ namespace mav{
 
 	}
 
-	//TODO: Aussi recevoir le generator pour les côtés du chunk
-	void Chunk::generateVoxels(VoxelMap& voxelsMap) {
+	//TODO: Voir si on peut changer cette façon de faire
+	void Chunk::generateVoxels(VoxelMap& voxelsMap, VoxelTestFunc voxelTester) {
 		
 		// Move voxelMap and prepare indices size
 		voxels_.voxelMap = std::move(voxelsMap);
@@ -98,16 +98,31 @@ namespace mav{
 					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
 
 					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
-					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), 0, voxelSize_);
+					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), voxels_.voxelMap[x][y][z], voxelSize_);
 
 					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
 
-						glm::vec3 positionToCheck = glm::vec3(x, y, z);
-						positionToCheck[Chunk::faceToNeighborOffset[faceIndex].first] += Chunk::faceToNeighborOffset[faceIndex].second;
+						//TODO: On a observé un gain de temps au passage de glm::vec3 à utiliser des entiers direct. Chercher des endroits où on peut optimiser pareil
+						int foundVoxel = findVoxel(
+								x + (Chunk::faceToNeighborOffset[faceIndex].first == 0) * Chunk::faceToNeighborOffset[faceIndex].second,
+								y + (Chunk::faceToNeighborOffset[faceIndex].first == 1) * Chunk::faceToNeighborOffset[faceIndex].second,
+								z + (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second
+						);
+						// If the positions are out of bound, test with the voxelTester function
+						
+						//TODO: Rendre ça paramétrable
+						if (true) {
+							if (foundVoxel == 2) {
+								foundVoxel = voxelTester(
+									xPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 0) * Chunk::faceToNeighborOffset[faceIndex].second,
+									yPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 1) * Chunk::faceToNeighborOffset[faceIndex].second,
+									zPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second
+								);
+							}
+						}
 
-						bool foundVoxel = findVoxel(positionToCheck);
-						if(foundVoxel) {
+						if(foundVoxel == 1) {
 							voxels_.data.back().setFaceState(faceIndex, false);							
 						}
 
@@ -120,11 +135,18 @@ namespace mav{
 
 	}
 
-	bool Chunk::findVoxel(glm::vec3 const& position) {
+	int Chunk::findVoxel(glm::vec3 const& position) const {
 
-		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return false;
+		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return 2;
 
 		return voxels_.voxelMap[position.x][position.y][position.z] != 0;
+	}
+
+	int Chunk::findVoxel(int x, int y, int z) const {
+
+		if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_) return 2;
+
+		return voxels_.voxelMap[x][y][z] != 0;
 	}
 
 	void Chunk::generateVertices() {
