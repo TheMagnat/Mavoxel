@@ -1,25 +1,25 @@
 
-#include <Mesh/Voxel.hpp>
+#include <Mesh/DebugVoxel.hpp>
 
 #include <Core/Global.hpp>
 
 namespace mav {
 
-	Voxel::Voxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
+	DebugVoxel::DebugVoxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
         : Mesh(shaderPtr, environment, material, size, position) {}
 
-	void Voxel::init(){
+	void DebugVoxel::init(){
 		vao_.init(true);
         generateVertices();
         updateVAO();
 	}
 
-    void Voxel::generateVertices(){
+    void DebugVoxel::generateVertices(){
 
         size_t nbOfData = 9;
 
         size_t verticesNb = 6*4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
-        indicesNb_ = 6*6; //Number of face * number of triangle * number of vertice per triangle
+        indicesNb_ = 6*4*2; //Number of face * number of line * number of vertice per line
 
         vertices_.resize(verticesNb);
         indices_.resize(indicesNb_);
@@ -103,26 +103,85 @@ namespace mav {
 
             //Each face have 6 indices
             //First triangle
-            indices_[i*6 + 0] = i*4 + 0;
-            indices_[i*6 + 1] = i*4 + 1;
-            indices_[i*6 + 2] = i*4 + 3;
-            
-            //Second triangle
-            indices_[i*6 + 3] = i*4 + 2;
-            indices_[i*6 + 4] = i*4 + 3;
-            indices_[i*6 + 5] = i*4 + 1;
+            indices_[i*8 + 0] = i*4 + 0;
+            indices_[i*8 + 1] = i*4 + 1;
+
+            indices_[i*8 + 2] = i*4 + 1;
+            indices_[i*8 + 3] = i*4 + 2;
+
+            indices_[i*8 + 4] = i*4 + 2;
+            indices_[i*8 + 5] = i*4 + 3;
+
+            indices_[i*8 + 6] = i*4 + 3;
+            indices_[i*8 + 7] = i*4 + 0;
 
         }
 
-        indicesNb_ = indices_.size();
     }
 
-    void Voxel::updateVAO(){
+    void DebugVoxel::updateVAO(){
 
         std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {3}};
 
 		vao_.setAll(vertices_, 9, allAttribute, indices_);
     }
 
+    void DebugVoxel::draw(){
+
+		glBindVertexArray(vao_.get());
+		
+
+		//SET LE SHADER
+		shaderPtr_->use();
+    
+		glm::mat4 model = glm::mat4(1.0f);
+        model = model * translationMatrix_;
+        //model = glm::rotate(model, 45.0f, glm::vec3(0.0f, 1.0f, 1.0f));
+		//model = model * rotationMat_;
+		model = glm::scale(model, glm::vec3(size));
+
+
+		shaderPtr_->setMat4("model", model);
+		shaderPtr_->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
+
+		////TOUT LES NEED
+		shaderPtr_->use();
+
+		shaderPtr_->setVec3("material.ambient", material.ambient);
+		shaderPtr_->setVec3("material.diffuse", material.diffuse);
+		shaderPtr_->setVec3("material.specular", material.specular);
+		shaderPtr_->setFloat("material.shininess", material.shininess);
+
+		shaderPtr_->setVec3("light.ambient",  environment_->sun->material.ambient);
+		shaderPtr_->setVec3("light.diffuse",  environment_->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
+		shaderPtr_->setVec3("light.specular", environment_->sun->material.specular);
+
+		shaderPtr_->setVec3("light.position", environment_->sun->getPosition());
+
+		// shaderPtr_->setFloat("light.constant",  1.0f);
+		// shaderPtr_->setFloat("light.linear",    0.09f);
+		// shaderPtr_->setFloat("light.quadratic", 0.032f);
+
+
+		//shaderPtr_->setVec3("light.position", glm::vec3(0, 50, 100));
+
+
+
+		//Calcule camera
+
+		glm::mat4 view(environment_->camera->GetViewMatrix());
+		//glm::mat4 view(glm::lookAt(cameraPtr_->Position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+
+		shaderPtr_->setMat4("view", view);
+
+		//Position de la cam
+		shaderPtr_->setVec3("viewPos", environment_->camera->Position);
+
+		shaderPtr_->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 2000.0f));
+
+
+		glDrawElements(GL_LINES, (int)indices_.size(), GL_UNSIGNED_INT, 0);
+
+	}
 
 }

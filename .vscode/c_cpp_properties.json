@@ -17,7 +17,8 @@
         {
             "name": "Windows",
             "includePath": [
-                "${workspaceFolder}/src/",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/app",
                 "C:\\libs\\headers"
             ],
             "defines": [],

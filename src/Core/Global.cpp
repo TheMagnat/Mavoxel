@@ -9,4 +9,11 @@ namespace mav {
 
 	ThreadPool Global::threadPool(4);
 
+
+	#ifndef NDEBUG
+
+		Shader Global::debugShader = Shader();
+
+	#endif
+
 }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1...3.26)
+cmake_minimum_required(VERSION 3.16...3.26)
 
 project(
     Mavoxel
@@ -33,8 +33,9 @@ elseif ( APPLE )
 
 endif ( MSVC )
 
-
-#include(FetchContent)
+## Extern libs and headers
+link_directories(${LIB_PATH})
+include_directories(${LIB_HEADERS_PATH})
 
 
 message("Mavoxel Arch: ${CMAKE_SYSTEM_PROCESSOR}") 
@@ -42,4 +43,5 @@ message("Mavoxel Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 option(MAIN_NOISE "Build noise main" OFF)
 
 
-add_subdirectory(src output)
+add_subdirectory(src Mavoxel)
+add_subdirectory(app App)

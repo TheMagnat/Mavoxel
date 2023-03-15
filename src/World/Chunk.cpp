@@ -25,11 +25,21 @@ namespace mav{
 
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize)
-		: state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world) {
+		: Drawable(true, 7, {{3}, {3}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world)
+#ifndef NDEBUG
+		, chunkSides(&Global::debugShader, world->environment, {
+			{0.1f, 0.1f, 0.1f},
+			{0.5f, 0.5f, 0.5f},
+			{1.0f, 1.0f, 1.0f}
+		}, size*voxelSize, glm::vec3((posX*size - 0.5)*voxelSize, (posY*size - 0.5)*voxelSize, (posZ*size - 0.5)*voxelSize))
+#endif
+		{
 
-		vao_.init(true);
+			#ifndef NDEBUG
+				chunkSides.init();
+    		#endif
 
-	}
+		}
 
 	void Chunk::generateVoxels(VoxelGeneratorFunc generator) {
 
@@ -78,10 +88,10 @@ namespace mav{
 	}
 
 	//TODO: Voir si on peut changer cette façon de faire
-	void Chunk::generateVoxels(VoxelMap& voxelsMap, VoxelTestFunc voxelTester) {
+	void Chunk::generateVoxels(const VoxelMapGenerator * voxelMapGenerator) {
 		
 		// Move voxelMap and prepare indices size
-		voxels_.voxelMap = std::move(voxelsMap);
+		voxels_.voxelMap = voxelMapGenerator->generate(posX_, posY_, posZ_);
 		voxels_.initializeIndices(size_);
 
 		// Calculate the coordinates of each points
@@ -114,7 +124,7 @@ namespace mav{
 						//TODO: Rendre ça paramétrable
 						if (true) {
 							if (foundVoxel == 2) {
-								foundVoxel = voxelTester(
+								foundVoxel = voxelMapGenerator->isIn(
 									xPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 0) * Chunk::faceToNeighborOffset[faceIndex].second,
 									yPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 1) * Chunk::faceToNeighborOffset[faceIndex].second,
 									zPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second
@@ -177,15 +187,8 @@ namespace mav{
 
 	}
 
-	void Chunk::graphicUpdate(){
-
-        std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {1}};
-
-		vao_.setAll(vertices_, 7, allAttribute, indices_);
-    }
-
 	void Chunk::draw(){
-
+		glDisable(GL_CULL_FACE);
 		glBindVertexArray(vao_.get());
 		
 
@@ -244,6 +247,17 @@ namespace mav{
 
 
 		glDrawElements(GL_TRIANGLES, (int)indices_.size(), GL_UNSIGNED_INT, 0);
+
+
+		#ifndef NDEBUG
+			
+			glDisable(GL_CULL_FACE);
+			// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			chunkSides.draw();
+
+			glEnable(GL_CULL_FACE);
+		
+		#endif
 
 
 	}

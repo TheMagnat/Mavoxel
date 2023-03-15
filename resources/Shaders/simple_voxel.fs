@@ -47,6 +47,13 @@ Material materials[] = Material[](
         vec3(0.819f, 0.466f, 0.263f),
         vec3(0.1f, 0.1f, 0.1f),
         32.0f
+    ),
+    //3 - Stone
+    Material(
+        vec3(0.7176f, 0.6901f, 0.6117f),
+        vec3(0.7176f, 0.6901f, 0.6117f),
+        vec3(0.1f, 0.1f, 0.1f),
+        32.0f
     )
 );
 

@@ -36,17 +36,20 @@ you can use a totally different main file.
 #include <iostream>
 #include <chrono>
 
-#include <Helper/ThreadPool.hpp>
+#include <Generator/VoxelMapGenerator.hpp>
+
+
 
 // Parameters
 #define VERT_LEN 700
 #define VERT_ROW 700
 
-float voxelSize = 10.0f;
+float voxelSize = 1.0f;
 size_t chunkSize = 64;
 
 //TEMPO:
-int nbChunkPerAxis = 10;
+int nbChunkPerAxis = 3;
+bool soloChunk = false;
 
 
 //DECLARE FUNC
@@ -80,7 +83,7 @@ static mav::Material sunMaterial {
 };
 
 static mav::World myWorld(&myShader, &environment, chunkSize, voxelSize);
-static mav::Voxel myVoxel(&myShader, &environment, grassMaterial, 100);
+//static mav::Voxel myVoxel(&myShader, &environment, grassMaterial, 100);
 static mav::LightVoxel sun(&sunShader, &environment, sunMaterial, 50);
 //static mav::Plane myPlane(&myShader, &myCam, 100);
 
@@ -89,6 +92,8 @@ static mav::LightVoxel sun(&sunShader, &environment, sunMaterial, 50);
 float lastX = mav::Global::width / 2.0f;
 float lastY = mav::Global::height / 2.0f;
 bool firstMouse = true;
+
+
 
 void mouseMoving(double xpos, double ypos){
     if(firstMouse){
@@ -116,94 +121,8 @@ void key_callback(int key, int scancode, int action, int mods){
 
 }
 
-auto perlinGenerator = FastNoise::New<FastNoise::Perlin>();
-// siv::PerlinNoise test(seed);
-
-size_t seed = 0;
-inline bool testIfVoxelIn(float x, float y, float z) {
-    
-    // auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
-    // float testValue = fnFractal->GenSingle2D(1.f, 2.f, 10);
-
-    // auto gen = FastNoise::New<FastNoise::Perlin>();
-
-    // float testValue = gen->GenSingle2D(x, z, seed);
-    // float testValue_2 = gen->GenSingle2D(x/100.0, z/100.0, seed);
-    // float testValue_3 = gen->GenSingle2D(x/100.0, z/100.0, seed) * 32;
-
-    // auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
-    auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
-    fnFractal->SetSource(perlinGenerator);
-    fnFractal->SetOctaveCount(9);
-
-    float factor = 400.0f;
-
-    return fnFractal->GenSingle3D(x/factor, y/factor, z/factor, seed) >= 0.0f;
-}
-
-std::vector<std::vector<std::vector<int>>> generateVoxelMap(float xGlobal, float yGlobal, float zGlobal) {
-
-    std::vector<std::vector<std::vector<int>>> output;
 
 
-    float positionOffsets = - ((chunkSize) / 2.0f) * voxelSize;
-
-    output.resize(chunkSize);
-    for (size_t x = 0; x < chunkSize; ++x) {
-
-        output[x].resize(chunkSize);
-        for (int y = chunkSize - 1; y >= 0; --y) {
-
-            output[x][y].resize(chunkSize);
-            for (size_t z = 0; z < chunkSize; ++z) {
-
-                float xPos = (x * voxelSize) + positionOffsets + (xGlobal * chunkSize * voxelSize);
-                float yPos = (y * voxelSize) + positionOffsets + (yGlobal * chunkSize * voxelSize);
-                float zPos = (z * voxelSize) + positionOffsets + (zGlobal * chunkSize * voxelSize);
-
-                //float testValue = perlinGenerator->GenSingle2D(xPos/factor, zPos/factor, seed);
-                bool isIn = testIfVoxelIn(xPos, yPos, zPos);
-
-                //if (yPos < testValue * 32.0f)
-                if (isIn) {
-                    
-                    //TODO: Gérer le cas du début
-                    if (y == chunkSize - 1) {
-                        output[x][y][z] = 1;
-                    }
-                    else {
-                        int upperVoxelId = output[x][y+1][z];
-                        output[x][y][z] = upperVoxelId + 1;
-
-                        if(upperVoxelId > 2) output[x][y+1][z] = 2;
-                    }
-
-                }
-                else {
-                    output[x][y][z] = 0;
-
-                    //TODO: Améliorer la boucle entière pour la rendre plus propre/opti
-                    if (y != chunkSize - 1) {
-                        if(output[x][y+1][z] > 2) output[x][y+1][z] = 2;
-                    }
-
-                }
-
-            }
-        }
-    }
-
-    //Corect last y level
-    for (size_t x = 0; x < chunkSize; ++x) {
-        for (size_t z = 0; z < chunkSize; ++z) {
-            if (output[x][0][z] > 2)
-                output[x][0][z] = 2;
-        }
-    }
-
-    return output;
-
-}
 
 void input(float deltaTime){
 
@@ -233,19 +152,21 @@ void mainGraphicLoop(float elapsedTime){
     //
 
     //Loading phase
-    myWorld.updateReadyChunk(3);
+    myWorld.updateReadyChunk(4);
 
     //Logic phase
 	input(elapsedTime);
     
-    // sun.setPosition(300.f, 400.f, 100.0f); // Simulate a sun rotation
-    // sun.setPosition(0.f, 0.f, 0.0f); // Simulate a sun rotation
+    sun.setPosition(300.f, 400.f, 100.0f); // Fix position
+    // sun.setPosition(0.f, 0.f, 0.0f); // Center position
     // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + myCam.Position.x, sin(tempoTotalTime/5.0f) * 400.f + myCam.Position.y, 0.0f + myCam.Position.z); // Simulate a sun rotation
-    // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f, sin(tempoTotalTime/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
+    //sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f, sin(tempoTotalTime/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
     sun.setPosition(myCam.Position.x, myCam.Position.y, myCam.Position.z); // Light on yourself
 
     //Drawing phase
     //glClearColor(0.5, 0.5, 0.5, 1);
+    glClearColor(0.5294f, 0.8078f, 0.9216f, 1);
+    
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -257,13 +178,17 @@ void mainGraphicLoop(float elapsedTime){
 
     sun.draw();
 
-    //std::cout << "Position = x: " << myCam.Position.x << " y: " << myCam.Position.y << " z: " << myCam.Position.z << std::endl;
+    std::cout << "Position = x: " << myCam.Position.x << " y: " << myCam.Position.y << " z: " << myCam.Position.z << std::endl;
 
 }
 
 int main(int argc, char const *argv[]){
 
 	srand(time(NULL));
+
+    #ifndef NDEBUG
+        mav::Global::debugShader.load("Shaders/basic_color.vs", "Shaders/sun_color.fs");
+    #endif
 
     //Init shaders
 	myShader.load("Shaders/simple_voxel.vs", "Shaders/simple_voxel.fs");
@@ -274,6 +199,7 @@ int main(int argc, char const *argv[]){
     environment.camera = &myCam;
 
     //Generators
+    ClassicVoxelMapGenerator generator(0, chunkSize, voxelSize);
 
 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
@@ -281,14 +207,34 @@ int main(int argc, char const *argv[]){
     //Init world
     mav::SimpleVoxel::generateGeneralFaces(voxelSize);
 
-	//myWorld.createChunk(0, 0, 0, generateVoxelMap, testIfVoxelIn);
+    if  (soloChunk) {
+        myWorld.createChunk(0, 0, 0, &generator);
+    }
+    else {
 
-    for (int x = 0; x <= nbChunkPerAxis; ++x) {
-        for (int y = 0; y <= nbChunkPerAxis; ++y) {
-            for (int z = 0; z <= nbChunkPerAxis; ++z) {
-                myWorld.createChunk(x, y, z, generateVoxelMap, testIfVoxelIn);
+        glm::vec3 center(0, 0, 0);
+        std::vector<glm::vec3> allCoordinateToRender;
+
+        // The state here notify the loop if it should add 1 to the value or not
+        for (int x = 0, xState = 1; x <= nbChunkPerAxis; x = -1 * x + xState, xState = (xState+1)%2) {
+            for (int y = 0, yState = 1; y <= nbChunkPerAxis; y = -1 * y + yState, yState = (yState+1)%2) {
+                for (int z = 0, zState = 1; z <= nbChunkPerAxis; z = -1 * z + zState, zState = (zState+1)%2) {
+                    allCoordinateToRender.emplace_back(x, y, z);
+                }
             }
         }
+
+        // Sort the coordinates vector to have the nearest to the camera first
+        std::sort(allCoordinateToRender.begin(), allCoordinateToRender.end(),
+            [&center](glm::vec3 const& coordA, glm::vec3 const& coordB) -> bool {
+                return glm::distance(coordA, center) < glm::distance(coordB, center);
+            }
+        );
+
+        for(glm::vec3 const& coordinate : allCoordinateToRender) {
+            myWorld.createChunk(coordinate.x, coordinate.y, coordinate.z, &generator);
+        }
+
     }
     
 
@@ -302,13 +248,16 @@ int main(int argc, char const *argv[]){
 
     std::chrono::duration<float> fsec = end - begin;
 
+
     std::cout << "Time difference = " << fsec.count() << "s" << std::endl;
 
-    myVoxel.init();
+
+    //myVoxel.init();
     sun.init();
 
     //Sun
     sun.setPosition(0, 200, 0);
+
 
 
 

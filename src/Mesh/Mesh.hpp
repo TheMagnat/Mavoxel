@@ -12,12 +12,11 @@
 
 #include <vector>
 
-
 namespace mav {
 
     struct Environment;
-
-
+    
+    //TODO: Utiliser drawable
     class Mesh {
 
         public:

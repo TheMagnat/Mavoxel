@@ -1,4 +1,7 @@
 
+#pragma once
+
+
 #include <functional>
 
 namespace mav {
@@ -9,4 +12,14 @@ namespace mav {
     
     using VoxelMap = std::vector<std::vector<std::vector<int>>>;
     using VoxelMapGeneratorFunc = std::function<VoxelMap(float startX, float startY, float startZ)>;
+
+
+    class VoxelMapGenerator {
+
+        public:
+            virtual bool isIn(float x, float y, float z) const = 0;
+            virtual VoxelMap generate(float xGlobal, float yGlobal, float zGlobal) const = 0;
+
+    };
+
 }

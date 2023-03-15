@@ -4,6 +4,7 @@
 #include <World/World.hpp>
 #include <World/SimpleVoxel.hpp>
 #include <World/Generator.hpp>
+#include <GLObject/Drawable.hpp>
 
 #include <GLObject/GLObject.hpp>
 
@@ -11,6 +12,12 @@
 #include <unordered_map>
 #include <cstddef>
 #include <functional>
+
+#ifndef NDEBUG
+
+#include <Mesh/DebugVoxel.hpp>
+
+#endif
 
 namespace mav {
 
@@ -53,7 +60,7 @@ namespace mav {
 
 	class World;
 	
-	class Chunk{
+	class Chunk : public Drawable {
 
 		static std::array<std::pair<int, int>, 6> faceToNeighborOffset;
 		static std::array<uint8_t, 6> faceToInverseFace;
@@ -62,7 +69,7 @@ namespace mav {
 			Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize);
 
 			void generateVoxels(VoxelGeneratorFunc generator);
-			void generateVoxels(VoxelMap& voxels, VoxelTestFunc voxelTester);
+			void generateVoxels(const VoxelMapGenerator * voxelMapGenerator);
 			void generateVertices();
 
 			/**
@@ -72,13 +79,12 @@ namespace mav {
 			int findVoxel(int x, int y, int z) const;
 
 			//OpenGL
-			void graphicUpdate();
 			void draw();
 
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
 			int state;
 			
-		private:
+		public:
 			int posX_;
 			int posY_;
 			int posZ_;
@@ -87,17 +93,17 @@ namespace mav {
 			float voxelSize_;
 
 			//Voxels informations
-			VoxelMatrice voxels_;			
-
-			//OpenGL
-			VAO vao_;
-            std::vector<float> vertices_;
-
-            size_t indicesNb_;
-            std::vector<int> indices_;
+			VoxelMatrice voxels_;
 
 			//Reference to the world
 			World* world_;
+
+
+			#ifndef NDEBUG
+
+				DebugVoxel chunkSides;
+
+    		#endif
 	};
 
 }
