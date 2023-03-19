@@ -7,7 +7,9 @@ Mavoxel aims to be a complete game engine to produce voxel-based games
 
 ### Prerequisites
 
-To compile this project, you need have installed this library :
+You need to have cmake installed.
+
+To compile this project, you must install these libraries :
 
 - [GLFW](https://www.glfw.org/)
 
@@ -15,20 +17,33 @@ To compile this project, you need have installed this library :
 
 - [GLM](https://glm.g-truc.net/)
 
+- [FastNoise2]([https://glm.g-truc.net/](https://github.com/Auburn/FastNoise2))
+
 ### Installing
 
-#### Linux and Macos
+### Generate project files
 
-Just run make
+Open a terminal at the root of the project.
+Run this command to create project files :
 
 ```
-make
+cmake -S . -B build
 ```
 
+### Compile project
+Using the same terminal as above, run this command to compile the project :
+
+```
+cmake --build build --config Release
+```
+
+You can also change the build type to Debug instead of Release.
+
+You will find the generated static library in build/Mavoxel/{build type}.
 
 ## Run
 
-Execute the executable make created to start the exemple file
+You can run the application generated in build/App/{build type}.
 
 
 ## Author
