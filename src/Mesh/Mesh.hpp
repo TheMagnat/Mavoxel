@@ -30,7 +30,7 @@ namespace mav {
             void setPosition(float x, float y, float z);
             void updatePosition();
 
-            glm::vec3 getPosition();
+            glm::vec3 const& getPosition() const;
 
             virtual void draw();
 

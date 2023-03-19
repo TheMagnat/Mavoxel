@@ -110,7 +110,7 @@ namespace mav {
 
 	inline float positiveModulo (float a, float b) { return a >= 0 ? fmod(a, b) : fmod( fmod(a, b) + b, b); }
 
-	const SimpleVoxel* World::CastRay(glm::vec3 startPosition, glm::vec3 direction, size_t maxNumberOfVoxels) const {
+	const SimpleVoxel* World::CastRay(glm::vec3 const& startPosition, glm::vec3 const& direction, size_t maxNumberOfVoxels) const {
 
 		glm::vec3 dir = glm::normalize(direction);
 

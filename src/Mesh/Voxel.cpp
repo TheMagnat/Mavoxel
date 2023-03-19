@@ -71,7 +71,7 @@ namespace mav {
             float secondValue = faceAlternateValues[i].second[0];
             float firstValue = faceAlternateValues[i].second[1];
 
-            //Indice start for each face (face index * number of vertice per face * number of information per vertice)
+            //Index start for each face (face index * number of vertice per face * number of information per vertice)
             size_t faceOffset = i*4*nbOfData;
 
             for(size_t j = 0; j < 4; ++j){

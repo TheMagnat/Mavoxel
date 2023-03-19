@@ -9,8 +9,8 @@ namespace mav {
 
     struct Environment {
 
-        Mesh* sun;
-        Camera* camera;
+        const Mesh* sun;
+        const Camera* camera;
 
     };
 

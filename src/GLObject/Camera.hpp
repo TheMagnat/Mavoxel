@@ -46,10 +46,11 @@ public:
     // Constructor with scalar values
     Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
     // Returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    glm::mat4 GetViewMatrix();
+    glm::mat4 GetViewMatrix() const;
 
     // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-    void ProcessKeyboard(Camera_Movement direction, float deltaTime);
+    void ProcessKeyboard(glm::vec3 velocity, float deltaTime);
+    void ProcessKeyboard(Camera_Movement direction, float velocity, float deltaTime);
 
     // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);

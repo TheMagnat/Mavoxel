@@ -30,7 +30,7 @@ namespace mav {
         translationMatrix_ = glm::translate(position);
     }
 
-    glm::vec3 Mesh::getPosition(){
+    glm::vec3 const& Mesh::getPosition() const{
         return position;
     }
 

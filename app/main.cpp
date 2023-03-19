@@ -42,6 +42,8 @@ you can use a totally different main file.
 
 #include <Collision/AABB.hpp>
 
+#include <Entity/Player.hpp>
+
 // Parameters
 #define VERT_LEN 700
 #define VERT_ROW 700
@@ -51,7 +53,7 @@ size_t chunkSize = 64;
 
 //TEMPO:
 int nbChunkPerAxis = 3;
-bool soloChunk = false;
+bool soloChunk = true;
 
 
 //DECLARE FUNC
@@ -70,8 +72,6 @@ static mav::Shader sunShader;
 
 static mav::Environment environment;
 
-static mav::Camera myCam(glm::vec3(0, 0, 0));
-
 static mav::Material grassMaterial {
     {0.0f, 1.0f, 0.0f},
     {0.0f, 1.0f, 0.0f},
@@ -85,6 +85,8 @@ static mav::Material sunMaterial {
     {1.0f, 1.0f, 1.0f}
 };
 
+
+static mav::Player player(glm::vec3(0, 0, 0));
 static mav::World myWorld(&myChunkShader, &environment, chunkSize, voxelSize);
 static mav::Voxel myVoxel(&myVoxelShader, &environment, grassMaterial, voxelSize);
 static mav::LightVoxel sun(&sunShader, &environment, sunMaterial, 50);
@@ -98,20 +100,22 @@ bool firstMouse = true;
 
 
 
-void mouseMoving(double xpos, double ypos){
-    if(firstMouse){
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
+void mouseMoving(double xPos, double yPos){
+    // if(firstMouse){
+    //     lastX = xPos;
+    //     lastY = yPos;
+    //     firstMouse = false;
+    // }
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // inversé car va de bas en haut
+    // float xOffset = xPos - lastX;
+    // float yOffset = lastY - yPos; // inversé car va de bas en haut
 
-    lastX = xpos;
-    lastY = ypos;
+    // lastX = xPos;
+    // lastY = yPos;
 
-    myCam.ProcessMouseMovement(xoffset, yoffset);
+    // myCam.ProcessMouseMovement(xOffset, yOffset);
+
+    player.updateCamera(xPos, yPos);
 }
 
 
@@ -124,16 +128,6 @@ void key_callback(int key, int scancode, int action, int mods){
 
     if(key == GLFW_KEY_E && action == GLFW_PRESS){
         
-        const mav::SimpleVoxel* foundVoxel = myWorld.CastRay(myCam.Position, myCam.Front);
-
-        if ( foundVoxel != nullptr) {
-            std::cout << "FOUND A VOXEL" << std::endl;
-            myVoxel.setPosition(foundVoxel->getPosition());
-            myVoxel.updatePosition();
-        }
-        else std::cout << "NOTHING.... : " << action << std::endl;
-
-
     }
 
 }
@@ -143,26 +137,30 @@ void key_callback(int key, int scancode, int action, int mods){
 
 void input(float deltaTime) {
 
-	if (myWindow.isPressed(GLFW_KEY_W)){
-        myCam.ProcessKeyboard(mav::FORWARD, deltaTime);
-        // const mav::SimpleVoxel* collisionVoxel = myWorld.getVoxel(myCam.Position.x, myCam.Position.y, myCam.Position.z);
+	if (myWindow.isPressed(GLFW_KEY_W)) {
+        player.addVelocity(mav::Direction::FRONT, 75.0f, deltaTime);
+        //myCam.ProcessKeyboard(mav::FORWARD, deltaTime);
+        // const mav::SimpleVoxel* collisionVoxel = myWorld.getVoxel(myCam.Position.x, myCam.Position.y, myCam.Position.FRONT);
         // if (collisionVoxel) myCam.ProcessKeyboard(mav::BACKWARD, deltaTime);
     }
 
-    if (myWindow.isPressed(GLFW_KEY_S)){
-        myCam.ProcessKeyboard(mav::BACKWARD, deltaTime);
+    if (myWindow.isPressed(GLFW_KEY_S)) {
+        player.addVelocity(mav::Direction::FRONT, -75.0f, deltaTime);
+        //myCam.ProcessKeyboard(mav::BACKWARD, deltaTime);
         // const mav::SimpleVoxel* collisionVoxel = myWorld.getVoxel(myCam.Position.x, myCam.Position.y, myCam.Position.z);
         // if (collisionVoxel) myCam.ProcessKeyboard(mav::FORWARD, deltaTime);
     }
 
-    if (myWindow.isPressed(GLFW_KEY_A)){
-        myCam.ProcessKeyboard(mav::LEFT, deltaTime);
+    if (myWindow.isPressed(GLFW_KEY_A)) {
+        player.addVelocity(mav::Direction::RIGHT, -75.0f, deltaTime);
+        //myCam.ProcessKeyboard(mav::LEFT, deltaTime);
         // const mav::SimpleVoxel* collisionVoxel = myWorld.getVoxel(myCam.Position.x, myCam.Position.y, myCam.Position.z);
         // if (collisionVoxel) myCam.ProcessKeyboard(mav::RIGHT, deltaTime);
     }
 
-    if (myWindow.isPressed(GLFW_KEY_D)){
-        myCam.ProcessKeyboard(mav::RIGHT, deltaTime);
+    if (myWindow.isPressed(GLFW_KEY_D)) {
+        player.addVelocity(mav::Direction::RIGHT, 75.0f, deltaTime);
+        //myCam.ProcessKeyboard(mav::RIGHT, deltaTime);
         // const mav::SimpleVoxel* collisionVoxel = myWorld.getVoxel(myCam.Position.x, myCam.Position.y, myCam.Position.z);
         // if (collisionVoxel) myCam.ProcessKeyboard(mav::LEFT, deltaTime);
     }
@@ -183,8 +181,8 @@ void mainGraphicLoop(float elapsedTime){
 
     //Logic phase
 	input(elapsedTime);
-
-    const mav::SimpleVoxel* foundVoxel = myWorld.CastRay(myCam.Position, myCam.Front);
+    player.update(elapsedTime);
+    const mav::SimpleVoxel* foundVoxel = myWorld.CastRay(player.getCamera()->Position, player.getCamera()->Front);
 
     sun.setPosition(-800.f, 800.f, 0.f); // Fix position
     // sun.setPosition(0.f, 0.f, 0.0f); // Center position
@@ -197,8 +195,6 @@ void mainGraphicLoop(float elapsedTime){
     glClearColor(0.5294f, 0.8078f, 0.9216f, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    glm::vec3 newPos = myCam.Position + myCam.Front * 30.0f;
-
 
     // If we previously found a voxel 
     if ( foundVoxel != nullptr) {
@@ -238,7 +234,7 @@ int main(int argc, char const *argv[]){
 
     //Init environment
     environment.sun = &sun;
-    environment.camera = &myCam;
+    environment.camera = player.getCamera();
 
     //Generators
     ClassicVoxelMapGenerator generator(0, chunkSize, voxelSize);

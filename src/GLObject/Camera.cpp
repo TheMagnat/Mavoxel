@@ -15,22 +15,27 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
         updateCameraVectors();
 }
 
-glm::mat4 Camera::GetViewMatrix(){
+glm::mat4 Camera::GetViewMatrix() const {
     return glm::lookAt(Position, Position + Front, Up);
 }
 
-void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime){
-    float velocity = MovementSpeed * deltaTime;
+
+void Camera::ProcessKeyboard(glm::vec3 velocity, float deltaTime){
+    Position += velocity * deltaTime;
+}
+
+void Camera::ProcessKeyboard(Camera_Movement direction, float velocity, float deltaTime){
+    float velocityByTime = velocity * deltaTime;
     if (direction == FORWARD)
-    	Position += Front * velocity;
-        //Position += glm::vec3(Front.x * velocity, Position.y, Front.z * velocity);
+    	Position += Front * velocityByTime;
+        //Position += glm::vec3(Front.x * velocityByTime, Position.y, Front.z * velocityByTime);
     if (direction == BACKWARD)
-    	Position -= Front * velocity;
-        //Position -= glm::vec3(Front.x * velocity, Position.y, Front.z * velocity);
+    	Position -= Front * velocityByTime;
+        //Position -= glm::vec3(Front.x * velocityByTime, Position.y, Front.z * velocityByTime);
     if (direction == LEFT)
-        Position -= Right * velocity;
+        Position -= Right * velocityByTime;
     if (direction == RIGHT)
-        Position += Right * velocity;
+        Position += Right * velocityByTime;
 }
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch){

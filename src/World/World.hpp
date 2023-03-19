@@ -30,7 +30,8 @@ namespace mav {
 
 			// Collisions
 			const SimpleVoxel* getVoxel(float x, float y, float z) const;
-			const SimpleVoxel* CastRay(glm::vec3 startPosition, glm::vec3 direction, size_t maxNumberOfVoxels = 50) const;
+			//TODO: Récupérer l'information de la face toucher en plus du Voxel.
+			const SimpleVoxel* CastRay(glm::vec3 const& startPosition, glm::vec3 const& direction, size_t maxNumberOfVoxels = 50) const;
 
 
 			// Threaded
