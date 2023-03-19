@@ -6,7 +6,7 @@ namespace mav {
 
     //Static members
     std::array<uint8_t, 6> SimpleVoxel::verticesIndices = {0, 1, 3, 2, 3, 1};
-    std::array<std::vector<float>, 6> SimpleVoxel::generalfacesVertices = std::array<std::vector<float>, 6>();
+    std::array<std::vector<float>, 6> SimpleVoxel::generalFacesVertices = std::array<std::vector<float>, 6>();
 
     void SimpleVoxel::generateGeneralFaces(float voxelSize) {
 
@@ -38,17 +38,25 @@ namespace mav {
             {{0, 2}, {-1, -1}} //top
         };
 
-        size_t nbDataInVertices = 7; //3 positions, 3 normals, 1 id
+
+        static const std::vector<std::pair<float, float>> verticesTexturesPositions {
+            {0, 1},
+            {0, 0},
+            {1, 0},
+            {1, 1}
+        };
+
+        size_t nbDataInVertices = 3+3+2+1; //3 positions, 3 normals, 2 textures, 1 id
         size_t nbVerticesPerFace = 4 * nbDataInVertices; //number of vertices per face * number of information per vertice
 
         // Prepare faces size
-        for(std::vector<float>& face : generalfacesVertices){ face.resize(nbVerticesPerFace); }
+        for(std::vector<float>& face : generalFacesVertices){ face.resize(nbVerticesPerFace); }
 
-        float verticeLenght = 0.5f * voxelSize;
+        float verticesLength = 0.5f * voxelSize;
         for (size_t i = 0; i < 6; ++i) {
 
             //We will fill each face
-            std::vector<float>& currentFace = generalfacesVertices[i];
+            std::vector<float>& currentFace = generalFacesVertices[i];
 
             //We calculate the vertices
             size_t fixedIndex = faceFixedValue[i].first;
@@ -66,9 +74,9 @@ namespace mav {
                 size_t verticeOffset = j*nbDataInVertices;
 
                 //Position (Offset should be add after on copy)
-                currentFace[verticeOffset + fixedIndex]  = fixedValue * verticeLenght;
-                currentFace[verticeOffset + secondIndex] = secondValue * verticeLenght;
-                currentFace[verticeOffset + firstIndex]  = firstValue * verticeLenght;
+                currentFace[verticeOffset + fixedIndex]  = fixedValue * verticesLength;
+                currentFace[verticeOffset + secondIndex] = secondValue * verticesLength;
+                currentFace[verticeOffset + firstIndex]  = firstValue * verticesLength;
 
                 //Normals
                 currentFace[verticeOffset + 3 + 0] = 0;
@@ -76,8 +84,12 @@ namespace mav {
                 currentFace[verticeOffset + 3 + 2] = 0;
                 currentFace[verticeOffset + 3 + fixedIndex] = fixedValue;
 
+                //Textures
+                currentFace[verticeOffset + 6 + 0] = verticesTexturesPositions[j].first;
+                currentFace[verticeOffset + 6 + 1] = verticesTexturesPositions[j].second;
+
                 //id
-                currentFace[verticeOffset + 6 + 0] = 0; // Default value to set
+                currentFace[verticeOffset + 8 + 0] = 0; // Default value to set
 
                 //Here we change first value
                 if (j % 2 == 0) {
@@ -99,7 +111,7 @@ namespace mav {
 
     // Non static members
     SimpleVoxel::SimpleVoxel(glm::vec3 const& position, int id, float size)
-        : id_(id), size_(size), position_(position) {
+        : id_(id), size_(size), position_(position), boundingBox_(position, size) {
 
         //At the start all faces are not shown
         stateOfFaces_.fill(true);
@@ -117,7 +129,7 @@ namespace mav {
     //         face.resize(nbVerticesPerFace);
     //     }
 
-    //     float verticeLenght = 0.5f * size_;
+    //     float verticesLength = 0.5f * size_;
 
     //     std::vector<std::pair<size_t, float>> faceFixedValue {
     //         {1, -1}, //bottom
@@ -163,9 +175,9 @@ namespace mav {
     //             size_t verticeOffset = j*nbDataInVertices;
 
     //             //Position
-    //             currentFace[verticeOffset + fixedIndex]  = position_[fixedIndex] + fixedValue * verticeLenght;
-    //             currentFace[verticeOffset + secondIndex] = position_[secondIndex] + secondValue * verticeLenght;
-    //             currentFace[verticeOffset + firstIndex]  = position_[firstIndex] + firstValue * verticeLenght;
+    //             currentFace[verticeOffset + fixedIndex]  = position_[fixedIndex] + fixedValue * verticesLength;
+    //             currentFace[verticeOffset + secondIndex] = position_[secondIndex] + secondValue * verticesLength;
+    //             currentFace[verticeOffset + firstIndex]  = position_[firstIndex] + firstValue * verticesLength;
 
     //             //Normals
     //             currentFace[verticeOffset + 3 + 0] = 0;
@@ -197,7 +209,7 @@ namespace mav {
 
     //     static size_t nbDataInVertices = 7; //3 positions, 3 normals, 1 id
 
-    //     faces_[faceIndex] = SimpleVoxel::generalfacesVertices[faceIndex];
+    //     faces_[faceIndex] = SimpleVoxel::generalFacesVertices[faceIndex];
 
     //     // We will copy the face at faceIndex
     //     std::vector<float>& currentFace = faces_[faceIndex];
@@ -227,10 +239,10 @@ namespace mav {
 
     std::vector<float> SimpleVoxel::getFace(uint8_t faceIndex) const {
 
-        static size_t nbDataInVertices = 7; //3 positions, 3 normals, 1 id
+        static size_t nbDataInVertices = 3+3+2+1; //3 positions, 3 normals, 2 textures, 1 id
 
         // We will copy the face at faceIndex
-        std::vector<float> face = SimpleVoxel::generalfacesVertices[faceIndex];
+        std::vector<float> face = SimpleVoxel::generalFacesVertices[faceIndex];
 
 
         for(size_t j = 0; j < 4; ++j) {
@@ -244,7 +256,7 @@ namespace mav {
             face[verticeOffset + 2] += position_.z;
 
             //id
-            face[verticeOffset + 6 + 0] = id_;
+            face[verticeOffset + 8 + 0] = id_;
 
         }
 
@@ -260,4 +272,7 @@ namespace mav {
         return stateOfFaces_[faceIndex];
     }
 
+    glm::vec3 const& SimpleVoxel::getPosition() const {
+        return position_;
+    }
 }

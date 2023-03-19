@@ -3,7 +3,11 @@
 
 
 ClassicVoxelMapGenerator::ClassicVoxelMapGenerator(size_t seed, size_t chunkSize, float voxelSize)
-    : seed_(seed), chunkSize_(chunkSize), voxelSize_(voxelSize), perlinGenerator_(FastNoise::New<FastNoise::Perlin>()), fnFractal_(FastNoise::New<FastNoise::FractalFBm>()) {
+    : seed_(seed), chunkSize_(chunkSize), voxelSize_(voxelSize),
+      perlinGenerator_(FastNoise::New<FastNoise::Perlin>()),
+      simplexGenerator_(FastNoise::New<FastNoise::Simplex>()),
+      fnFractal_(FastNoise::New<FastNoise::FractalFBm>())
+{
     
     factor_ = 800.0f;
 
@@ -37,7 +41,7 @@ mav::VoxelMap ClassicVoxelMapGenerator::generate(float xGlobal, float yGlobal, f
     mav::VoxelMap output;
 
 
-    float positionOffsets = - ((chunkSize_) / 2.0f) * voxelSize_;
+    float positionOffsets = - ((chunkSize_ - 1) / 2.0f) * voxelSize_;
 
     output.resize(chunkSize_);
     for (size_t x = 0; x < chunkSize_; ++x) {
@@ -79,7 +83,8 @@ mav::VoxelMap ClassicVoxelMapGenerator::generate(float xGlobal, float yGlobal, f
                         output[x][y][z] = upperVoxelId + 1;
 
                         if(upperVoxelId > 5) output[x][y+1][z] = 3;
-                        else if(upperVoxelId > 2) output[x][y+1][z] = 2;
+                        else if(upperVoxelId > 1) output[x][y+1][z] = 2;
+                        else if(upperVoxelId > 0) output[x][y+1][z] = 1;
                     }
 
                 }
@@ -89,7 +94,8 @@ mav::VoxelMap ClassicVoxelMapGenerator::generate(float xGlobal, float yGlobal, f
                     //TODO: Améliorer la boucle entière pour la rendre plus propre/opti
                     if (y != chunkSize_ - 1) {
                         if(output[x][y+1][z] > 5) output[x][y+1][z] = 3;
-                        else if(output[x][y+1][z] > 2) output[x][y+1][z] = 2;
+                        else if(output[x][y+1][z] > 1) output[x][y+1][z] = 2;
+                        else if(output[x][y+1][z] > 0) output[x][y+1][z] = 1;
                     }
 
                 }
@@ -102,7 +108,8 @@ mav::VoxelMap ClassicVoxelMapGenerator::generate(float xGlobal, float yGlobal, f
     for (size_t x = 0; x < chunkSize_; ++x) {
         for (size_t z = 0; z < chunkSize_; ++z) {
             if (output[x][0][z] > 5) output[x][0][z] = 3;
-            else if (output[x][0][z] > 2) output[x][0][z] = 2;
+            else if (output[x][0][z] > 1) output[x][0][z] = 2;
+            else if (output[x][0][z] > 0) output[x][0][z] = 1;
         }
     }
 

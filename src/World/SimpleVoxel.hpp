@@ -1,7 +1,10 @@
+#pragma once
 
 #include <array>
 #include <vector>
 #include <glm/vec3.hpp>
+
+#include <Collision/AABB.hpp>
 
 namespace mav {
 
@@ -12,7 +15,7 @@ namespace mav {
             static std::array<uint8_t, 6> verticesIndices;
 
             // This array will contain the faces basics vertices
-            static std::array<std::vector<float>, 6> generalfacesVertices;
+            static std::array<std::vector<float>, 6> generalFacesVertices;
             static void generateGeneralFaces(float voxelSize);
 
             // Faces indexes in the faces array
@@ -25,20 +28,23 @@ namespace mav {
             //void generateFace(uint8_t faceIndex);
             //std::array<std::vector<float>, 6> const& getFaces() const;
 
+            // Faces informations
             std::vector<float> getFace(uint8_t faceIndex) const;
-
 
             void setFaceState(uint8_t faceIndex, bool state = true);
             bool getFaceState(uint8_t faceIndex) const;
+
+            // Getters
+            glm::vec3 const& getPosition() const;
 
         private:
             int id_;
             float size_;
 
+            AABB boundingBox_;
+
             glm::vec3 position_;
 
-            //TODO: Maybe delete ?
-            //std::array<std::vector<float>, 6> faces_;
             std::array<bool, 6> stateOfFaces_;
 
     };

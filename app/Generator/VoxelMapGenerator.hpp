@@ -26,6 +26,7 @@ class ClassicVoxelMapGenerator : public mav::VoxelMapGenerator {
         float factor_;
 
         FastNoise::SmartNode<FastNoise::Perlin> perlinGenerator_;
+        FastNoise::SmartNode<FastNoise::Simplex> simplexGenerator_;
         FastNoise::SmartNode<FastNoise::FractalFBm> fnFractal_;
 };
 

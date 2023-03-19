@@ -6,6 +6,7 @@ struct Material {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
+    
     float shininess;
 };
 
@@ -19,7 +20,7 @@ struct Light {
 
 in vec3 FragPos;
 in vec3 Normal;
-in vec3 FragColor;
+in vec2 TexPos;
 
 uniform vec3 viewPos;
 uniform Material material;

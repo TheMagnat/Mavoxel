@@ -110,5 +110,14 @@
 		"future": "cpp",
 		"ranges": "cpp",
 		"span": "cpp"
-	}
+	},
+	"cSpell.words": [
+		"AABB",
+		"GLFW",
+		"Mavoxel",
+		"perlin",
+		"vertice",
+		"voxel",
+		"voxels"
+	]
 }

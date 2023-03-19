@@ -20,6 +20,7 @@ struct Light {
 
 in vec3 FragPos;
 in vec3 Normal;
+in vec2 TexPos;
 in float Id;
 
 uniform vec3 viewPos;

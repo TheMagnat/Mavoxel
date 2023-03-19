@@ -16,7 +16,7 @@ namespace mav {
 
     void Voxel::generateVertices(){
 
-        size_t nbOfData = 9;
+        size_t nbOfData = 8;
 
         size_t verticesNb = 6*4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
         indicesNb_ = 6*6; //Number of face * number of triangle * number of vertice per triangle
@@ -25,7 +25,7 @@ namespace mav {
         indices_.resize(indicesNb_);
 
         glm::vec3 color(0, 1, 0);
-        float verticeLenght = 0.5f;
+        float verticesLength = 0.5f;
 
 
         std::vector<std::pair<size_t, float>> faceFixedValue {
@@ -50,6 +50,13 @@ namespace mav {
             {{2, 1}, {-1, 1}}, //left
             {{0, 2}, {-1, -1}} //top
         };
+
+        static const std::vector<std::pair<float, float>> verticesTexturesPositions {
+            {0, 1},
+            {0, 0},
+            {1, 0},
+            {1, 1}
+        };
         
         for (size_t i = 0; i < 6; ++i)
         {
@@ -73,9 +80,9 @@ namespace mav {
                 size_t verticeOffset = j*nbOfData;
 
                 //Position
-                vertices_[faceOffset + verticeOffset + fixedIndex] = fixedValue * verticeLenght;
-                vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticeLenght;
-                vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticeLenght;
+                vertices_[faceOffset + verticeOffset + fixedIndex] = fixedValue * verticesLength;
+                vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticesLength;
+                vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticesLength;
 
                 //Normals
                 vertices_[faceOffset + verticeOffset + 3 + 0] = 0;
@@ -83,10 +90,10 @@ namespace mav {
                 vertices_[faceOffset + verticeOffset + 3 + 2] = 0;
                 vertices_[faceOffset + verticeOffset + 3 + fixedIndex] = fixedValue;
 
-                //Color
-                vertices_[faceOffset + verticeOffset + 6 + 0] = color.r;
-                vertices_[faceOffset + verticeOffset + 6 + 1] = color.g;
-                vertices_[faceOffset + verticeOffset + 6 + 2] = color.b;
+                //Textures
+                vertices_[faceOffset + verticeOffset + 6 + 0] = verticesTexturesPositions[j].first;
+                vertices_[faceOffset + verticeOffset + 6 + 1] = verticesTexturesPositions[j].second;
+
 
                 //Here we change first value
                 if (j % 2 == 0) {
@@ -119,9 +126,9 @@ namespace mav {
 
     void Voxel::updateVAO(){
 
-        std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {3}};
+        std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {2}};
 
-		vao_.setAll(vertices_, 9, allAttribute, indices_);
+		vao_.setAll(vertices_, 8, allAttribute, indices_);
     }
 
 

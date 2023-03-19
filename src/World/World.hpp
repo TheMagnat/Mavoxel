@@ -1,7 +1,10 @@
 #pragma once
 
+#include <World/SimpleVoxel.hpp>
 #include <World/Chunk.hpp>
 #include <World/Generator.hpp>
+#include <World/CoordinatesHelper.hpp>
+
 
 #include <GLObject/Shader.hpp>
 #include <Environment/Environment.hpp>
@@ -21,11 +24,14 @@ namespace mav {
 		public:
 			World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize = 32, float voxelSize = 1);
 
-			//TODO: Ne plus utiliser que celle avec le generator mais s'en servir pour générer la VoxelMap
-			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, VoxelGeneratorFunc generator);
 			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator);
 
 			void drawAll();
+
+			// Collisions
+			const SimpleVoxel* getVoxel(float x, float y, float z) const;
+			const SimpleVoxel* CastRay(glm::vec3 startPosition, glm::vec3 direction, size_t maxNumberOfVoxels = 50) const;
+
 
 			// Threaded
 			void updateReadyChunk(size_t nbToUpdate = 1);
@@ -36,7 +42,8 @@ namespace mav {
 
 			std::vector<std::unique_ptr<Chunk>> allChunk_;
 
-			std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, size_t>>> chunkCoordToIndex_;
+			//std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, size_t>>> chunkCoordToIndex_;
+			std::unordered_map<ChunkCoordinates, size_t> chunkCoordToIndex_;
 
 
 			std::mutex readyToUpdateChunksMutex;

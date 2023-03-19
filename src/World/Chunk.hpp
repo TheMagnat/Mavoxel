@@ -34,7 +34,7 @@ namespace mav {
 				voxelIndices[x].resize(size);
 				for (size_t y = 0; y < size; ++y) {
 
-					voxelIndices[x][y].resize(size);
+					voxelIndices[x][y].resize(size, -1);
 				}
 			}
 		
@@ -77,6 +77,7 @@ namespace mav {
 			*/
 			int findVoxel(glm::vec3 const& position) const;
 			int findVoxel(int x, int y, int z) const;
+			const SimpleVoxel* unsafeGetVoxel(int x, int y, int z) const;
 
 			//OpenGL
 			void draw();

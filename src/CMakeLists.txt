@@ -3,7 +3,7 @@
 file(GLOB_RECURSE CppSources ${CMAKE_SOURCE_DIR}/src/*.cpp)
 set(CppHeaders "${CMAKE_SOURCE_DIR}/src")
 
-## Create new executable target
+## Create new library target
 add_library(Mavoxel ${CppSources})
 
 # Add threading for MSVC compilation

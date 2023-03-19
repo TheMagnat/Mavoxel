@@ -25,13 +25,13 @@ namespace mav{
 
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize)
-		: Drawable(true, 7, {{3}, {3}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world)
+		: Drawable(true, 9, {{3}, {3}, {2}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world)
 #ifndef NDEBUG
 		, chunkSides(&Global::debugShader, world->environment, {
 			{0.1f, 0.1f, 0.1f},
 			{0.5f, 0.5f, 0.5f},
 			{1.0f, 1.0f, 1.0f}
-		}, size*voxelSize, glm::vec3((posX*size - 0.5)*voxelSize, (posY*size - 0.5)*voxelSize, (posZ*size - 0.5)*voxelSize))
+		}, size*voxelSize, glm::vec3((posX*size)*voxelSize, (posY*size)*voxelSize, (posZ*size)*voxelSize))
 #endif
 		{
 
@@ -41,53 +41,7 @@ namespace mav{
 
 		}
 
-	void Chunk::generateVoxels(VoxelGeneratorFunc generator) {
 
-		voxels_.initializeIndices(size_);
-		voxels_.initializeMap(size_);
-
-		float positionOffsets = - ((size_) / 2.0f) * voxelSize_;
-
-		// Calculate the coordinates of each points
-		for (size_t x = 0; x < size_; ++x) {
-			for (size_t y = 0; y < size_; ++y) {
-				for (size_t z = 0; z < size_; ++z) {
-
-					// Position in the chunk + Offset to center the chunk + position in the world
-					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * size_ * voxelSize_);
-					float yPos = (y * voxelSize_) + positionOffsets + (posY_ * size_ * voxelSize_);
-					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
-
-					int genValue = generator(xPos, yPos, zPos);
-					if(genValue == 0)
-						continue;
-
-					voxels_.voxelMap[x][y][z] = genValue;
-					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
-					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), 0, voxelSize_);
-
-					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
-
-						glm::vec3 positionToCheck = glm::vec3(xPos, yPos, zPos);
-						positionToCheck[Chunk::faceToNeighborOffset[faceIndex].first] += Chunk::faceToNeighborOffset[faceIndex].second * voxelSize_;
-
-						bool foundVoxel = generator(positionToCheck.x, positionToCheck.y, positionToCheck.z);
-						if(foundVoxel) {
-							voxels_.data.back().setFaceState(faceIndex, false);							
-						}
-
-					}
-
-				}
-			}
-		}
-
-
-
-	}
-
-	//TODO: Voir si on peut changer cette façon de faire
 	void Chunk::generateVoxels(const VoxelMapGenerator * voxelMapGenerator) {
 		
 		// Move voxelMap and prepare indices size
@@ -95,7 +49,7 @@ namespace mav{
 		voxels_.initializeIndices(size_);
 
 		// Calculate the coordinates of each points
-		float positionOffsets = - ((size_) / 2.0f) * voxelSize_;
+		float positionOffsets = - ((float)(size_ - 1) / 2.0f) * voxelSize_;
 		for (size_t x = 0; x < size_; ++x) {
 			for (size_t y = 0; y < size_; ++y) {
 				for (size_t z = 0; z < size_; ++z) {
@@ -103,7 +57,7 @@ namespace mav{
 					if( voxels_.voxelMap[x][y][z] == 0 ) continue;
 
 					// Position in the chunk + Offset to center the chunk + position in the world
-					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * size_ * voxelSize_);
+					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * (size_) * voxelSize_);
 					float yPos = (y * voxelSize_) + positionOffsets + (posY_ * size_ * voxelSize_);
 					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
 
@@ -159,6 +113,15 @@ namespace mav{
 		return voxels_.voxelMap[x][y][z] != 0;
 	}
 
+	const SimpleVoxel* Chunk::unsafeGetVoxel(int x, int y, int z) const {
+
+		int index = voxels_.voxelIndices[x][y][z];
+		if(index != -1) return &voxels_.data[ index ];
+
+		return nullptr;
+
+	}
+
 	void Chunk::generateVertices() {
 		
 		size_t insertedFaces = 0;
@@ -188,7 +151,7 @@ namespace mav{
 	}
 
 	void Chunk::draw(){
-		glDisable(GL_CULL_FACE);
+
 		glBindVertexArray(vao_.get());
 		
 
@@ -251,11 +214,11 @@ namespace mav{
 
 		#ifndef NDEBUG
 			
-			glDisable(GL_CULL_FACE);
+			//glDisable(GL_CULL_FACE);
 			// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			chunkSides.draw();
+			//chunkSides.draw();
 
-			glEnable(GL_CULL_FACE);
+			//glEnable(GL_CULL_FACE);
 		
 		#endif
 
