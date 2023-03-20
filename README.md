@@ -7,7 +7,7 @@ Mavoxel aims to be a complete game engine to produce voxel-based games
 
 ### Prerequisites
 
-You need to have cmake installed.
+You need to have [Cmake](https://cmake.org/) installed.
 
 To compile this project, you must install these libraries :
 
