@@ -17,7 +17,7 @@ To compile this project, you must install these libraries :
 
 - [GLM](https://glm.g-truc.net/)
 
-- [FastNoise2]([https://glm.g-truc.net/](https://github.com/Auburn/FastNoise2))
+- [FastNoise2](https://github.com/Auburn/FastNoise2)
 
 ### Installing
 
