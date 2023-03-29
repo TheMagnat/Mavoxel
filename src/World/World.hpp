@@ -8,6 +8,7 @@
 
 #include <GLObject/Shader.hpp>
 #include <Environment/Environment.hpp>
+#include <Helper/ThreadPool.hpp>
 
 #include <vector>
 #include <queue>
@@ -24,9 +25,13 @@ namespace mav {
 		public:
 			World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize = 32, float voxelSize = 1);
 
+			std::vector<glm::vec3> getAroundChunks(glm::vec3 position, float distance, bool sorted) const;
+
 			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator);
+			void bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted, const VoxelMapGenerator * voxelMapGenerator);
 
 			void drawAll();
+			void draw(glm::vec3 position, float renderDistance);
 
 			// Collisions
 			const SimpleVoxel* getVoxel(float x, float y, float z) const;
@@ -54,6 +59,9 @@ namespace mav {
 			Shader* shader;
 			Environment* environment;
 			//Material material;
+
+			//Threading
+			ThreadPool threadPool; //Note that destruction is done in reverse order than construction. So threadPool will be destructed first, preventing error when joining threads.
 			
 	};
 

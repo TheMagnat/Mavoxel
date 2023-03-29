@@ -15,8 +15,6 @@ namespace mav {
 			static size_t width;
 			static size_t height;
 
-			static ThreadPool threadPool;
-
 		#ifndef NDEBUG
 
 			static mav::Shader debugShader;

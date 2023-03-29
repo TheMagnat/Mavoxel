@@ -48,7 +48,7 @@ inline ThreadPool::ThreadPool(size_t threads)
                         std::unique_lock<std::mutex> lock(this->queue_mutex);
                         this->condition.wait(lock,
                             [this]{ return this->stop || !this->tasks.empty(); });
-                        if(this->stop && this->tasks.empty())
+                        if(this->stop)
                             return;
                         task = std::move(this->tasks.front());
                         this->tasks.pop();
@@ -60,6 +60,7 @@ inline ThreadPool::ThreadPool(size_t threads)
         );
 }
 
+//TODO: retravailler cette classe pour la simplifier et prendre seulement des fonction void()
 // add new work item to the pool
 template<class F, class... Args>
 auto ThreadPool::enqueue(F&& f, Args&&... args) 
