@@ -3,12 +3,14 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <functional>
 #include <string>
 
-typedef void(*functionFloat)(float);
-typedef void(*function)();
-typedef void(*functionDoubleDouble)(double, double);
-typedef void(*functionIntIntIntInt)(int, int, int, int);
+using function = std::function<void()>;
+using functionFloat = std::function<void(float x)>;
+using functionDoubleDouble = std::function<void(double x, double y)>;
+using functionIntIntIntInt = std::function<void(int x, int y, int z, int w)>;
+
 
 namespace mav{
 
@@ -19,11 +21,11 @@ namespace mav{
 
 			Window(std::string const& windowName, int width = 800, int height = 600);
 
-			bool isPressed(int key);
+			bool isPressed(int key) const;
 
 			void setGraphicLoop(functionFloat newFunction);
 
-			void startLoop();
+			void startLoop() const;
 
 			void closeWindow();
 

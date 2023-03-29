@@ -115,6 +115,9 @@ namespace mav{
 
 	const SimpleVoxel* Chunk::unsafeGetVoxel(int x, int y, int z) const {
 
+		// if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_)
+		// 	return nullptr;
+
 		int index = voxels_.voxelIndices[x][y][z];
 		if(index != -1) return &voxels_.data[ index ];
 

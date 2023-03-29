@@ -8,7 +8,8 @@
 namespace mav {
 
 	World::World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, float voxelSize)
-		: chunkSize_(chunkSize), voxelSize_(voxelSize), shader(shaderPtrP), environment(environmentP) {}
+		//TODO: Rendre le nombre de thread paramétrable
+		: chunkSize_(chunkSize), voxelSize_(voxelSize), shader(shaderPtrP), environment(environmentP), threadPool(4) {}
 
 	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator){
 
@@ -19,7 +20,8 @@ namespace mav {
 
 		Chunk* currentChunkPtr = allChunk_.back().get();
 
-		auto rez = Global::threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ, voxelMapGenerator](){
+		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
+		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ, voxelMapGenerator](){
 			
 			std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 			currentChunkPtr->generateVoxels( voxelMapGenerator );
@@ -41,6 +43,64 @@ namespace mav {
 
 		});
 
+	}
+
+	void World::bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted, const VoxelMapGenerator * voxelMapGenerator) {
+
+		for (glm::vec3 const& chunkPosition : getAroundChunks(position, createDistance, sorted)) {
+
+			//Try finding the chunk
+			auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(chunkPosition.x, chunkPosition.y, chunkPosition.z));
+			if (chunkIt != chunkCoordToIndex_.end()) continue;
+
+			//If it does not exist, we create it
+			createChunk(chunkPosition.x, chunkPosition.y, chunkPosition.z, voxelMapGenerator);
+
+		}
+
+	}
+
+	std::vector<glm::vec3> World::getAroundChunks(glm::vec3 position, float distance, bool sorted) const {
+		
+		std::vector<glm::vec3> aroundChunks;
+
+		//Calculate center position
+		float xSign = position.x < 0 ? -1 : 1;
+		float ySign = position.y < 0 ? -1 : 1;
+		float zSign = position.z < 0 ? -1 : 1;
+		
+		float trueChunkSize = chunkSize_ * voxelSize_;
+		float halfChunkSize = trueChunkSize / 2.0f;
+
+		int xIndex = (position.x + halfChunkSize * xSign) / trueChunkSize;
+		int yIndex = (position.y + halfChunkSize * ySign) / trueChunkSize;
+		int zIndex = (position.z + halfChunkSize * zSign) / trueChunkSize;
+
+		//Calculate the number of chunk to render
+		int nb_chunk = distance / trueChunkSize;
+
+		
+		for (int x = -nb_chunk, xState = 1; x <= nb_chunk; ++x) {
+			for (int y = -nb_chunk, yState = 1; y <= nb_chunk; ++y) {
+				for (int z = -nb_chunk, zState = 1; z <= nb_chunk; ++z) {
+					aroundChunks.emplace_back(x + xIndex, y + yIndex, z + zIndex);
+				}
+			}
+		}
+
+		if (sorted) {
+
+			glm::vec3 center(xIndex, yIndex, zIndex);
+
+			// Sort the coordinates vector to have the nearest to the position first
+			std::sort(aroundChunks.begin(), aroundChunks.end(),
+				[&center](glm::vec3 const& coordA, glm::vec3 const& coordB) -> bool {
+					return glm::distance(coordA, center) < glm::distance(coordB, center);
+				}
+			);
+		}
+
+		return aroundChunks;
 	}
 
 	void World::updateReadyChunk(size_t nbToUpdate) {
@@ -80,28 +140,48 @@ namespace mav {
 
 	}
 
+	void World::draw(glm::vec3 position, float renderDistance) {
+					
+		for (glm::vec3 const& chunkPosition : getAroundChunks(position, renderDistance, false)) {
+
+			//Try finding the chunk
+			auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(chunkPosition.x, chunkPosition.y, chunkPosition.z));
+			if (chunkIt == chunkCoordToIndex_.end()) continue;
+
+			//Verify if it's finished
+			if (allChunk_[chunkIt->second]->state != 2) continue;
+
+			//And now draw it
+			allChunk_[chunkIt->second]->draw();
+
+		}
+
+	}
+
 	const SimpleVoxel* World::getVoxel(float x, float y, float z) const {
 
 		float xSign = x < 0 ? -1 : 1;
 		float ySign = y < 0 ? -1 : 1;
 		float zSign = z < 0 ? -1 : 1;
 
-		float chunkLen = (float)(chunkSize_ - 1);
+		float trueChunkSize = chunkSize_ * voxelSize_;
+		//float chunkLen = trueChunkSize - voxelSize_;
 
-		float halfChunkSize = chunkLen / 2.0f;
+		float halfChunkSize = trueChunkSize / 2.0f;
 
-		int xIndex = (x + halfChunkSize * xSign) / (float)chunkSize_;
-		int yIndex = (y + halfChunkSize * ySign) / (float)chunkSize_;
-		int zIndex = (z + halfChunkSize * zSign) / (float)chunkSize_;
+		int xIndex = (x + halfChunkSize * xSign) / trueChunkSize;
+		int yIndex = (y + halfChunkSize * ySign) / trueChunkSize;
+		int zIndex = (z + halfChunkSize * zSign) / trueChunkSize;
 
 		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(xIndex, yIndex, zIndex));
 		if (chunkIt == chunkCoordToIndex_.end()) return nullptr; //The chunk does not exist
 		if (allChunk_[chunkIt->second]->state != 2) return nullptr;
 		//TODO: We could return something else to make the user understand the chunk does not exist and make it jump directly to the next chunk
 
-		int internalX = (x + halfChunkSize) - xIndex * (int)chunkSize_;
-		int internalY = (y + halfChunkSize) - yIndex * (int)chunkSize_;
-		int internalZ = (z + halfChunkSize) - zIndex * (int)chunkSize_;
+		//TODO: voir si ça marche avec des positions pas pile sur le cube
+		int internalX = ((x + halfChunkSize) - xIndex * (int)trueChunkSize) / voxelSize_;
+		int internalY = ((y + halfChunkSize) - yIndex * (int)trueChunkSize) / voxelSize_;
+		int internalZ = ((z + halfChunkSize) - zIndex * (int)trueChunkSize) / voxelSize_;
 
 		return allChunk_[chunkIt->second]->unsafeGetVoxel(internalX, internalY, internalZ);
 

@@ -7,7 +7,7 @@ Mavoxel aims to be a complete game engine to produce voxel-based games
 
 ### Prerequisites
 
-You need to have cmake installed.
+You need to have [Cmake](https://cmake.org/) installed.
 
 To compile this project, you must install these libraries :
 
@@ -17,7 +17,7 @@ To compile this project, you must install these libraries :
 
 - [GLM](https://glm.g-truc.net/)
 
-- [FastNoise2]([https://glm.g-truc.net/](https://github.com/Auburn/FastNoise2))
+- [FastNoise2](https://github.com/Auburn/FastNoise2)
 
 ### Installing
 

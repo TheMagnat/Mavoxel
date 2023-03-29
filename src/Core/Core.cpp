@@ -75,7 +75,7 @@ namespace mav {
 		glfwSetWindowShouldClose(window_, true);
 	}
 
-	bool Window::isPressed(int key){
+	bool Window::isPressed(int key) const {
 		return glfwGetKey(window_, key) == GLFW_PRESS;
 	}
 
@@ -91,7 +91,7 @@ namespace mav {
 		keyEventFunction_ = newFunction;
 	}
 
-	void Window::startLoop(){
+	void Window::startLoop() const {
 
 		float deltaTime, lastFrame = glfwGetTime();
 
