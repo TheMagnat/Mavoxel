@@ -14,7 +14,7 @@ class ClassicVoxelMapGenerator : public mav::VoxelMapGenerator {
         ClassicVoxelMapGenerator(size_t seed, size_t chunkSize, float voxelSize);
 
         bool isIn(float x, float y, float z) const;
-        mav::VoxelMap generate(float xGlobal, float yGlobal, float zGlobal) const;
+        mav::VoxelData generate(float xGlobal, float yGlobal, float zGlobal) const;
 
     private:
         size_t seed_;
@@ -29,6 +29,3 @@ class ClassicVoxelMapGenerator : public mav::VoxelMapGenerator {
         FastNoise::SmartNode<FastNoise::Simplex> simplexGenerator_;
         FastNoise::SmartNode<FastNoise::FractalFBm> fnFractal_;
 };
-
-
-std::vector<std::vector<std::vector<int>>> generateClassicVoxelMap(float xGlobal, float yGlobal, float zGlobal);

@@ -19,14 +19,16 @@ namespace mav {
 
 			DebugVoxel(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
-			void init();
+			void generateVertices() override;
 
-			void generateVertices();
+			void draw() const override;
 
-			void updateVAO();
+			//Unique
+			void setColor(glm::vec3 const& color);
+		
+		private:
 
-			void draw();
-
+			glm::vec3 color_;
     };
 
 }

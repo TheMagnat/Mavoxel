@@ -11,9 +11,9 @@ namespace mav {
 		setAll(vertices, totalAttributeSize, allAttribute);
 	}
 
-	VAO::VAO(std::vector<float> const& vertices, unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute, std::vector<int> const& indice){
+	VAO::VAO(std::vector<float> const& vertices, unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute, std::vector<int> const& indices){
 		init(true);
-		setAll(vertices, totalAttributeSize, allAttribute, indice);
+		setAll(vertices, totalAttributeSize, allAttribute, indices);
 	}
 
 	void VAO::init(bool isEBO){
@@ -40,12 +40,12 @@ namespace mav {
 	}
 
 	//WITH EBO
-	void VAO::setAll(std::vector<float> const& vertices, unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute, std::vector<int> const& indice){
+	void VAO::setAll(std::vector<float> const& vertices, unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute, std::vector<int> const& indices){
 		
 		glBindVertexArray(VAO_);
 		//glBindBuffer(GL_ARRAY_BUFFER, VBO_);
 
-		setIndice(indice);
+		setIndices(indices);
 		setData(vertices);
 		setAttribute(totalAttributeSize, allAttribute);
 
@@ -73,9 +73,9 @@ namespace mav {
 
 	}
 
-	void VAO::setIndice(std::vector<int> const& indice){
+	void VAO::setIndices(std::vector<int> const& indices){
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indice.size() * sizeof(int), indice.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), indices.data(), GL_STATIC_DRAW);
 	}
 
 	unsigned int VAO::get() const {

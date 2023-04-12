@@ -9,17 +9,21 @@
 #include <glm/glm.hpp>
 
 #include <vector>
+#include <array>
 
 
 namespace mav {
 
-    class Voxel : public Mesh {
+    class Face : public Mesh {
 
 		public:
 
-			Voxel(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+			Face(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
 			void generateVertices() override;
+			void generateVertices(std::array<glm::vec3, 4> const& points);
+
+			void draw();
 
     };
 

@@ -42,7 +42,7 @@ namespace mav {
 
 			void setData(std::vector<float> const& vertices);
 			void setAttribute(unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute);
-			void setIndice(std::vector<int> const& indice);
+			void setIndices(std::vector<int> const& indices);
 
 			unsigned int get() const;
 

@@ -1,27 +1,58 @@
 
 #include "Camera.hpp"
 
+#include <Core/Global.hpp>
 
 namespace mav {
 
 Camera::Camera(glm::vec3 const& position, glm::vec3 const& up, float yaw, float pitch)
-	: Position(position), Front(0.0f, 0.0f, -1.0f), WorldUp(up), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
-        updateCameraVectors();
+	: Position(position), Front(0.0f, 0.0f, -1.0f), WorldUp(up), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM),
+      maintainFrustum(true)
+{
+    updateCameraVectors();
+
+    //Default perspective
+    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 200.0f);
+    updateFrustum();
 }
 
 
 Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) 
-: Position(posX, posY, posZ), Front(0.0f, 0.0f, -1.0f), WorldUp(upX, upY, upZ), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
-        updateCameraVectors();
+: Position(posX, posY, posZ), Front(0.0f, 0.0f, -1.0f), WorldUp(upX, upY, upZ), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM),
+  maintainFrustum(true)
+{
+    updateCameraVectors();
+
+    //Default perspective
+    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 200.0f);
+    updateFrustum();
 }
 
 glm::mat4 Camera::GetViewMatrix() const {
     return glm::lookAt(Position, Position + Front, Up);
 }
 
+void Camera::setPerspectiveProjectionMatrix(float fovY, float aspect, float zNear, float zFar) {
+    Projection = glm::perspective(fovY, aspect, zNear, zFar);
+    if (maintainFrustum) frustum.updatePerspective(fovY, aspect, zNear, zFar);
+}
+
+void Camera::updateFrustum() {
+    frustum.updateCamera(this);
+}
 
 void Camera::ProcessKeyboard(glm::vec3 velocity, float deltaTime){
     Position += velocity * deltaTime;
+
+    // Keep frustum up to date
+    if (maintainFrustum) updateFrustum();
+}
+
+void Camera::ProcessKeyboard(glm::vec3 velocity){
+    Position += velocity;
+
+    // Keep frustum up to date
+    if (maintainFrustum) updateFrustum();
 }
 
 void Camera::ProcessKeyboard(Camera_Movement direction, float velocity, float deltaTime){
@@ -36,6 +67,9 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float velocity, float de
         Position -= Right * velocityByTime;
     if (direction == RIGHT)
         Position += Right * velocityByTime;
+
+    // Keep frustum up to date
+    if (maintainFrustum) updateFrustum();
 }
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch){
@@ -56,6 +90,9 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 
     // Update Front, Right and Up Vectors using the updated Euler angles
     updateCameraVectors();
+
+    // Keep frustum up to date
+    if (maintainFrustum) updateFrustum();
 }
 
 void Camera::ProcessMouseScroll(float yoffset){

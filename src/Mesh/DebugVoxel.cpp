@@ -6,23 +6,17 @@
 namespace mav {
 
 	DebugVoxel::DebugVoxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(shaderPtr, environment, material, size, position) {}
-
-	void DebugVoxel::init(){
-		vao_.init(true);
-        generateVertices();
-        updateVAO();
-	}
+        : Mesh(3, {{3}}, shaderPtr, environment, material, size, position), color_(1.0f, 1.0f, 1.0f) {}
 
     void DebugVoxel::generateVertices(){
 
-        size_t nbOfData = 9;
+        size_t nbOfData = 3;
 
         size_t verticesNb = 6*4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
-        indicesNb_ = 6*4*2; //Number of face * number of line * number of vertice per line
+        indicesSize_ = 6*4*2; //Number of face * number of line * number of vertice per line
 
         vertices_.resize(verticesNb);
-        indices_.resize(indicesNb_);
+        indices_.resize(indicesSize_);
 
         glm::vec3 color(0, 1, 0);
         float verticeLenght = 0.5f;
@@ -77,17 +71,6 @@ namespace mav {
                 vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticeLenght;
                 vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticeLenght;
 
-                //Normals
-                vertices_[faceOffset + verticeOffset + 3 + 0] = 0;
-                vertices_[faceOffset + verticeOffset + 3 + 1] = 0;
-                vertices_[faceOffset + verticeOffset + 3 + 2] = 0;
-                vertices_[faceOffset + verticeOffset + 3 + fixedIndex] = fixedValue;
-
-                //Color
-                vertices_[faceOffset + verticeOffset + 6 + 0] = color.r;
-                vertices_[faceOffset + verticeOffset + 6 + 1] = color.g;
-                vertices_[faceOffset + verticeOffset + 6 + 2] = color.b;
-
                 //Here we change first value
                 if (j % 2 == 0) {
                     firstValue *= -1;
@@ -119,20 +102,16 @@ namespace mav {
 
     }
 
-    void DebugVoxel::updateVAO(){
-
-        std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {3}};
-
-		vao_.setAll(vertices_, 9, allAttribute, indices_);
+    void DebugVoxel::setColor(glm::vec3 const& color) {
+        color_ = color;
     }
 
-    void DebugVoxel::draw(){
+    void DebugVoxel::draw() const {
 
 		glBindVertexArray(vao_.get());
 		
-
 		//SET LE SHADER
-		shaderPtr_->use();
+		shader_->use();
     
 		glm::mat4 model = glm::mat4(1.0f);
         model = model * translationMatrix_;
@@ -141,43 +120,18 @@ namespace mav {
 		model = glm::scale(model, glm::vec3(size));
 
 
-		shaderPtr_->setMat4("model", model);
-		shaderPtr_->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
+		shader_->setMat4("model", model);
 
 		////TOUT LES NEED
-		shaderPtr_->use();
+		shader_->use();
 
-		shaderPtr_->setVec3("material.ambient", material.ambient);
-		shaderPtr_->setVec3("material.diffuse", material.diffuse);
-		shaderPtr_->setVec3("material.specular", material.specular);
-		shaderPtr_->setFloat("material.shininess", material.shininess);
-
-		shaderPtr_->setVec3("light.ambient",  environment_->sun->material.ambient);
-		shaderPtr_->setVec3("light.diffuse",  environment_->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
-		shaderPtr_->setVec3("light.specular", environment_->sun->material.specular);
-
-		shaderPtr_->setVec3("light.position", environment_->sun->getPosition());
-
-		// shaderPtr_->setFloat("light.constant",  1.0f);
-		// shaderPtr_->setFloat("light.linear",    0.09f);
-		// shaderPtr_->setFloat("light.quadratic", 0.032f);
-
-
-		//shaderPtr_->setVec3("light.position", glm::vec3(0, 50, 100));
-
-
+		shader_->setVec3("Color", color_);
 
 		//Calcule camera
-
 		glm::mat4 view(environment_->camera->GetViewMatrix());
-		//glm::mat4 view(glm::lookAt(cameraPtr_->Position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 
-		shaderPtr_->setMat4("view", view);
-
-		//Position de la cam
-		shaderPtr_->setVec3("viewPos", environment_->camera->Position);
-
-		shaderPtr_->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 2000.0f));
+		shader_->setMat4("view", view);
+		shader_->setMat4("projection", environment_->camera->Projection);
 
 
 		glDrawElements(GL_LINES, (int)indices_.size(), GL_UNSIGNED_INT, 0);

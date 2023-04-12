@@ -10,6 +10,7 @@ namespace mav {
 	#ifndef NDEBUG
 
 		Shader Global::debugShader = Shader();
+		Environment Global::debugEnvironment = {0, 0};
 
 	#endif
 

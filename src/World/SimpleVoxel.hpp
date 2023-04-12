@@ -21,7 +21,7 @@ namespace mav {
             // Faces indexes in the faces array
             enum Face { bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5 };
 
-            SimpleVoxel(glm::vec3 const& position, int id = 0, float size = 1);
+            SimpleVoxel(glm::vec3 const& position, int id = 0);
             
             //TODO: Maybe delete ?
             //void generateFaces();
@@ -39,9 +39,6 @@ namespace mav {
 
         private:
             int id_;
-            float size_;
-
-            AABB boundingBox_;
 
             glm::vec3 position_;
 

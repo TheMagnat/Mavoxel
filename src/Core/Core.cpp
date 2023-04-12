@@ -41,8 +41,8 @@ namespace mav {
 
 		glfwSetWindowUserPointer(window_, this);
 
-		auto mouse_callback = [](GLFWwindow* w, double xpos, double ypos){
-			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseMovingCallback(xpos, ypos);
+		auto mouse_callback = [](GLFWwindow* w, double xPos, double yPos){
+			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseMovingCallback(xPos, yPos);
 		};
 		glfwSetCursorPosCallback(window_, mouse_callback);
 		
@@ -71,7 +71,7 @@ namespace mav {
 
 	}
 
-	void Window::closeWindow(){
+	void Window::closeWindow() const {
 		glfwSetWindowShouldClose(window_, true);
 	}
 
@@ -112,12 +112,10 @@ namespace mav {
 		
 	}
 
-
-
 	//CALLBACK
-	void Window::mouseMovingCallback(double xpos, double ypos){
+	void Window::mouseMovingCallback(double xPos, double yPos){
 		if(mouseEventFunction_){
-			mouseEventFunction_(xpos, ypos);
+			mouseEventFunction_(xPos, yPos);
 		}
 	}
 

@@ -3,6 +3,7 @@
 #include <GLObject/Shader.hpp>
 #include <GLObject/Camera.hpp>
 #include <GLObject/GLObject.hpp>
+#include <GLObject/Drawable.hpp>
 
 #include <Environment/Environment.hpp>
 
@@ -17,22 +18,21 @@ namespace mav {
     struct Environment;
     
     //TODO: Utiliser drawable
-    class Mesh {
+    class Mesh : public Drawable {
 
         public:
 
-            Mesh(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+            //TODO: retirer cette dépendant à un material qui est peu utilisé
+            Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
-            virtual void init();
-            virtual void updateVAO() = 0;
 
-            void setPosition(glm::vec3 newPosition);
+            void setPosition(glm::vec3 const& newPosition);
             void setPosition(float x, float y, float z);
             void updatePosition();
 
             glm::vec3 const& getPosition() const;
 
-            virtual void draw();
+            virtual void draw() const;
 
 
         public:
@@ -51,14 +51,6 @@ namespace mav {
             //Environement
             Environment* environment_;
 
-            //GL
-            Shader* shaderPtr_;
-
-            VAO vao_;
-            std::vector<float> vertices_;
-
-            size_t indicesNb_;
-            std::vector<int> indices_;
 
     };
 

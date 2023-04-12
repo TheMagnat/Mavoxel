@@ -4,15 +4,23 @@
 #include <glm/vec3.hpp>
 #include <glm/gtx/scalar_relational.hpp>
 
-//AABB = Axis-aligned bounding boxes
-struct AABB {
+namespace mav {
 
-    // float minX, maxX;
-    // float minY, maxY;
-    // float minZ, maxZ;
+    //AABB = Axis-aligned bounding boxes
+    struct AABB {
 
-    glm::vec3 minCoords, maxCoords;
+        glm::vec3 minCoords, maxCoords;
+        glm::vec3 center;
+        glm::vec3 extents;
 
-    AABB(glm::vec3 pos, float size);
 
-};
+        AABB(glm::vec3 const& pos, float size);
+        void updatePos(glm::vec3 const& pos);
+
+    private:
+
+        float halfSize_;
+
+    };
+
+}

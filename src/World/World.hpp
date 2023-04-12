@@ -9,12 +9,15 @@
 #include <GLObject/Shader.hpp>
 #include <Environment/Environment.hpp>
 #include <Helper/ThreadPool.hpp>
+#include <Collision/AABB.hpp>
+#include <Collision/CollisionFace.hpp>
 
 #include <vector>
 #include <queue>
 #include <unordered_map>
 #include <mutex>
 #include <memory>
+#include <optional>
 
 namespace mav {
 
@@ -31,12 +34,16 @@ namespace mav {
 			void bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted, const VoxelMapGenerator * voxelMapGenerator);
 
 			void drawAll();
+
+			//TODO: Save entre les draw la position de l'utilisateur et garder en mémoir les chunks a draw, et update ce vecteur si l'utilisateur à bougé
 			void draw(glm::vec3 position, float renderDistance);
 
 			// Collisions
 			const SimpleVoxel* getVoxel(float x, float y, float z) const;
 			//TODO: Récupérer l'information de la face toucher en plus du Voxel.
-			const SimpleVoxel* CastRay(glm::vec3 const& startPosition, glm::vec3 const& direction, size_t maxNumberOfVoxels = 50) const;
+			
+			std::optional<CollisionFace> castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance = 50) const;
+			glm::vec3 castRay(mav::AABB const& box, glm::vec3 direction) const;
 
 
 			// Threaded

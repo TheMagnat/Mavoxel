@@ -25,18 +25,19 @@ namespace mav{
 
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize)
-		: Drawable(true, 9, {{3}, {3}, {2}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), world_(world)
+		//TODO set "glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize))" dans un vec3 "centerPosition"
+		: Drawable(true, 9, {{3}, {3}, {2}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), collisionBox_(glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)), size), world_(world)
 #ifndef NDEBUG
 		, chunkSides(&Global::debugShader, world->environment, {
 			{0.1f, 0.1f, 0.1f},
 			{0.5f, 0.5f, 0.5f},
 			{1.0f, 1.0f, 1.0f}
-		}, size*voxelSize, glm::vec3((posX*size)*voxelSize, (posY*size)*voxelSize, (posZ*size)*voxelSize))
+		}, size*voxelSize, glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)) )
 #endif
 		{
 
 			#ifndef NDEBUG
-				chunkSides.init();
+				chunkSides.initialize(true);
     		#endif
 
 		}
@@ -45,7 +46,11 @@ namespace mav{
 	void Chunk::generateVoxels(const VoxelMapGenerator * voxelMapGenerator) {
 		
 		// Move voxelMap and prepare indices size
-		voxels_.voxelMap = voxelMapGenerator->generate(posX_, posY_, posZ_);
+		VoxelData voxelData = voxelMapGenerator->generate(posX_, posY_, posZ_);
+		
+		VoxelMap const& voxelMap = voxelData.map;
+		voxels_.data.reserve(voxelData.count);
+		
 		voxels_.initializeIndices(size_);
 
 		// Calculate the coordinates of each points
@@ -54,7 +59,7 @@ namespace mav{
 			for (size_t y = 0; y < size_; ++y) {
 				for (size_t z = 0; z < size_; ++z) {
 					
-					if( voxels_.voxelMap[x][y][z] == 0 ) continue;
+					if( voxelMap[x][y][z] == 0 ) continue;
 
 					// Position in the chunk + Offset to center the chunk + position in the world
 					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * (size_) * voxelSize_);
@@ -62,7 +67,7 @@ namespace mav{
 					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
 
 					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
-					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), voxels_.voxelMap[x][y][z], voxelSize_);
+					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), voxelMap[x][y][z]);
 
 					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
@@ -71,7 +76,8 @@ namespace mav{
 						int foundVoxel = findVoxel(
 								x + (Chunk::faceToNeighborOffset[faceIndex].first == 0) * Chunk::faceToNeighborOffset[faceIndex].second,
 								y + (Chunk::faceToNeighborOffset[faceIndex].first == 1) * Chunk::faceToNeighborOffset[faceIndex].second,
-								z + (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second
+								z + (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second,
+								voxelMap
 						);
 						// If the positions are out of bound, test with the voxelTester function
 						
@@ -99,18 +105,18 @@ namespace mav{
 
 	}
 
-	int Chunk::findVoxel(glm::vec3 const& position) const {
+	int Chunk::findVoxel(glm::vec3 const& position, VoxelMap const& voxelMap) const {
 
 		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return 2;
 
-		return voxels_.voxelMap[position.x][position.y][position.z] != 0;
+		return voxelMap[position.x][position.y][position.z] != 0;
 	}
 
-	int Chunk::findVoxel(int x, int y, int z) const {
+	int Chunk::findVoxel(int x, int y, int z, VoxelMap const& voxelMap) const {
 
 		if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_) return 2;
 
-		return voxels_.voxelMap[x][y][z] != 0;
+		return voxelMap[x][y][z] != 0;
 	}
 
 	const SimpleVoxel* Chunk::unsafeGetVoxel(int x, int y, int z) const {
@@ -154,6 +160,20 @@ namespace mav{
 	}
 
 	void Chunk::draw(){
+
+		//Verify if chunks is inside camera frustum
+		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
+
+		#ifndef NDEBUG
+			//We always want to draw the debug chunk sides so we do it before the checks
+			if (isVisible) chunkSides.setColor(glm::vec3(1.0f));
+			else chunkSides.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
+			
+			chunkSides.draw();
+		#endif
+
+		if (indicesSize_ == 0) return;
+		if (!isVisible) return;
 
 		glBindVertexArray(vao_.get());
 		
@@ -209,22 +229,10 @@ namespace mav{
 		//Position de la cam
 		world_->shader->setVec3("viewPos", world_->environment->camera->Position);
 
-		world_->shader->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 2000.0f));
+		world_->shader->setMat4("projection", world_->environment->camera->Projection);
 
 
-		glDrawElements(GL_TRIANGLES, (int)indices_.size(), GL_UNSIGNED_INT, 0);
-
-
-		#ifndef NDEBUG
-			
-			//glDisable(GL_CULL_FACE);
-			// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			//chunkSides.draw();
-
-			//glEnable(GL_CULL_FACE);
-		
-		#endif
-
+		glDrawElements(GL_TRIANGLES, (int)indicesSize_, GL_UNSIGNED_INT, 0);
 
 	}
 

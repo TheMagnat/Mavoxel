@@ -5,6 +5,8 @@
 #include <iostream>
 #include <chrono>
 
+#include <algorithm>
+
 namespace mav {
 
 	World::World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, float voxelSize)
@@ -141,6 +143,11 @@ namespace mav {
 	}
 
 	void World::draw(glm::vec3 position, float renderDistance) {
+
+		static size_t count = 0;
+		static float totalTime = 0.0f;
+		
+		std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 					
 		for (glm::vec3 const& chunkPosition : getAroundChunks(position, renderDistance, false)) {
 
@@ -151,10 +158,19 @@ namespace mav {
 			//Verify if it's finished
 			if (allChunk_[chunkIt->second]->state != 2) continue;
 
-			//And now draw it
+			//And now draw it if it's visible
 			allChunk_[chunkIt->second]->draw();
 
 		}
+
+		std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<float> fsec = end - begin;
+
+		totalTime += fsec.count();
+		++count;
+
+		//std::cout << "Time difference (Frustum) = " << totalTime/(float)count << "s" << std::endl;
+
 
 	}
 
@@ -190,21 +206,19 @@ namespace mav {
 
 	inline float positiveModulo (float a, float b) { return a >= 0 ? fmod(a, b) : fmod( fmod(a, b) + b, b); }
 
-	const SimpleVoxel* World::CastRay(glm::vec3 const& startPosition, glm::vec3 const& direction, size_t maxNumberOfVoxels) const {
+	std::optional<CollisionFace> World::castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance) const {
 
 		glm::vec3 dir = glm::normalize(direction);
-
-		//Index of the first voxel
-		float x = floor(startPosition.x / voxelSize_) * voxelSize_;
-		float y = floor(startPosition.y / voxelSize_) * voxelSize_;
-		float z = floor(startPosition.z / voxelSize_) * voxelSize_;
-
-		//TODO: Checker le pb de carré blanc qui s'affiche pas si on set met vers le haut d'un chunk et qu'on vise une case au dessus en regardant tout droit
 
 		//Positive or negative direction
 		float xStep = dir.x < 0 ? -1 : 1;
 		float yStep = dir.y < 0 ? -1 : 1;
 		float zStep = dir.z < 0 ? -1 : 1;
+
+		//Index of the first voxel
+		float x = floor(startPosition.x / voxelSize_) * voxelSize_;
+		float y = floor(startPosition.y / voxelSize_) * voxelSize_;
+		float z = floor(startPosition.z / voxelSize_) * voxelSize_;
 
 		//Required time to exit the full voxel along each axis.
 		float tMaxX = positiveModulo(startPosition.x, voxelSize_);
@@ -219,14 +233,41 @@ namespace mav {
 		tMaxY /= dir.y * yStep;
 		tMaxZ /= dir.z * zStep;
 
+		//Here we verify if our position are in between 2 positions. If so we position the ray casting just before the collision between the 2 positions
+		if (std::fmod(startPosition.x, voxelSize_) == 0 && dir.x != 0.0){
+			tMaxX = 0;
+			x = x - xStep * voxelSize_;
+		}
+		if (std::fmod(startPosition.y, voxelSize_) == 0 && dir.y != 0.0){
+			tMaxY = 0;
+			y = y - yStep * voxelSize_;
+		}
+		if (std::fmod(startPosition.z, voxelSize_) == 0 && dir.z != 0.0){
+			tMaxZ = 0;
+			z = z - zStep * voxelSize_;
+		}
+
 		//Required time to do a full voxel length along the axis.
 		float tDeltaX = voxelSize_ / dir.x * xStep;
 		float tDeltaY = voxelSize_ / dir.y * yStep;
 		float tDeltaZ = voxelSize_ / dir.z * zStep;
 
+		//This value represent the distance traveled to get to the next voxel along the axis
+		float travelingX = tMaxX;
+		float travelingY = tMaxY;
+		float travelingZ = tMaxZ;
+
 		//TODO: Maybe we could remove this or maybe bot
-		const SimpleVoxel* foundVoxel = getVoxel(x + (voxelSize_ / 2.0f) * xStep, y + (voxelSize_ / 2.0f) * yStep, z + (voxelSize_ / 2.0f) * zStep);
-		for(size_t i = 0; foundVoxel == nullptr && i < maxNumberOfVoxels; ++i) {
+		int movingSide = -1;
+		const SimpleVoxel* foundVoxel = nullptr;
+		//const SimpleVoxel* foundVoxel = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));		
+
+		glm::vec3 traveledDistanceVector(0.0f);
+		float traveledDistance = 0.0f;
+
+		while(foundVoxel == nullptr) {
+
+			//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 
 			if(tMaxX < tMaxY) {
 
@@ -234,12 +275,22 @@ namespace mav {
 
 					tMaxX = tMaxX + tDeltaX;
 					x = x + xStep * voxelSize_;
+					movingSide = dir.x < 0 ? 2 : 4; 
+
+					//Update traveled distance and now set traveling to a whole voxel
+					traveledDistanceVector.x += dir.x * travelingX;
+					travelingX = tDeltaX;
 
 				}
 				else {
 
 					tMaxZ = tMaxZ + tDeltaZ;
 					z = z + zStep * voxelSize_;
+					movingSide = dir.z < 0 ? 1 : 3; 
+
+					//Update traveled distance and now set traveling to a whole voxel
+					traveledDistanceVector.z += dir.z * travelingZ;
+					travelingZ = tDeltaZ;
 
 				}
 
@@ -250,24 +301,125 @@ namespace mav {
 
 					tMaxY = tMaxY + tDeltaY;
 					y = y + yStep * voxelSize_;
+					movingSide = dir.y < 0 ? 5 : 0; 
+
+					//Update traveled distance and now set traveling to a whole voxel
+					traveledDistanceVector.y += dir.y * travelingY;
+					travelingY = tDeltaY;
 
 				}
 				else {
 					
 					tMaxZ = tMaxZ + tDeltaZ;
 					z = z + zStep * voxelSize_;
+					movingSide = dir.z < 0 ? 1 : 3; 
 
+					//Update traveled distance and now set traveling to a whole voxel
+					traveledDistanceVector.z += dir.z * travelingZ;
+					travelingZ = tDeltaZ;
 				}
 
 			}
+
+			traveledDistance = glm::length(traveledDistanceVector);
+
+			if (traveledDistance > maxDistance) break;
 
 			//We add half the voxel size to center it.
 			foundVoxel = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));
 
 		}
 
-		return foundVoxel;
+		if (foundVoxel) {
+			//TODO: remove this shit
+			//if (movingSide == -1 ) return CollisionFace( foundVoxel->getFace(0), traveledDistance );
 
+			return CollisionFace( foundVoxel->getFace(movingSide), traveledDistance );
+		}
+
+		return {};
+
+	}
+
+	glm::vec3 World::castRay(mav::AABB const& box, glm::vec3 direction) const {
+
+		//TODO: Rendre ça paramétrable
+		const float minimumDistanceToWall = 0.001f;
+
+		std::vector<glm::vec3> allPositions {
+			//Bottom face
+			{box.minCoords.x, box.minCoords.y, box.minCoords.z},
+			{box.maxCoords.x, box.minCoords.y, box.minCoords.z},
+			{box.maxCoords.x, box.minCoords.y, box.maxCoords.z},
+			{box.minCoords.x, box.minCoords.y, box.maxCoords.z},
+
+			//Top face
+			{box.minCoords.x, box.maxCoords.y, box.minCoords.z},
+			{box.maxCoords.x, box.maxCoords.y, box.minCoords.z},
+			{box.maxCoords.x, box.maxCoords.y, box.maxCoords.z},
+			{box.minCoords.x, box.maxCoords.y, box.maxCoords.z},
+		};
+		
+		glm::vec3 savedMovements(0.0f);
+
+		size_t it = 0;
+		for (float directionLength = glm::length(direction); directionLength > 0; directionLength = glm::length(direction), ++it) {
+			
+			//Save the nearest collision
+			int nearestIndex = -1;
+			float nearestCollisionDistance = directionLength;
+			float collisionDirection = 0.0f;
+
+			for (glm::vec3 const& position : allPositions) {
+
+				std::optional<CollisionFace> foundFace = castRay(position, direction, nearestCollisionDistance);
+
+				if( foundFace ) {
+					
+					CollisionFace& face = *foundFace;
+
+					//If this distance is higher than our nearest collision, ignore it.
+					if (face.distance >= nearestCollisionDistance) continue;
+					nearestCollisionDistance = face.distance;
+
+					uint8_t axisIndex;
+					for(axisIndex = 0; axisIndex < 3; ++axisIndex) {
+						if (face.normal[axisIndex] != 0) break;
+					}
+
+					nearestIndex = axisIndex;
+					collisionDirection = face.normal[axisIndex]; //This is the inverse direction
+
+				}
+			
+			}
+
+			//If nearestIndex is still equal to -1, it mean no collision was encountered, we can stop the algorithm
+			if (nearestIndex == -1) break;
+
+			//Movement done before collision
+			glm::vec3 doneMovement = direction * (nearestCollisionDistance / directionLength);
+
+			//We add a minimum distance to wall to prevent being in between 2 voxel positions
+			doneMovement[nearestIndex] += minimumDistanceToWall * collisionDirection;
+
+			//Update all positions
+			for (glm::vec3& position : allPositions) {
+				position += doneMovement;
+			}
+
+			//Save the movement
+			savedMovements += doneMovement;
+
+			//Update direction
+			direction -= doneMovement;
+			direction[nearestIndex] = 0.0f;
+
+		}
+
+		//We return the total done movements and the remaining
+		return savedMovements + direction;
+		
 	}
 	
 }

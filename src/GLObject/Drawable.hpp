@@ -1,3 +1,4 @@
+#pragma once
 
 #include <GLObject/Shader.hpp>
 #include <GLObject/GLObject.hpp>
@@ -9,10 +10,16 @@ namespace mav {
     class Drawable {
 
         public:
-            Drawable(bool shouldInitialize, size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader);
-            
-            //To initialize the VAO
-            void initialize();
+            Drawable(bool shouldInitialized, size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader);
+
+            //To generate vertices
+            virtual void generateVertices() = 0;
+
+            /**
+             * To initialize the VAO.
+             * If fullInit is set to true, also generate vertices and call graphic update to set graphic buffer data
+            */
+            void initialize(bool fullInit = false);
 
             //To update the VAO buffers
             void graphicUpdate();
@@ -26,7 +33,9 @@ namespace mav {
             std::vector<VAO::Attribute> attributes_;
 
             std::vector<float> vertices_;
+            
             std::vector<int> indices_;
+            size_t indicesSize_;
 
         };
 

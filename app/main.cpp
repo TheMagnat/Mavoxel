@@ -11,31 +11,13 @@ you can use a totally different main file.
 #include <iostream>
 #include <chrono>
 
-#include <Collision/AABB.hpp>
-
 #include <Game/Game.hpp>
 
 
-static mav::Window gameWindow("Mavoxel", 1920/2, 1080/2);
-
-
-void key_callback(int key, int scancode, int action, int mods){
-
-    if(key == GLFW_KEY_ESCAPE){
-        //TODO: etudier la possibiliter de kills les threads avant de tout fermer pour vite les stops
-		gameWindow.closeWindow();
-	}
-
-    if(key == GLFW_KEY_E && action == GLFW_PRESS){
-        
-    }
-
-}
+static mav::Window gameWindow("Mavoxel", 1920, 1080);
 
 
 int main(int argc, char const *argv[]){
-
-    AABB(glm::vec3(10, 5, 3), 10);
 
 	srand(time(NULL));
 
@@ -53,7 +35,7 @@ int main(int argc, char const *argv[]){
 
     //Setup interface
 	gameWindow.setMouseCallback([&game](double xPos, double yPos){ game.mouseMoving(xPos, yPos); });
-	gameWindow.setKeyCallback(key_callback);
+	gameWindow.setKeyCallback([&game](int key, int scancode, int action, int mods){ game.keyCallback(key, scancode, action, mods); });
 	gameWindow.setGraphicLoop([&game](float elapsedTime){ game.gameLoop(elapsedTime); });
 
     std::cout << "Starting main loop..." << std::endl;

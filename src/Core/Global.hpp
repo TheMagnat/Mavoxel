@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstddef>
 #include <Helper/ThreadPool.hpp>
+#include <Environment/Environment.hpp>
 
 namespace mav {
 
@@ -18,6 +19,7 @@ namespace mav {
 		#ifndef NDEBUG
 
 			static mav::Shader debugShader;
+			static mav::Environment debugEnvironment;
 
 		#endif
 		

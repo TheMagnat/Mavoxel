@@ -298,7 +298,7 @@ namespace mav {
 		//Position de la cam
 		shaderPtr_->setVec3("viewPos", cameraPtr_->Position);
 
-		shaderPtr_->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 500.0f));
+		shaderPtr_->setMat4("projection", cameraPtr_->Projection);
 
 
 		glDrawElements(GL_TRIANGLES, (int)indicesNb_, GL_UNSIGNED_INT, 0);

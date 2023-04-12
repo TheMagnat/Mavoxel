@@ -119,5 +119,6 @@
 		"vertice",
 		"voxel",
 		"voxels"
-	]
+	],
+	"cmake.configureOnOpen": true
 }

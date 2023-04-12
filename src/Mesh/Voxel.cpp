@@ -6,23 +6,18 @@
 namespace mav {
 
 	Voxel::Voxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(shaderPtr, environment, material, size, position) {}
+        : Mesh(8, {{3}, {3}, {2}}, shaderPtr, environment, material, size, position) {}
 
-	void Voxel::init(){
-		vao_.init(true);
-        generateVertices();
-        updateVAO();
-	}
 
     void Voxel::generateVertices(){
 
         size_t nbOfData = 8;
 
         size_t verticesNb = 6*4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
-        indicesNb_ = 6*6; //Number of face * number of triangle * number of vertice per triangle
+        indicesSize_ = 6*6; //Number of face * number of triangle * number of vertice per triangle
 
         vertices_.resize(verticesNb);
-        indices_.resize(indicesNb_);
+        indices_.resize(indicesSize_);
 
         glm::vec3 color(0, 1, 0);
         float verticesLength = 0.5f;
@@ -121,14 +116,7 @@ namespace mav {
 
         }
 
-        indicesNb_ = indices_.size();
-    }
-
-    void Voxel::updateVAO(){
-
-        std::vector<VAO::Attribute> allAttribute = {{3}, {3}, {2}};
-
-		vao_.setAll(vertices_, 8, allAttribute, indices_);
+        indicesSize_ = indices_.size();
     }
 
 

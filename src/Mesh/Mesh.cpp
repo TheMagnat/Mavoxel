@@ -5,16 +5,12 @@
 
 namespace mav {
 
-    Mesh::Mesh(Shader* shaderPtrP, Environment* environmentP, Material materialP, float sizeP, glm::vec3 positionP)
-        : size(sizeP), position(positionP), material(materialP), environment_(environmentP), shaderPtr_(shaderPtrP) {
+    Mesh::Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shaderPtr, Environment* environmentP, Material materialP, float sizeP, glm::vec3 positionP)
+        : Drawable(false, attributesSum, attributes, shaderPtr), size(sizeP), position(positionP), material(materialP), environment_(environmentP) {
             updatePosition();
         }
 
-    void Mesh::init(){
-        vao_.init(true);
-    }
-
-    void Mesh::setPosition(glm::vec3 newPosition){
+    void Mesh::setPosition(glm::vec3 const& newPosition){
         position = newPosition;
         updatePosition();
     }
@@ -34,13 +30,13 @@ namespace mav {
         return position;
     }
 
-    void Mesh::draw(){
+    void Mesh::draw() const {
 
 		glBindVertexArray(vao_.get());
 		
 
 		//SET LE SHADER
-		shaderPtr_->use();
+		shader_->use();
     
 		glm::mat4 model = glm::mat4(1.0f);
         model = model * translationMatrix_;
@@ -49,29 +45,29 @@ namespace mav {
 		model = glm::scale(model, glm::vec3(size));
 
 
-		shaderPtr_->setMat4("model", model);
-		shaderPtr_->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
+		shader_->setMat4("model", model);
+		shader_->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
 
 		////TOUT LES NEED
-		shaderPtr_->use();
+		shader_->use();
 
-		shaderPtr_->setVec3("material.ambient", material.ambient);
-		shaderPtr_->setVec3("material.diffuse", material.diffuse);
-		shaderPtr_->setVec3("material.specular", material.specular);
-		shaderPtr_->setFloat("material.shininess", material.shininess);
+		shader_->setVec3("material.ambient", material.ambient);
+		shader_->setVec3("material.diffuse", material.diffuse);
+		shader_->setVec3("material.specular", material.specular);
+		shader_->setFloat("material.shininess", material.shininess);
 
-		shaderPtr_->setVec3("light.ambient",  environment_->sun->material.ambient);
-		shaderPtr_->setVec3("light.diffuse",  environment_->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
-		shaderPtr_->setVec3("light.specular", environment_->sun->material.specular);
+		shader_->setVec3("light.ambient",  environment_->sun->material.ambient);
+		shader_->setVec3("light.diffuse",  environment_->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
+		shader_->setVec3("light.specular", environment_->sun->material.specular);
 
-		shaderPtr_->setVec3("light.position", environment_->sun->getPosition());
+		shader_->setVec3("light.position", environment_->sun->getPosition());
 
-		// shaderPtr_->setFloat("light.constant",  1.0f);
-		// shaderPtr_->setFloat("light.linear",    0.09f);
-		// shaderPtr_->setFloat("light.quadratic", 0.032f);
+		// shader_->setFloat("light.constant",  1.0f);
+		// shader_->setFloat("light.linear",    0.09f);
+		// shader_->setFloat("light.quadratic", 0.032f);
 
 
-		//shaderPtr_->setVec3("light.position", glm::vec3(0, 50, 100));
+		//shader_->setVec3("light.position", glm::vec3(0, 50, 100));
 
 
 
@@ -80,15 +76,15 @@ namespace mav {
 		glm::mat4 view(environment_->camera->GetViewMatrix());
 		//glm::mat4 view(glm::lookAt(cameraPtr_->Position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 
-		shaderPtr_->setMat4("view", view);
+		shader_->setMat4("view", view);
 
 		//Position de la cam
-		shaderPtr_->setVec3("viewPos", environment_->camera->Position);
+		shader_->setVec3("viewPos", environment_->camera->Position);
 
-		shaderPtr_->setMat4("projection", glm::perspective(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 2000.0f));
+		shader_->setMat4("projection", environment_->camera->Projection);
 
 
-		glDrawElements(GL_TRIANGLES, (int)indicesNb_, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, (int)indicesSize_, GL_UNSIGNED_INT, 0);
 
 	}
 

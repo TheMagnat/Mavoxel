@@ -21,10 +21,9 @@
 
 namespace mav {
 
-	struct VoxelMatrice {
+	struct VoxelMatrix {
 		std::vector<SimpleVoxel> data;
 		VoxelMap voxelIndices;
-		VoxelMap voxelMap;
 
 		void initializeIndices(size_t size) {
 
@@ -35,20 +34,6 @@ namespace mav {
 				for (size_t y = 0; y < size; ++y) {
 
 					voxelIndices[x][y].resize(size, -1);
-				}
-			}
-		
-		}
-
-		void initializeMap(size_t size) {
-
-			voxelMap.resize(size);
-			for (size_t x = 0; x < size; ++x) {
-
-				voxelMap[x].resize(size);
-				for (size_t y = 0; y < size; ++y) {
-
-					voxelMap[x][y].resize(size);
 				}
 			}
 		
@@ -68,15 +53,14 @@ namespace mav {
 		public:
 			Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize);
 
-			void generateVoxels(VoxelGeneratorFunc generator);
 			void generateVoxels(const VoxelMapGenerator * voxelMapGenerator);
 			void generateVertices();
 
 			/**
-			 * Reeturn 0 if nothing found, 1 if another voxel was found and 2 if out of bound.
+			 * Return 0 if nothing found, 1 if another voxel was found and 2 if out of bound.
 			*/
-			int findVoxel(glm::vec3 const& position) const;
-			int findVoxel(int x, int y, int z) const;
+			int findVoxel(glm::vec3 const& position, VoxelMap const& voxelMap) const;
+			int findVoxel(int x, int y, int z, VoxelMap const& voxelMap) const;
 			const SimpleVoxel* unsafeGetVoxel(int x, int y, int z) const;
 
 			//OpenGL
@@ -93,17 +77,17 @@ namespace mav {
 			int size_;
 			float voxelSize_;
 
+			AABB collisionBox_;
+
 			//Voxels informations
-			VoxelMatrice voxels_;
+			VoxelMatrix voxels_;
 
 			//Reference to the world
 			World* world_;
 
 
 			#ifndef NDEBUG
-
 				DebugVoxel chunkSides;
-
     		#endif
 	};
 

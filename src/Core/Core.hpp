@@ -27,13 +27,13 @@ namespace mav{
 
 			void startLoop() const;
 
-			void closeWindow();
+			void closeWindow() const;
 
 
 
 			///Callback
 			void setMouseCallback(functionDoubleDouble newFunction);
-			void mouseMovingCallback(double xpos, double ypos);
+			void mouseMovingCallback(double xPos, double yPos);
 
 			void setKeyCallback(functionIntIntIntInt newFunction);
 			void keyCallback(int key, int scancode, int action, int mods);
