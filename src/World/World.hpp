@@ -43,7 +43,7 @@ namespace mav {
 			//TODO: Récupérer l'information de la face toucher en plus du Voxel.
 			
 			std::optional<CollisionFace> castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance = 50) const;
-			glm::vec3 castRay(mav::AABB const& box, glm::vec3 direction) const;
+			std::pair<glm::vec3, glm::vec3> castBoxRay(mav::AABB const& box, glm::vec3 direction) const;
 
 
 			// Threaded

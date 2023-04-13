@@ -3,15 +3,6 @@
 
 #include <GLObject/Camera.hpp>
 #include <Entity/Entity.hpp>
-#include <World/World.hpp>
-
-//TODO: remove
-//DEBUG
-#include <iomanip>
-
-//TODO: le metre en paramètre de la class ?
-const static float friction = 0.001;
-const static float minimumLength = 0.1;
 
 namespace mav {
 
@@ -19,8 +10,8 @@ namespace mav {
     class Player : public Entity {
 
             public:
-                Player(glm::vec3 const& playerStartPosition)
-                    : camera_(playerStartPosition), Entity(camera_.Position, camera_.Front, camera_.Right)
+                Player(glm::vec3 const& playerStartPosition, float voxelSize)
+                    : camera_(playerStartPosition), Entity(voxelSize, camera_.Position, camera_.Front, camera_.Right)
                 {
                     box.updatePos(position);
                 }
@@ -41,28 +32,14 @@ namespace mav {
 
                 }
 
-                void update(float elapsedTime, World const& world) {
+                bool update(float elapsedTime, World const& world) {
                     
-                    if( glm::length(velocity) ) {
-                        
-                        glm::vec3 collisionVelocity = world.castRay(box, velocity * elapsedTime);
-                                                
-                        camera_.ProcessKeyboard(collisionVelocity);
-                        box.updatePos(position);
+                    bool positionUpdated = Entity::update(elapsedTime, world);
+                    if (positionUpdated) camera_.updateFrustum();
 
-                        #ifndef NDEBUG
-                            entityBox.setPosition(position);
-                        #endif
-
-                    }
-
-                    float toMult = pow(friction, elapsedTime);
-                    velocity *= toMult;
-
-                    if( glm::length(velocity) < minimumLength ) velocity = glm::vec3(0.0f);
+                    return positionUpdated;
 
                 }
-
 
                 //Camera logic
                 Camera* getCamera() {

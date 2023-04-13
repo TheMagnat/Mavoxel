@@ -26,7 +26,7 @@ namespace mav{
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize)
 		//TODO set "glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize))" dans un vec3 "centerPosition"
-		: Drawable(true, 9, {{3}, {3}, {2}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), collisionBox_(glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)), size), world_(world)
+		: Drawable(true, 9, {{3}, {3}, {2}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), collisionBox_(glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)), size*voxelSize), world_(world)
 #ifndef NDEBUG
 		, chunkSides(&Global::debugShader, world->environment, {
 			{0.1f, 0.1f, 0.1f},

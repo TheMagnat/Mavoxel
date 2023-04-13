@@ -15,6 +15,7 @@
 
 #include <glm/gtx/scalar_multiplication.hpp>
 
+#include <Physics/Gravity.hpp>
 #include <Collision/Frustum.hpp>
 #include <Helper/FrustumPoints.hpp>
 
@@ -24,8 +25,12 @@
 
 //TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utilisert la perspective de la caméra partout.
 #define CHUNK_SIZE 64 //size_t
-#define VOXEL_SIZE 1.0f //float
-#define RENDER_DISTANCE 300
+#define VOXEL_SIZE 0.125f //float
+#define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 2
+
+//Player variables
+#define PLAYER_SPEED 4.4
+#define JUMP_FORCE 2.5
 
 constexpr mav::Material grassMaterial {
     {0.0f, 1.0f, 0.0f},
@@ -50,7 +55,7 @@ class Game {
 
 
         Game(const mav::Window* window) : window_(window), totalElapsedTime_(0),
-            player(glm::vec3(0, 0, 0)), generator(0, CHUNK_SIZE, VOXEL_SIZE),
+            player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
             world(&chunkShader, &environment, CHUNK_SIZE, VOXEL_SIZE),
             selectionFace(&selectVoxelShader, &environment, grassMaterial, VOXEL_SIZE),
             sun(&whiteShader, &environment, sunMaterial, 50),
@@ -66,6 +71,8 @@ class Game {
             selectVoxelShader.load("Shaders/basic_color.vs", "Shaders/select_color.fs");
             whiteShader.load("Shaders/basic_color.vs", "Shaders/sun_color.fs");
             colorShader.load("Shaders/only_color.vs", "Shaders/only_color.fs");
+
+            player.setGravity(&gravity);
 
             //Init environment
             environment.sun = &sun;
@@ -102,7 +109,7 @@ class Game {
             else {
 
                 glm::vec3 center(0, 0, 0);
-                world.bulkCreateChunk(center, NB_CHUNK_PER_AXIS * CHUNK_SIZE, true, &generator);
+                world.bulkCreateChunk(center, NB_CHUNK_PER_AXIS * CHUNK_SIZE * VOXEL_SIZE, true, &generator);
 
             }
         }
@@ -111,6 +118,12 @@ class Game {
 
             if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
                 window_->closeWindow();
+            }
+
+            if(key == GLFW_KEY_G && action == GLFW_PRESS){
+
+                player.freeFlight = !player.freeFlight;
+
             }
 
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
@@ -123,10 +136,9 @@ class Game {
                 // }
                 
                 if( !first ) {
-
-                //Drawing lines
-                lines.addPoint(player.position);
-                lines.graphicUpdate();
+                    //Drawing lines
+                    lines.addPoint(player.position);
+                    lines.graphicUpdate();
                 }
                 else {
 
@@ -139,6 +151,8 @@ class Game {
                     glm::mat4 projectionSave = camera->Projection;
                     
                     camera->setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 100.0f);
+                    
+                    camera->maintainFrustum = true;
                     camera->updateFrustum();
                     camera->maintainFrustum = false;
 
@@ -188,7 +202,13 @@ class Game {
                 direction.x += 1.0f;
             }
 
-            player.addVelocity(direction, 275.0f, deltaTime);
+            player.addVelocity(direction, PLAYER_SPEED, deltaTime);
+
+
+            if (window_->isPressed(GLFW_KEY_SPACE)) {
+                player.jump(JUMP_FORCE);
+                //player.addVelocity(glm::vec3(0.0f, 1.0f, 0.0f), 5.0f, deltaTime);
+            }
 
         }
 
@@ -217,7 +237,7 @@ class Game {
             sun.setPosition(-800.f, 800.f, 0.f); // Fix position
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation
-            // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f, sin(tempoTotalTime/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
+            // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
             //Drawing phase
@@ -266,6 +286,9 @@ class Game {
         //mav::Camera camera;
         mav::Environment environment;
         ClassicVoxelMapGenerator generator;
+
+        //Physics
+        mav::Gravity gravity;
 
         mav::World world;
         mav::Face selectionFace;

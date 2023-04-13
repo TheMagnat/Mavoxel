@@ -9,7 +9,7 @@ ClassicVoxelMapGenerator::ClassicVoxelMapGenerator(size_t seed, size_t chunkSize
       fnFractal_(FastNoise::New<FastNoise::FractalFBm>())
 {
     
-    factor_ = 800.0f;
+    factor_ = 400.0f;
 
     fnFractal_->SetSource(perlinGenerator_);
     fnFractal_->SetOctaveCount(9);

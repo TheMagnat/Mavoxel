@@ -12,7 +12,7 @@ Camera::Camera(glm::vec3 const& position, glm::vec3 const& up, float yaw, float 
     updateCameraVectors();
 
     //Default perspective
-    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 200.0f);
+    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.001f, 200.0f);
     updateFrustum();
 }
 
@@ -24,7 +24,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
     updateCameraVectors();
 
     //Default perspective
-    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 200.0f);
+    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.001f, 200.0f);
     updateFrustum();
 }
 
@@ -34,25 +34,25 @@ glm::mat4 Camera::GetViewMatrix() const {
 
 void Camera::setPerspectiveProjectionMatrix(float fovY, float aspect, float zNear, float zFar) {
     Projection = glm::perspective(fovY, aspect, zNear, zFar);
-    if (maintainFrustum) frustum.updatePerspective(fovY, aspect, zNear, zFar);
+    frustum.updatePerspective(fovY, aspect, zNear, zFar);
 }
 
 void Camera::updateFrustum() {
-    frustum.updateCamera(this);
+    if (maintainFrustum) frustum.updateCamera(this);
 }
 
 void Camera::ProcessKeyboard(glm::vec3 velocity, float deltaTime){
     Position += velocity * deltaTime;
 
     // Keep frustum up to date
-    if (maintainFrustum) updateFrustum();
+    updateFrustum();
 }
 
 void Camera::ProcessKeyboard(glm::vec3 velocity){
     Position += velocity;
 
     // Keep frustum up to date
-    if (maintainFrustum) updateFrustum();
+    updateFrustum();
 }
 
 void Camera::ProcessKeyboard(Camera_Movement direction, float velocity, float deltaTime){
@@ -69,7 +69,7 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float velocity, float de
         Position += Right * velocityByTime;
 
     // Keep frustum up to date
-    if (maintainFrustum) updateFrustum();
+    updateFrustum();
 }
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch){
@@ -92,7 +92,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
     updateCameraVectors();
 
     // Keep frustum up to date
-    if (maintainFrustum) updateFrustum();
+    updateFrustum();
 }
 
 void Camera::ProcessMouseScroll(float yoffset){

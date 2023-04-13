@@ -236,15 +236,16 @@ namespace mav {
 		//Here we verify if our position are in between 2 positions. If so we position the ray casting just before the collision between the 2 positions
 		if (std::fmod(startPosition.x, voxelSize_) == 0 && dir.x != 0.0){
 			tMaxX = 0;
-			x = x - xStep * voxelSize_;
+			//Note: we only need to shift the index if the direction is positive
+			if (xStep == 1) x = x - xStep * voxelSize_;
 		}
 		if (std::fmod(startPosition.y, voxelSize_) == 0 && dir.y != 0.0){
 			tMaxY = 0;
-			y = y - yStep * voxelSize_;
+			if (yStep == 1) y = y - yStep * voxelSize_;
 		}
 		if (std::fmod(startPosition.z, voxelSize_) == 0 && dir.z != 0.0){
 			tMaxZ = 0;
-			z = z - zStep * voxelSize_;
+			if (zStep == 1) z = z - zStep * voxelSize_;
 		}
 
 		//Required time to do a full voxel length along the axis.
@@ -341,10 +342,10 @@ namespace mav {
 
 	}
 
-	glm::vec3 World::castRay(mav::AABB const& box, glm::vec3 direction) const {
+	std::pair<glm::vec3, glm::vec3> World::castBoxRay(mav::AABB const& box, glm::vec3 direction) const {
 
 		//TODO: Rendre ça paramétrable
-		const float minimumDistanceToWall = 0.001f;
+		const float minimumDistanceToWall = 0.00001f;
 
 		std::vector<glm::vec3> allPositions {
 			//Bottom face
@@ -361,6 +362,7 @@ namespace mav {
 		};
 		
 		glm::vec3 savedMovements(0.0f);
+		glm::vec3 encounteredCollisions(0.0f);
 
 		size_t it = 0;
 		for (float directionLength = glm::length(direction); directionLength > 0; directionLength = glm::length(direction), ++it) {
@@ -402,6 +404,7 @@ namespace mav {
 
 			//We add a minimum distance to wall to prevent being in between 2 voxel positions
 			doneMovement[nearestIndex] += minimumDistanceToWall * collisionDirection;
+			encounteredCollisions[nearestIndex] = -collisionDirection;
 
 			//Update all positions
 			for (glm::vec3& position : allPositions) {
@@ -418,7 +421,7 @@ namespace mav {
 		}
 
 		//We return the total done movements and the remaining
-		return savedMovements + direction;
+		return {savedMovements + direction, encounteredCollisions};
 		
 	}
 	
