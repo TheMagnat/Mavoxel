@@ -195,9 +195,9 @@ namespace mav {
 		//TODO: We could return something else to make the user understand the chunk does not exist and make it jump directly to the next chunk
 
 		//TODO: voir si ça marche avec des positions pas pile sur le cube
-		int internalX = ((x + halfChunkSize) - xIndex * (int)trueChunkSize) / voxelSize_;
-		int internalY = ((y + halfChunkSize) - yIndex * (int)trueChunkSize) / voxelSize_;
-		int internalZ = ((z + halfChunkSize) - zIndex * (int)trueChunkSize) / voxelSize_;
+		int internalX = ((x + halfChunkSize) - xIndex * trueChunkSize) / voxelSize_;
+		int internalY = ((y + halfChunkSize) - yIndex * trueChunkSize) / voxelSize_;
+		int internalZ = ((z + halfChunkSize) - zIndex * trueChunkSize) / voxelSize_;
 
 		return allChunk_[chunkIt->second]->unsafeGetVoxel(internalX, internalY, internalZ);
 
