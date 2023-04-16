@@ -14,7 +14,7 @@
 
 //TODO: le metre en paramètre de la class ?
 const static float friction = 0.01;
-const static float aerialFriction = 0.1;
+const static float aerialFriction = 0.75;
 const static float minimumLength = 0.001;
 const static float dampingFactor = 0.5f;
 
@@ -144,13 +144,14 @@ namespace mav {
 
                     //We apply friction and damping factor on our velocity
                     float timeGroundFriction = pow(friction, elapsedTime);
+                    float timeAerialFriction = pow(aerialFriction, elapsedTime);
                     if (freeFlight) {
                         velocity *= timeGroundFriction;
                     }
                     else {
                         velocity.x *= timeGroundFriction;
                         velocity.z *= timeGroundFriction;
-                        velocity.y *= 1.0f - dampingFactor * elapsedTime;
+                        velocity.y *= timeAerialFriction;
                     }
 
                     if( glm::length(velocity) < minimumLength ) velocity = glm::vec3(0.0f);

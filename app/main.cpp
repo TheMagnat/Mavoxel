@@ -35,6 +35,7 @@ int main(int argc, char const *argv[]){
 
     //Setup interface
 	gameWindow.setMouseCallback([&game](double xPos, double yPos){ game.mouseMoving(xPos, yPos); });
+	gameWindow.setMouseClickCallback([&game](int button, int action, int mods){ game.mouseClickCallback(button, action, mods); });
 	gameWindow.setKeyCallback([&game](int key, int scancode, int action, int mods){ game.keyCallback(key, scancode, action, mods); });
 	gameWindow.setGraphicLoop([&game](float elapsedTime){ game.gameLoop(elapsedTime); });
 

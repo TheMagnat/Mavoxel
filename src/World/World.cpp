@@ -7,6 +7,10 @@
 
 #include <algorithm>
 
+#ifdef TIME
+	#include <Helper/Benchmark/Profiler.hpp>
+#endif
+
 namespace mav {
 
 	World::World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, float voxelSize)
@@ -25,18 +29,12 @@ namespace mav {
 		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
 		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ, voxelMapGenerator](){
 			
-			std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-			currentChunkPtr->generateVoxels( voxelMapGenerator );
-			std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<float> fsec = end - begin;
-			std::cout << "Time difference (generateVoxels) = " << fsec.count() << "s" << std::endl;
-			
-			begin = std::chrono::high_resolution_clock::now();
-			currentChunkPtr->generateVertices();
-			end = std::chrono::high_resolution_clock::now();
-			fsec = end - begin;
-			std::cout << "Time difference (generateVertices) = " << fsec.count() << "s" << std::endl;
+			#ifdef TIME
+				Profiler profiler("Full chunks generation");
+			#endif
 
+			currentChunkPtr->generateVoxels( voxelMapGenerator );
+			currentChunkPtr->generateVertices();
 			currentChunkPtr->state = 1;
 
 			// Now thread safe operation
@@ -109,21 +107,23 @@ namespace mav {
 
 		if (readyToUpdateChunks.empty()) return;
 
+		#ifdef TIME
+			Profiler profiler("Graphic update (full)");
+		#endif
+
 		std::lock_guard<std::mutex> lock(readyToUpdateChunksMutex);
 
 		while(!readyToUpdateChunks.empty() && nbToUpdate-- != 0) {
+			
+			#ifdef TIME
+				Profiler profiler("Graphic update");
+			#endif
 
 			size_t currentChunkIndex = readyToUpdateChunks.front();
 			readyToUpdateChunks.pop();
 
-			std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-
 			allChunk_[currentChunkIndex]->graphicUpdate();
 			allChunk_[currentChunkIndex]->state = 2;
-
-			std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<float> fsec = end - begin;
-			std::cout << "Time difference (graphicUpdate) = " << fsec.count() << "s" << std::endl;
 
 		}
 	}
@@ -208,7 +208,7 @@ namespace mav {
 
 	//TODO: tester les perf de cette fonction en utilisant plutôt des array et une boucle sur les 3 axes
 	std::optional<CollisionFace> World::castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance) const {
-
+		
 		glm::vec3 dir = glm::normalize(direction);
 
 		//Positive or negative direction
@@ -344,6 +344,10 @@ namespace mav {
 	}
 
 	std::pair<glm::vec3, glm::vec3> World::collide(mav::AABB const& box, glm::vec3 direction) const {
+
+		#ifdef TIME
+			Profiler profiler("World collide");
+		#endif
 
 		//TODO: Rendre ça paramétrable
 		const float minimumDistanceToWall = 0.00001f;

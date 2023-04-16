@@ -41,15 +41,20 @@ namespace mav {
 
 		glfwSetWindowUserPointer(window_, this);
 
-		auto mouse_callback = [](GLFWwindow* w, double xPos, double yPos){
+		auto mouseMoveCallback = [](GLFWwindow* w, double xPos, double yPos){
 			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseMovingCallback(xPos, yPos);
 		};
-		glfwSetCursorPosCallback(window_, mouse_callback);
+		glfwSetCursorPosCallback(window_, mouseMoveCallback);
+
+		auto mouseClickCallback = [](GLFWwindow* w, int button, int action, int mods){
+			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseClickCallback(button, action, mods);
+		};
+		glfwSetMouseButtonCallback(window_, mouseClickCallback);
 		
-		auto key_callback = [](GLFWwindow* w, int key, int scancode, int action, int mods){
+		auto keyCallback = [](GLFWwindow* w, int key, int scancode, int action, int mods){
 			static_cast<Window*>(glfwGetWindowUserPointer(w))->keyCallback(key, scancode, action, mods);
 		};
-		glfwSetKeyCallback(window_, key_callback);
+		glfwSetKeyCallback(window_, keyCallback);
 
 
 		//Desactivate the mouse
@@ -59,7 +64,6 @@ namespace mav {
 	    glfwSwapInterval(1);
 
 		//glfwSetFramebufferSizeCallback(window_, framebuffer_size_callback);
-	    //glfwSetKeyCallback(window_, key_callback);
 
 
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -85,6 +89,10 @@ namespace mav {
 
 	void Window::setMouseCallback(functionDoubleDouble newFunction){
 		mouseEventFunction_ = newFunction;
+	}
+
+	void Window::setMouseClickCallback(functionIntIntInt newFunction) {
+		mouseClickEventFunction_ = newFunction;
 	}
 
 	void Window::setKeyCallback(functionIntIntIntInt newFunction){
@@ -119,13 +127,16 @@ namespace mav {
 		}
 	}
 
+	void Window::mouseClickCallback(int button, int action, int mods){
+		if(mouseClickEventFunction_){
+			mouseClickEventFunction_(button, action, mods);
+		}
+	}
 
 	void Window::keyCallback(int key, int scancode, int action, int mods){
 		if(keyEventFunction_){
 			keyEventFunction_(key, scancode, action, mods);
 		}
 	}
-
-
 
 }

@@ -4,6 +4,11 @@
 
 #include <iostream>
 
+#ifdef TIME
+	//Help/debug
+	#include <Helper/Benchmark/Profiler.hpp>
+#endif
+
 namespace {
 
 	uint8_t vertexAO(bool side1, bool corner, bool side2) {
@@ -57,6 +62,10 @@ namespace mav{
 
 	void Chunk::generateVoxels(const VoxelMapGenerator * voxelMapGenerator) {
 		
+		#ifdef TIME
+			Profiler profiler("Generate voxels");
+		#endif
+
 		// Move voxelMap and prepare indices size
 		VoxelData voxelData = voxelMapGenerator->generate(posX_, posY_, posZ_);
 		
@@ -79,7 +88,7 @@ namespace mav{
 					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
 
 					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
-					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), voxelMap[x][y][z]);
+					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), glm::ivec3(x, y, z), voxelMap[x][y][z]);
 
 					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
@@ -153,42 +162,29 @@ namespace mav{
 
 	std::array<float, 4> Chunk::generateAmbientOcclusion(glm::ivec3 const& position, uint8_t faceIndex) const {
 		
+		#ifdef TIME
+			Profiler profiler("AO");
+		#endif
+
 		static const std::array<float, 4> AOcurve { 0.0, 0.6, 0.8, 1.0 };
 
-		//Faces
+		//Faces order
 		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-
-		//Vertices
-		//top left, bottom left, bottom right, top right
-
 		static const std::vector<std::vector<glm::ivec3>> positionToLookUp {
-			
 			//bottom
 			{ {-1, -1, 0}, {-1, -1, 1}, {0, -1, 1}, {1, -1, 1}, {1, -1, 0}, {1, -1, -1}, {0, -1, -1}, {-1, -1, -1} },
-
 			//front
 			{ {-1, 0, 1}, {-1, 1, 1}, {0, 1, 1}, {1, 1, 1}, {1, 0, 1}, {1, -1, 1}, {0, -1, 1}, {-1, -1, 1} },
-			
 			//right
 			{ {1, 0, 1}, {1, 1, 1}, {1, 1, 0}, {1, 1, -1}, {1, 0, -1}, {1, -1, -1}, {1, -1, 0}, {1, -1, 1} },
-
 			//back
 			{ {1, 0, -1}, {1, 1, -1}, {0, 1, -1}, {-1, 1, -1}, {-1, 0, -1}, {-1, -1, -1}, {0, -1, -1}, {1, -1, -1} },
-
 			//left
 			{ {-1, 0, -1}, {-1, 1, -1}, {-1, 1, 0}, {-1, 1, 1}, {-1, 0, 1}, {-1, -1, 1}, {-1, -1, 0}, {-1, -1, -1} },
-
 			//top
 			{ {-1, 1, 0}, {-1, 1, -1}, {0, 1, -1}, {1, 1, -1}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}, {-1, 1, 1} }
-
 		};
 
-		// if (faceIndex != 4) return {0, 0, 0, 0};
-
-
-		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-
-		//left, top left, top, top right, right, bottom right, bottom, bottom left
 		std::vector<bool> foundVoxels;
 		foundVoxels.reserve(8);
 		for(uint8_t i = 0; i < 8; ++i) {
@@ -196,14 +192,22 @@ namespace mav{
 			foundVoxels.push_back(foundVoxel == 1);
 		}
 
-		return {AOcurve[vertexAO(foundVoxels[0], foundVoxels[1], foundVoxels[2])],
-				AOcurve[vertexAO(foundVoxels[6], foundVoxels[7], foundVoxels[0])],
-				AOcurve[vertexAO(foundVoxels[4], foundVoxels[5], foundVoxels[6])],
-				AOcurve[vertexAO(foundVoxels[2], foundVoxels[3], foundVoxels[4])]};
+		//Vertices order
+		//top left, bottom left, bottom right, top right
+		return {
+			AOcurve[vertexAO(foundVoxels[0], foundVoxels[1], foundVoxels[2])],
+			AOcurve[vertexAO(foundVoxels[6], foundVoxels[7], foundVoxels[0])],
+			AOcurve[vertexAO(foundVoxels[4], foundVoxels[5], foundVoxels[6])],
+			AOcurve[vertexAO(foundVoxels[2], foundVoxels[3], foundVoxels[4])]
+		};
 
 	}
 
 	void Chunk::generateVertices() {
+
+		#ifdef TIME
+			Profiler profiler("Generate vertices");
+		#endif
 
 		//TODO: set ça de manière global ?
 		float positionOffsets = - ((float)(size_ - 1) / 2.0f) * voxelSize_;
@@ -219,12 +223,14 @@ namespace mav{
 
 				//Ambient occlusion
 				//TODO: benchmark le temps que prends cette nouvelle fonction en tout
-				glm::vec3 const& voxelPosition = voxel.getPosition();
-				std::array<float, 4> AO = generateAmbientOcclusion(glm::ivec3(
-					(voxelPosition.x - positionOffsets - (posX_ * size_ * voxelSize_)) / voxelSize_,
-					(voxelPosition.y - positionOffsets - (posY_ * size_ * voxelSize_)) / voxelSize_,
-					(voxelPosition.z - positionOffsets - (posZ_ * size_ * voxelSize_)) / voxelSize_), faceIndex
-				);
+				std::array<float, 4> AO = generateAmbientOcclusion(voxel.getChunkPosition(), faceIndex);
+
+				// glm::vec3 voxelPosition = voxel.getPosition();
+				// std::array<float, 4> AO = generateAmbientOcclusion(glm::ivec3(
+				// 	(voxelPosition.x - positionOffsets - (posX_ * size_ * voxelSize_)) / voxelSize_,
+				// 	(voxelPosition.y - positionOffsets - (posY_ * size_ * voxelSize_)) / voxelSize_,
+				// 	(voxelPosition.z - positionOffsets - (posZ_ * size_ * voxelSize_)) / voxelSize_), faceIndex
+				// );
 
 				std::vector<float> face = voxel.getFace(faceIndex, AO);
 
@@ -254,6 +260,8 @@ namespace mav{
 
 	void Chunk::draw(){
 
+		if (indicesSize_ == 0) return;
+
 		//Verify if chunks is inside camera frustum
 		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
 
@@ -265,7 +273,6 @@ namespace mav{
 			chunkSides.draw();
 		#endif
 
-		if (indicesSize_ == 0) return;
 		if (!isVisible) return;
 
 		glBindVertexArray(vao_.get());

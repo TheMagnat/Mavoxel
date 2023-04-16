@@ -23,7 +23,7 @@ namespace mav {
             // Faces indexes in the faces array
             enum Face { bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5 };
 
-            SimpleVoxel(glm::vec3 const& position, int id = 0);
+            SimpleVoxel(glm::vec3 const& position, glm::ivec3 const& chunkPosition, int id = 0);
             
             //TODO: Maybe delete ?
             //void generateFaces();
@@ -39,11 +39,13 @@ namespace mav {
 
             // Getters
             glm::vec3 const& getPosition() const;
+            glm::ivec3 const& getChunkPosition() const;
 
         private:
             int id_;
 
             glm::vec3 position_;
+            glm::ivec3 chunkPosition_;
 
             std::array<bool, 6> stateOfFaces_;
 

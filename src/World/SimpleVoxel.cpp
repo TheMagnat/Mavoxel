@@ -116,8 +116,8 @@ namespace mav {
 
 
     // Non static members
-    SimpleVoxel::SimpleVoxel(glm::vec3 const& position, int id)
-        : id_(id), position_(position) {
+    SimpleVoxel::SimpleVoxel(glm::vec3 const& position, glm::ivec3 const& chunkPosition, int id)
+        : id_(id), position_(position), chunkPosition_(chunkPosition) {
 
         //At the start all faces are not shown
         stateOfFaces_.fill(true);
@@ -187,5 +187,9 @@ namespace mav {
 
     glm::vec3 const& SimpleVoxel::getPosition() const {
         return position_;
+    }
+
+    glm::ivec3 const& SimpleVoxel::getChunkPosition() const {
+        return chunkPosition_;
     }
 }

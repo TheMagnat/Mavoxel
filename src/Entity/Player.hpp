@@ -51,6 +51,32 @@ namespace mav {
 
                 }
 
+                //TODO: retirer ?
+                float calculateNewFOV(float elapsedTime) {
+
+                    static const float maximumDiff = 120.0f;
+
+                    float timeMaximumDiff = maximumDiff * elapsedTime;
+
+                    glm::vec3 specialVelocity(velocity.x, 0.0f, velocity.z);
+
+                    float interpolationAlpha = std::min(1.0f, glm::length(specialVelocity) / 15.0f);
+                    float newFov = baseFov + 60.0f * interpolationAlpha;
+
+                    if (newFov == lastFov) return lastFov;
+                    else if (newFov < lastFov) {
+                        float diff = lastFov - newFov;
+                        if (diff < timeMaximumDiff) return newFov;
+                        else return lastFov - timeMaximumDiff;
+                    }
+                    else {
+                        float diff = newFov - lastFov;
+                        if (diff < timeMaximumDiff) return newFov;
+                        else return lastFov + timeMaximumDiff;
+                    }
+
+                }
+
                 //Camera logic
                 Camera* getCamera() {
                     return &camera_;
@@ -80,6 +106,9 @@ namespace mav {
                 float lastX;
                 float lastY;
                 bool firstMouse = true;
+
+                float baseFov = 45.0f;
+                float lastFov = 45.0f;
 
                 //World data
                 float voxelSize_;

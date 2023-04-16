@@ -18,6 +18,7 @@
 #include <Physics/Gravity.hpp>
 #include <Collision/Frustum.hpp>
 #include <Helper/FrustumPoints.hpp>
+#include <Helper/Benchmark/Profiler.hpp>
 
 #define SOLO_CHUNK false
 #define GENERATE_CHUNK false
@@ -114,7 +115,13 @@ class Game {
             }
         }
 
+        void mouseClickCallback(int button, int action, int mods){
+            std::cout << "CALLBACK MOUSE: " << button << " " << action << " " << mods << std::endl;
+        }
+
         void keyCallback(int key, int scancode, int action, int mods){
+
+            
 
             if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
                 window_->closeWindow();
@@ -124,6 +131,10 @@ class Game {
 
                 player.freeFlight = !player.freeFlight;
 
+            }
+
+            if(key == GLFW_KEY_P && action == GLFW_PRESS) {
+                Profiler::printProfiled(std::cout);
             }
 
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
@@ -217,6 +228,11 @@ class Game {
         }
 
         void gameLoop(float elapsedTime) {
+            
+            if (elapsedTime > 1.0f) {
+                std::cout << "WARNING: Long elapsed time : " << elapsedTime << "s, reduced to 1.0s" << std::endl;
+                elapsedTime = 1.0f;
+            }
 
             //To modify
             totalElapsedTime_ += elapsedTime;
