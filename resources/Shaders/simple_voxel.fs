@@ -21,6 +21,7 @@ struct Light {
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexPos;
+in float AO;
 in float Id;
 
 uniform vec3 viewPos;
@@ -78,8 +79,18 @@ void main() {
     vec3 reflectDir = reflect(-lightDir, norm);  
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     vec3 specular = light.specular * (spec * material.specular);  
-        
+    
     vec3 result = ambient + diffuse + specular;
+
+    // Ambient occlusion
+    //TODO: trouver une manière de lisser l'occlusion ambiente    
+    result *= AO;
+
     outFragColor = vec4(result, 1.0);
 
+    // if (AO == 0) outFragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    // else if (AO <= 1) outFragColor = vec4(AO, 0.0, 0.0, 1.0);
+    // else if (AO <= 2) outFragColor = vec4(0.0, AO/2.0, 0.0, 1.0);
+    // else if (AO <= 3) outFragColor = vec4(0.0, 0.0, AO/3.0, 1.0);
+    // outFragColor = vec4(AO/3.0, AO/3.0, AO/3.0, 1.0);
 }

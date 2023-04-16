@@ -56,11 +56,15 @@ namespace mav {
 			void generateVoxels(const VoxelMapGenerator * voxelMapGenerator);
 			void generateVertices();
 
+
+			std::array<float, 4> Chunk::generateAmbientOcclusion(glm::ivec3 const& position, uint8_t faceIndex) const;
+
 			/**
 			 * Return 0 if nothing found, 1 if another voxel was found and 2 if out of bound.
 			*/
 			int findVoxel(glm::vec3 const& position, VoxelMap const& voxelMap) const;
 			int findVoxel(int x, int y, int z, VoxelMap const& voxelMap) const;
+			int findVoxel(glm::vec3 const& position) const;
 			const SimpleVoxel* unsafeGetVoxel(int x, int y, int z) const;
 
 			//OpenGL

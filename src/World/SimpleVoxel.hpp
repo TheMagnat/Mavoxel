@@ -13,7 +13,9 @@ namespace mav {
 
             // This array contain the correct sequence to convert face vertices to 2 openGL triangles
             static std::array<uint8_t, 6> verticesIndices;
-
+            // There is a flipped version for a better interpolation of the ambient occlusion values
+            static std::array<uint8_t, 6> flippedVerticesIndices;
+            
             // This array will contain the faces basics vertices
             static std::array<std::vector<float>, 6> generalFacesVertices;
             static void generateGeneralFaces(float voxelSize);
@@ -30,6 +32,7 @@ namespace mav {
 
             // Faces informations
             std::vector<float> getFace(uint8_t faceIndex) const;
+            std::vector<float> getFace(uint8_t faceIndex, std::array<float, 4> const& ambientOcclusion) const;
 
             void setFaceState(uint8_t faceIndex, bool state = true);
             bool getFaceState(uint8_t faceIndex) const;

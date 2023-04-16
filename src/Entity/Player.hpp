@@ -11,9 +11,12 @@ namespace mav {
 
             public:
                 Player(glm::vec3 const& playerStartPosition, float voxelSize)
-                    : camera_(playerStartPosition), Entity(voxelSize, camera_.Position, camera_.Front, camera_.Right)
+                    : Entity( AABB(playerStartPosition, glm::vec3(voxelSize/2.0f * 0.95f, voxelSize * 0.95f, voxelSize/2.0f * 0.95f)) ),
+                    camera_(playerStartPosition), voxelSize_(voxelSize)
                 {
-                    box.updatePos(position);
+                    front_ = &camera_.Front;
+                    right_ = &camera_.Right;
+                    // box.updatePos(position.x, position.y - voxelSize/2.0f, position.z);
                 }
 
                 void update(float elapsedTime) {
@@ -21,10 +24,10 @@ namespace mav {
                     camera_.ProcessKeyboard(velocity, elapsedTime);
 
                     //Update collision box
-                    box.updatePos(position);
+                    // box.updatePos(position);
 
                     #ifndef NDEBUG
-                        entityBox.setPosition(position);
+                        entityBox.setPosition(boundingBox_.center);
                     #endif
 
                     float toMult = pow(friction, elapsedTime);
@@ -35,7 +38,14 @@ namespace mav {
                 bool update(float elapsedTime, World const& world) {
                     
                     bool positionUpdated = Entity::update(elapsedTime, world);
-                    if (positionUpdated) camera_.updateFrustum();
+                    
+                    // Update camera position
+                    if (positionUpdated) {
+                        //TODO: un truc plus clean ?
+                        camera_.Position = boundingBox_.center;
+                        camera_.Position.y += voxelSize_ * 0.95 / 2.0f;
+                        camera_.updateFrustum();
+                    }
 
                     return positionUpdated;
 
@@ -70,6 +80,9 @@ namespace mav {
                 float lastX;
                 float lastY;
                 bool firstMouse = true;
+
+                //World data
+                float voxelSize_;
 
     };
 

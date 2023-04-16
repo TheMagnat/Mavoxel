@@ -10,7 +10,8 @@ namespace mav {
         CollisionFace(std::vector<float> const& vertices, float distanceP) : distance(distanceP) {
             
             //Data size in vertices
-            for(size_t i = 0, j = 0; i < 4; ++i, j += 9) {
+            //TODO: faire en sort d'aller chercher le 10
+            for(size_t i = 0, j = 0; i < 4; ++i, j += 10) {
                 points[i].x = vertices[j + 0];
                 points[i].y = vertices[j + 1];
                 points[i].z = vertices[j + 2];

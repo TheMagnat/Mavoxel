@@ -206,6 +206,7 @@ namespace mav {
 
 	inline float positiveModulo (float a, float b) { return a >= 0 ? fmod(a, b) : fmod( fmod(a, b) + b, b); }
 
+	//TODO: tester les perf de cette fonction en utilisant plutôt des array et une boucle sur les 3 axes
 	std::optional<CollisionFace> World::castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance) const {
 
 		glm::vec3 dir = glm::normalize(direction);
@@ -342,23 +343,25 @@ namespace mav {
 
 	}
 
-	std::pair<glm::vec3, glm::vec3> World::castBoxRay(mav::AABB const& box, glm::vec3 direction) const {
+	std::pair<glm::vec3, glm::vec3> World::collide(mav::AABB const& box, glm::vec3 direction) const {
 
 		//TODO: Rendre ça paramétrable
 		const float minimumDistanceToWall = 0.00001f;
 
-		std::vector<glm::vec3> allPositions {
+		//Here we calculate the center and the extremities of our bounding box
+		glm::vec3 boxCenterPosition = box.center;
+		std::vector<glm::vec3> allExtremities {
 			//Bottom face
-			{box.minCoords.x, box.minCoords.y, box.minCoords.z},
-			{box.maxCoords.x, box.minCoords.y, box.minCoords.z},
-			{box.maxCoords.x, box.minCoords.y, box.maxCoords.z},
-			{box.minCoords.x, box.minCoords.y, box.maxCoords.z},
+			{-box.extents.x, -box.extents.y, -box.extents.z},
+			{+box.extents.x, -box.extents.y, -box.extents.z},
+			{+box.extents.x, -box.extents.y, +box.extents.z},
+			{-box.extents.x, -box.extents.y, +box.extents.z},
 
 			//Top face
-			{box.minCoords.x, box.maxCoords.y, box.minCoords.z},
-			{box.maxCoords.x, box.maxCoords.y, box.minCoords.z},
-			{box.maxCoords.x, box.maxCoords.y, box.maxCoords.z},
-			{box.minCoords.x, box.maxCoords.y, box.maxCoords.z},
+			{-box.extents.x, +box.extents.y, -box.extents.z},
+			{+box.extents.x, +box.extents.y, -box.extents.z},
+			{+box.extents.x, +box.extents.y, +box.extents.z},
+			{-box.extents.x, +box.extents.y, +box.extents.z},
 		};
 		
 		glm::vec3 savedMovements(0.0f);
@@ -372,9 +375,9 @@ namespace mav {
 			float nearestCollisionDistance = directionLength;
 			float collisionDirection = 0.0f;
 
-			for (glm::vec3 const& position : allPositions) {
+			for (glm::vec3 const& extremity : allExtremities) {
 
-				std::optional<CollisionFace> foundFace = castRay(position, direction, nearestCollisionDistance);
+				std::optional<CollisionFace> foundFace = castRay(boxCenterPosition + extremity, direction, nearestCollisionDistance);
 
 				if( foundFace ) {
 					
@@ -406,10 +409,8 @@ namespace mav {
 			doneMovement[nearestIndex] += minimumDistanceToWall * collisionDirection;
 			encounteredCollisions[nearestIndex] = -collisionDirection;
 
-			//Update all positions
-			for (glm::vec3& position : allPositions) {
-				position += doneMovement;
-			}
+			//Update center position
+			boxCenterPosition += doneMovement;
 
 			//Save the movement
 			savedMovements += doneMovement;

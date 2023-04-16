@@ -39,11 +39,36 @@ namespace mav {
 			void draw(glm::vec3 position, float renderDistance);
 
 			// Collisions
+
+			/**
+			 * @brief Find if there is a voxel at the given position.
+			 * 
+			 * @param x 
+			 * @param y 
+			 * @param z 
+			 * @return Return a constant pointer to the found voxel if found, or nullptr if not.
+			 */
 			const SimpleVoxel* getVoxel(float x, float y, float z) const;
-			//TODO: Récupérer l'information de la face toucher en plus du Voxel.
-			
+
+			/**
+			 * @brief Cast a ray in the world to find the face encountered.
+			 * 
+			 * @param startPosition The position where we will start to cast our ray.
+			 * @param direction The direction of the ray.
+			 * @param maxDistance The maximum distance that we will travel before considering there is no collision.
+			 * @return We will return an optional CollisionFace which is filled only if we found a collision.
+			 */
 			std::optional<CollisionFace> castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance = 50) const;
-			std::pair<glm::vec3, glm::vec3> castBoxRay(mav::AABB const& box, glm::vec3 direction) const;
+			
+			/**
+			 * @brief Verify if a moving bounding box enter in collision with our world.
+			 * 
+			 * @param box The bounding box that will be tested in our world
+			 * @param direction The direction of the box.
+			 * @return A pair of glm::vec3. The first element represent the newly calculated velocity with the collisions applied to it
+			 * and the second contain the informations about the axis where collision where encountered.
+			 */
+			std::pair<glm::vec3, glm::vec3> collide(mav::AABB const& box, glm::vec3 direction) const;
 
 
 			// Threaded

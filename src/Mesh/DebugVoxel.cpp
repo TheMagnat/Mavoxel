@@ -8,7 +8,7 @@ namespace mav {
 	DebugVoxel::DebugVoxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
         : Mesh(3, {{3}}, shaderPtr, environment, material, size, position), color_(1.0f, 1.0f, 1.0f) {}
 
-    void DebugVoxel::generateVertices(){
+    void DebugVoxel::generateVertices() {
 
         size_t nbOfData = 3;
 

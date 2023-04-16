@@ -25,12 +25,12 @@
 
 //TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utilisert la perspective de la caméra partout.
 #define CHUNK_SIZE 64 //size_t
-#define VOXEL_SIZE 0.125f //float
+#define VOXEL_SIZE 0.5f //float
 #define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 2
 
 //Player variables
-#define PLAYER_SPEED 4.4
-#define JUMP_FORCE 2.5
+#define PLAYER_SPEED 12
+#define JUMP_FORCE 7
 
 constexpr mav::Material grassMaterial {
     {0.0f, 1.0f, 0.0f},
@@ -137,8 +137,8 @@ class Game {
                 
                 if( !first ) {
                     //Drawing lines
-                    lines.addPoint(player.position);
-                    lines.graphicUpdate();
+                    // lines.addPoint(player.position);
+                    // lines.graphicUpdate();
                 }
                 else {
 

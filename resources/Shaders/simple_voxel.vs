@@ -3,7 +3,8 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTex;
-layout (location = 3) in float aId;
+layout (location = 3) in float aAO;
+layout (location = 4) in float aId;
 
 uniform mat3 modelNormal;
 
@@ -14,6 +15,7 @@ uniform mat4 projection;
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexPos;
+out float AO;
 out float Id;
 
 
@@ -28,6 +30,7 @@ void main(){
     TexPos = aTex;
 
     Id = aId;
+    AO = aAO;
     
 }
 

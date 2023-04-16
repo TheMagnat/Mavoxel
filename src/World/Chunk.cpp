@@ -4,6 +4,18 @@
 
 #include <iostream>
 
+namespace {
+
+	uint8_t vertexAO(bool side1, bool corner, bool side2) {
+		if(side1 && side2) {
+			return 0;
+		}
+  		return 3 - (side1 + side2 + corner);
+	}
+
+}
+
+
 namespace mav{
 
 	//TODO: Move this to SimpleVoxel ?
@@ -26,7 +38,7 @@ namespace mav{
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize)
 		//TODO set "glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize))" dans un vec3 "centerPosition"
-		: Drawable(true, 9, {{3}, {3}, {2}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), collisionBox_(glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)), size*voxelSize), world_(world)
+		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), collisionBox_(glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)), size*voxelSize), world_(world)
 #ifndef NDEBUG
 		, chunkSides(&Global::debugShader, world->environment, {
 			{0.1f, 0.1f, 0.1f},
@@ -62,7 +74,7 @@ namespace mav{
 					if( voxelMap[x][y][z] == 0 ) continue;
 
 					// Position in the chunk + Offset to center the chunk + position in the world
-					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * (size_) * voxelSize_);
+					float xPos = (x * voxelSize_) + positionOffsets + (posX_ * size_ * voxelSize_);
 					float yPos = (y * voxelSize_) + positionOffsets + (posY_ * size_ * voxelSize_);
 					float zPos = (z * voxelSize_) + positionOffsets + (posZ_ * size_ * voxelSize_);
 
@@ -119,10 +131,18 @@ namespace mav{
 		return voxelMap[x][y][z] != 0;
 	}
 
+	int Chunk::findVoxel(glm::vec3 const& position) const {
+
+		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return 2;
+
+		return voxels_.voxelIndices[position.x][position.y][position.z] != -1;
+	}
+
 	const SimpleVoxel* Chunk::unsafeGetVoxel(int x, int y, int z) const {
 
-		// if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_)
-		// 	return nullptr;
+		// if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_) {
+		//  	return nullptr;
+		// }
 
 		int index = voxels_.voxelIndices[x][y][z];
 		if(index != -1) return &voxels_.data[ index ];
@@ -131,7 +151,62 @@ namespace mav{
 
 	}
 
+	std::array<float, 4> Chunk::generateAmbientOcclusion(glm::ivec3 const& position, uint8_t faceIndex) const {
+		
+		static const std::array<float, 4> AOcurve { 0.0, 0.6, 0.8, 1.0 };
+
+		//Faces
+		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
+
+		//Vertices
+		//top left, bottom left, bottom right, top right
+
+		static const std::vector<std::vector<glm::ivec3>> positionToLookUp {
+			
+			//bottom
+			{ {-1, -1, 0}, {-1, -1, 1}, {0, -1, 1}, {1, -1, 1}, {1, -1, 0}, {1, -1, -1}, {0, -1, -1}, {-1, -1, -1} },
+
+			//front
+			{ {-1, 0, 1}, {-1, 1, 1}, {0, 1, 1}, {1, 1, 1}, {1, 0, 1}, {1, -1, 1}, {0, -1, 1}, {-1, -1, 1} },
+			
+			//right
+			{ {1, 0, 1}, {1, 1, 1}, {1, 1, 0}, {1, 1, -1}, {1, 0, -1}, {1, -1, -1}, {1, -1, 0}, {1, -1, 1} },
+
+			//back
+			{ {1, 0, -1}, {1, 1, -1}, {0, 1, -1}, {-1, 1, -1}, {-1, 0, -1}, {-1, -1, -1}, {0, -1, -1}, {1, -1, -1} },
+
+			//left
+			{ {-1, 0, -1}, {-1, 1, -1}, {-1, 1, 0}, {-1, 1, 1}, {-1, 0, 1}, {-1, -1, 1}, {-1, -1, 0}, {-1, -1, -1} },
+
+			//top
+			{ {-1, 1, 0}, {-1, 1, -1}, {0, 1, -1}, {1, 1, -1}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}, {-1, 1, 1} }
+
+		};
+
+		// if (faceIndex != 4) return {0, 0, 0, 0};
+
+
+		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
+
+		//left, top left, top, top right, right, bottom right, bottom, bottom left
+		std::vector<bool> foundVoxels;
+		foundVoxels.reserve(8);
+		for(uint8_t i = 0; i < 8; ++i) {
+			int foundVoxel = findVoxel(position + positionToLookUp[faceIndex][i]);
+			foundVoxels.push_back(foundVoxel == 1);
+		}
+
+		return {AOcurve[vertexAO(foundVoxels[0], foundVoxels[1], foundVoxels[2])],
+				AOcurve[vertexAO(foundVoxels[6], foundVoxels[7], foundVoxels[0])],
+				AOcurve[vertexAO(foundVoxels[4], foundVoxels[5], foundVoxels[6])],
+				AOcurve[vertexAO(foundVoxels[2], foundVoxels[3], foundVoxels[4])]};
+
+	}
+
 	void Chunk::generateVertices() {
+
+		//TODO: set ça de manière global ?
+		float positionOffsets = - ((float)(size_ - 1) / 2.0f) * voxelSize_;
 		
 		size_t insertedFaces = 0;
 		for (size_t i = 0; i < voxels_.data.size(); ++i) {
@@ -142,15 +217,33 @@ namespace mav{
 				// Here the face is not shown
 				if (!voxel.getFaceState(faceIndex)) continue;
 
-				std::vector<float> face = voxel.getFace(faceIndex);
+				//Ambient occlusion
+				//TODO: benchmark le temps que prends cette nouvelle fonction en tout
+				glm::vec3 const& voxelPosition = voxel.getPosition();
+				std::array<float, 4> AO = generateAmbientOcclusion(glm::ivec3(
+					(voxelPosition.x - positionOffsets - (posX_ * size_ * voxelSize_)) / voxelSize_,
+					(voxelPosition.y - positionOffsets - (posY_ * size_ * voxelSize_)) / voxelSize_,
+					(voxelPosition.z - positionOffsets - (posZ_ * size_ * voxelSize_)) / voxelSize_), faceIndex
+				);
+
+				std::vector<float> face = voxel.getFace(faceIndex, AO);
 
 				//We insert the face vertices...
 				vertices_.insert(vertices_.end(), std::make_move_iterator(face.begin()), std::make_move_iterator(face.end()));
 
 				//...And it's corresponding indices for the EBO
 				size_t currentIndexOffset = (insertedFaces++ * 4);
-				for (uint8_t indice : SimpleVoxel::verticesIndices) {
-					indices_.push_back(currentIndexOffset + indice);
+
+				//We flip the vertices depending on the strongest diagonal to lower the effect of quad interpolation
+				if (AO[0] + AO[2] > AO[1] + AO[3]) {
+					for (uint8_t index : SimpleVoxel::flippedVerticesIndices) {
+						indices_.push_back(currentIndexOffset + index);
+					}
+				}
+				else {
+					for (uint8_t index : SimpleVoxel::verticesIndices) {
+						indices_.push_back(currentIndexOffset + index);
+					}
 				}
 
 			}

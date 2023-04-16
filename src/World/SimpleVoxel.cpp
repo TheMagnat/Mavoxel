@@ -2,10 +2,14 @@
 #include <World/SimpleVoxel.hpp>
 #include <cstddef>
 
+//3 positions, 3 normals, 2 textures, 1 ambient occlusion, 1 id
+static const size_t nbDataInVertices = 3+3+2+1+1;
+
 namespace mav {
 
     //Static members
     std::array<uint8_t, 6> SimpleVoxel::verticesIndices = {0, 1, 3, 2, 3, 1};
+    std::array<uint8_t, 6> SimpleVoxel::flippedVerticesIndices = {1, 2, 0, 3, 0, 2};
     std::array<std::vector<float>, 6> SimpleVoxel::generalFacesVertices = std::array<std::vector<float>, 6>();
 
     void SimpleVoxel::generateGeneralFaces(float voxelSize) {
@@ -38,7 +42,7 @@ namespace mav {
             {{0, 2}, {-1, -1}} //top
         };
 
-
+        //top left, bottom left, bottom right, top right
         static const std::vector<std::pair<float, float>> verticesTexturesPositions {
             {0, 1},
             {0, 0},
@@ -46,7 +50,6 @@ namespace mav {
             {1, 1}
         };
 
-        size_t nbDataInVertices = 3+3+2+1; //3 positions, 3 normals, 2 textures, 1 id
         size_t nbVerticesPerFace = 4 * nbDataInVertices; //number of vertices per face * number of information per vertice
 
         // Prepare faces size
@@ -88,8 +91,11 @@ namespace mav {
                 currentFace[verticeOffset + 6 + 0] = verticesTexturesPositions[j].first;
                 currentFace[verticeOffset + 6 + 1] = verticesTexturesPositions[j].second;
 
-                //id
-                currentFace[verticeOffset + 8 + 0] = 0; // Default value to set
+                //Ambient occlusion
+                currentFace[verticeOffset + 8 + 0] = 1.0f;
+
+                //Id
+                currentFace[verticeOffset + 9 + 0] = 0; // Default value set to id 0
 
                 //Here we change first value
                 if (j % 2 == 0) {
@@ -120,8 +126,6 @@ namespace mav {
 
     std::vector<float> SimpleVoxel::getFace(uint8_t faceIndex) const {
 
-        static size_t nbDataInVertices = 3+3+2+1; //3 positions, 3 normals, 2 textures, 1 id
-
         // We will copy the face at faceIndex
         std::vector<float> face = SimpleVoxel::generalFacesVertices[faceIndex];
 
@@ -137,7 +141,35 @@ namespace mav {
             face[verticeOffset + 2] += position_.z;
 
             //id
-            face[verticeOffset + 8 + 0] = id_;
+            face[verticeOffset + 9 + 0] = id_;
+
+        }
+
+        return face;
+
+    }
+
+    std::vector<float> SimpleVoxel::getFace(uint8_t faceIndex, std::array<float, 4> const& ambientOcclusion) const {
+
+        // We will copy the face at faceIndex
+        std::vector<float> face = SimpleVoxel::generalFacesVertices[faceIndex];
+
+
+        for(size_t j = 0; j < 4; ++j) {
+
+            //We also add (vertice index * nbDataInVertices) to get current vertice position
+            size_t verticeOffset = j*nbDataInVertices;
+
+            //Position
+            face[verticeOffset + 0] += position_.x;
+            face[verticeOffset + 1] += position_.y;
+            face[verticeOffset + 2] += position_.z;
+
+            //Ambient Occlusion
+            face[verticeOffset + 8 + 0] = ambientOcclusion[j];
+
+            //id
+            face[verticeOffset + 9 + 0] = id_;
 
         }
 
