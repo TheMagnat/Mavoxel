@@ -21,19 +21,19 @@ namespace mav {
 
 		size_t newChunkIndex = allChunk_.size();
 
-		allChunk_.push_back( std::make_unique<Chunk>(this, chunkPosX, chunkPosY, chunkPosZ, chunkSize_, voxelSize_) );
+		allChunk_.push_back( std::make_unique<Chunk>(this, chunkPosX, chunkPosY, chunkPosZ, chunkSize_, voxelSize_, voxelMapGenerator) );
 		chunkCoordToIndex_.emplace(ChunkCoordinates(chunkPosX, chunkPosY, chunkPosZ), newChunkIndex);
 
 		Chunk* currentChunkPtr = allChunk_.back().get();
 
 		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
-		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ, voxelMapGenerator](){
+		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ](){
 			
 			#ifdef TIME
 				Profiler profiler("Full chunks generation");
 			#endif
 
-			currentChunkPtr->generateVoxels( voxelMapGenerator );
+			currentChunkPtr->generateVoxels();
 			currentChunkPtr->generateVertices();
 			currentChunkPtr->state = 1;
 
@@ -52,13 +52,24 @@ namespace mav {
 			//Try finding the chunk
 			auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(chunkPosition.x, chunkPosition.y, chunkPosition.z));
 			if (chunkIt != chunkCoordToIndex_.end()) continue;
-
+			
 			//If it does not exist, we create it
 			createChunk(chunkPosition.x, chunkPosition.y, chunkPosition.z, voxelMapGenerator);
 
 		}
 
 	}
+
+	Chunk* World::getChunk(int x, int y, int z) {
+		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(x, y, z));
+		if (chunkIt == chunkCoordToIndex_.end()) return nullptr;
+
+		Chunk* foundChunk = allChunk_[chunkIt->second].get();
+		if (foundChunk->state == 0) return nullptr;
+
+		return foundChunk;
+	}
+
 
 	std::vector<glm::vec3> World::getAroundChunks(glm::vec3 position, float distance, bool sorted) const {
 		
@@ -174,7 +185,7 @@ namespace mav {
 
 	}
 
-	const SimpleVoxel* World::getVoxel(float x, float y, float z) const {
+	std::pair<SimpleVoxel*, Chunk*> World::getVoxel(float x, float y, float z) const {
 
 		float xSign = x < 0 ? -1 : 1;
 		float ySign = y < 0 ? -1 : 1;
@@ -190,8 +201,11 @@ namespace mav {
 		int zIndex = (z + halfChunkSize * zSign) / trueChunkSize;
 
 		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(xIndex, yIndex, zIndex));
-		if (chunkIt == chunkCoordToIndex_.end()) return nullptr; //The chunk does not exist
-		if (allChunk_[chunkIt->second]->state != 2) return nullptr;
+		if (chunkIt == chunkCoordToIndex_.end()) return {nullptr, nullptr}; //The chunk does not exist
+
+		Chunk* chunkPtr = allChunk_[chunkIt->second].get();
+
+		if (chunkPtr->state != 2) return {nullptr, nullptr};
 		//TODO: We could return something else to make the user understand the chunk does not exist and make it jump directly to the next chunk
 
 		//TODO: voir si ça marche avec des positions pas pile sur le cube
@@ -199,7 +213,7 @@ namespace mav {
 		int internalY = ((y + halfChunkSize) - yIndex * trueChunkSize) / voxelSize_;
 		int internalZ = ((z + halfChunkSize) - zIndex * trueChunkSize) / voxelSize_;
 
-		return allChunk_[chunkIt->second]->unsafeGetVoxel(internalX, internalY, internalZ);
+		return {chunkPtr->unsafeGetVoxel(internalX, internalY, internalZ), chunkPtr};
 
 	}
 
@@ -261,7 +275,8 @@ namespace mav {
 
 		//TODO: Maybe we could remove this or maybe bot
 		int movingSide = -1;
-		const SimpleVoxel* foundVoxel = nullptr;
+		SimpleVoxel* foundVoxel = nullptr;
+		Chunk* foundChunk = nullptr;
 		//const SimpleVoxel* foundVoxel = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));		
 
 		glm::vec3 traveledDistanceVector(0.0f);
@@ -328,7 +343,7 @@ namespace mav {
 			if (traveledDistance > maxDistance) break;
 
 			//We add half the voxel size to center it.
-			foundVoxel = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));
+			std::tie(foundVoxel, foundChunk) = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));
 
 		}
 
@@ -336,7 +351,7 @@ namespace mav {
 			//TODO: remove this shit
 			//if (movingSide == -1 ) return CollisionFace( foundVoxel->getFace(0), traveledDistance );
 
-			return CollisionFace( foundVoxel->getFace(movingSide), traveledDistance );
+			return CollisionFace( foundVoxel, foundChunk, foundVoxel->getFace(movingSide), traveledDistance );
 		}
 
 		return {};

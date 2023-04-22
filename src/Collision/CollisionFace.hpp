@@ -1,13 +1,20 @@
 
+#pragma once
+
+#include <World/Chunk.hpp>
+#include <World/SimpleVoxel.hpp>
+
 #include <glm/vec3.hpp>
 #include <array>
 
 namespace mav {
 
+    class Chunk;
+
     struct CollisionFace {
 
-        CollisionFace(std::array<glm::vec3, 4> const& pointsP) : points(pointsP) {}
-        CollisionFace(std::vector<float> const& vertices, float distanceP) : distance(distanceP) {
+        CollisionFace(SimpleVoxel* focusedVoxel, Chunk* parrentChunk, std::vector<float> const& vertices, float distanceP)
+            : voxel(focusedVoxel), chunk(parrentChunk), distance(distanceP) {
             
             //Data size in vertices
             //TODO: faire en sort d'aller chercher le 10
@@ -22,6 +29,10 @@ namespace mav {
             normal.z = vertices[3 + 2];
 
         }
+
+        //Information about the voxel owning the face
+        SimpleVoxel* voxel;
+        Chunk* chunk;
 
         std::array<glm::vec3, 4> points;
         glm::vec3 normal;

@@ -69,3 +69,6 @@ add_custom_command(TARGET app POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_directory
                     ${CMAKE_SOURCE_DIR}/resources/dynamicLibs $<TARGET_FILE_DIR:app>
                 COMMENT "Copy dynamic libs in binary folder")
+
+## Preprocessor macro
+target_compile_definitions(app PRIVATE TIME)

@@ -22,12 +22,12 @@
 
 #define SOLO_CHUNK false
 #define GENERATE_CHUNK false
-#define NB_CHUNK_PER_AXIS 2
+#define NB_CHUNK_PER_AXIS 4
 
 //TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utilisert la perspective de la caméra partout.
-#define CHUNK_SIZE 64 //size_t
+#define CHUNK_SIZE 32 //size_t
 #define VOXEL_SIZE 0.5f //float
-#define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 2
+#define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 4
 
 //Player variables
 #define PLAYER_SPEED 12
@@ -116,12 +116,54 @@ class Game {
         }
 
         void mouseClickCallback(int button, int action, int mods){
-            std::cout << "CALLBACK MOUSE: " << button << " " << action << " " << mods << std::endl;
+
+            if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+
+                if (currentlyLookingFace) {
+
+                    #ifdef TIME
+			            Profiler profiler("Click on mouse delete");
+		            #endif
+
+                    currentlyLookingFace->chunk->deleteVoxel(currentlyLookingFace->voxel->getChunkPosition());
+
+                    for (mav::Chunk* chunkPtr : world.needToRegenerateChunks) {
+                        chunkPtr->generateVertices();
+                        chunkPtr->graphicUpdate();
+                    }
+
+                    world.needToRegenerateChunks.clear();
+
+                }
+
+            }
+            else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+                
+                if (currentlyLookingFace) {
+
+                    #ifdef TIME
+			            Profiler profiler("Click on mouse delete");
+		            #endif
+
+                    glm::ivec3 newVoxelPositionToChunk = currentlyLookingFace->voxel->getChunkPosition();
+                    newVoxelPositionToChunk += currentlyLookingFace->normal;
+
+                    currentlyLookingFace->chunk->addVoxel(newVoxelPositionToChunk, 1);
+
+                    for (mav::Chunk* chunkPtr : world.needToRegenerateChunks) {
+                        chunkPtr->generateVertices();
+                        chunkPtr->graphicUpdate();
+                    }
+
+                    world.needToRegenerateChunks.clear();
+
+                }
+
+            }
+
         }
 
         void keyCallback(int key, int scancode, int action, int mods){
-
-            
 
             if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
                 window_->closeWindow();
@@ -215,10 +257,8 @@ class Game {
 
             player.addVelocity(direction, PLAYER_SPEED, deltaTime);
 
-
             if (window_->isPressed(GLFW_KEY_SPACE)) {
                 player.jump(JUMP_FORCE);
-                //player.addVelocity(glm::vec3(0.0f, 1.0f, 0.0f), 5.0f, deltaTime);
             }
 
         }
@@ -252,7 +292,7 @@ class Game {
                         
             sun.setPosition(-800.f, 800.f, 0.f); // Fix position
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
-            // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation
+            // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
             // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
@@ -262,16 +302,12 @@ class Game {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // If we find a voxel in front of the user
-            std::optional<mav::CollisionFace> foundFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
-            if ( foundFace ) {
-                selectionFace.generateVertices(foundFace->points);
-                selectionFace.graphicUpdate();
-                //selectionVoxel.setPosition(foundFace->points[0]);
-                //selectionVoxel.updatePosition();
-                
+            currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
+            if ( currentlyLookingFace ) {
+                selectionFace.generateVertices(currentlyLookingFace->points);
+                selectionFace.graphicUpdate();                
                 selectionFace.draw();
-            }
-            
+            }            
 
             world.draw(player.getCamera()->Position, RENDER_DISTANCE);
 
@@ -310,5 +346,7 @@ class Game {
         mav::Face selectionFace;
         mav::LightVoxel sun;
         mav::Lines lines;
+
+        std::optional<mav::CollisionFace> currentlyLookingFace;
 
 };

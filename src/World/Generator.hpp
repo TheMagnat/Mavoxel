@@ -3,6 +3,7 @@
 
 
 #include <functional>
+#include <vector>
 
 namespace mav {
 

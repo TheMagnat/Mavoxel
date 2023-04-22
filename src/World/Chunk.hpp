@@ -51,21 +51,86 @@ namespace mav {
 		static std::array<uint8_t, 6> faceToInverseFace;
 
 		public:
-			Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize);
+			Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
 
-			void generateVoxels(const VoxelMapGenerator * voxelMapGenerator);
+			void generateVoxels();
 			void generateVertices();
 
+			std::array<float, 4> generateAmbientOcclusion(SimpleVoxel const& voxel, uint8_t faceIndex) const;
 
-			std::array<float, 4> Chunk::generateAmbientOcclusion(glm::ivec3 const& position, uint8_t faceIndex) const;
+
+			//Find and/or get a voxel
 
 			/**
 			 * Return 0 if nothing found, 1 if another voxel was found and 2 if out of bound.
+			 * Their is a glm::vec3 version and one with 3 int for each axis.
+			 * 
+			 * Their is also a version using a Voxel Map and a version using directly the stored VoxelMatrix.
 			*/
 			int findVoxel(glm::vec3 const& position, VoxelMap const& voxelMap) const;
 			int findVoxel(int x, int y, int z, VoxelMap const& voxelMap) const;
-			int findVoxel(glm::vec3 const& position) const;
-			const SimpleVoxel* unsafeGetVoxel(int x, int y, int z) const;
+			int findVoxel(glm::ivec3 const& position) const;
+			int findVoxel(int x, int y, int z) const;
+
+			/**
+			 * @brief Get the voxel at the given position.
+			 * @note This method will not verify if the given position is in the chunk range.
+			 * 
+			 * @param x 
+			 * @param y 
+			 * @param z 
+			 * @return SimpleVoxel* A Pointer to the requested voxel. nullptr will be returned if the position is empty.
+			 */
+			SimpleVoxel* unsafeGetVoxel(int x, int y, int z);
+
+			/**
+			 * Return -2 if position is out of bound, -1 if the position is empty
+			 * or the index of the voxel at the given position.
+			*/
+			int findAndGetVoxelIndex(glm::ivec3 const& position);
+
+			/**
+			 * @brief Delete a voxel at the given position.
+			 * @note This method will also populate "needToRegenerateChunks" from the world_ pointer
+			 * to notify the chunk that need to have their vertices regenerated (including this chunk
+			 * and the neighbors chunks of the deleted voxel).
+			 * 
+			 * @param position The chunk position of he deleted voxel
+			 * @return true if a voxel was present and got deleted
+			 * @return false otherwise
+			 */
+			bool deleteVoxel(glm::ivec3 position);
+
+			/**
+			 * @brief Add a voxel at the given chunk position. The position can lead to another chunk.
+			 * @note This method will then call the unsafeAddVoxel of the corresponding chunk.
+			 * 
+			 * @param position Chunk position of the voxel to add
+			 * @param newVoxelId Id of the added voxel
+			 */
+			void addVoxel(glm::ivec3 position, int newVoxelId);
+
+			/**
+			 * @brief Add a voxel at the given chunk position.
+			 * @note If a voxel already exist at the given position, it will be replaced.
+			 * This method will also populate "needToRegenerateChunks" from the world_ pointer.
+			 * 
+			 * @param position Chunk position of the voxel to add. It must be in the chunk range ([0 - size_[ for each axis)
+			 * @param newVoxelId Id of the added voxel
+			 */
+			void unsafeAddVoxel(glm::ivec3 position, int newVoxelId);
+
+			/**
+			 * Return a pair containing a pointer to the side voxel of the position if it exist or nullptr otherwise
+			 * and a pointer to the side chunk if the voxel is not in the current chunk, or nullptr otherwise.
+			*/
+			std::pair<SimpleVoxel*, Chunk*> getSideVoxel(glm::ivec3 position, u_int8_t side);
+
+			/**
+			 * Get the real chunk from the given voxel chunk position.
+			 * This method will also adapt voxelChunkPosition to the position of the returned chunk.
+			*/
+			Chunk* getChunk(glm::ivec3& voxelChunkPosition) const;
 
 			//OpenGL
 			void draw();
@@ -80,6 +145,7 @@ namespace mav {
 
 			int size_;
 			float voxelSize_;
+			float positionOffsets_;
 
 			AABB collisionBox_;
 
@@ -88,6 +154,7 @@ namespace mav {
 
 			//Reference to the world
 			World* world_;
+			const VoxelMapGenerator * voxelMapGenerator_;
 
 
 			#ifndef NDEBUG

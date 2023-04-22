@@ -10,7 +10,8 @@
 #include <Mesh/DebugVoxel.hpp>
 
 
-#define GRAVITY_ON false
+#define GRAVITY_ON true
+#define FREE_FLIGHT_MULTIPLIER 5.0f
 
 //TODO: le metre en paramètre de la class ?
 const static float friction = 0.01;
@@ -64,7 +65,7 @@ namespace mav {
                                 velocity += trueFront * (strength * deltaTime);
                             }
                             else {
-                                velocity += (*front_) * (strength * deltaTime);
+                                velocity += (*front_) * (strength * FREE_FLIGHT_MULTIPLIER * deltaTime);
                             }
                             break;
 
@@ -102,7 +103,7 @@ namespace mav {
                             velocity += trueRight * (normalizedDirectionStrength.x * deltaTime);
                         }
                         else {
-                            velocity += (*right_) * (normalizedDirectionStrength.x * deltaTime);
+                            velocity += (*right_) * (normalizedDirectionStrength.x * FREE_FLIGHT_MULTIPLIER * deltaTime);
                         }
 
                     }
@@ -118,7 +119,7 @@ namespace mav {
                             velocity += trueFront * (normalizedDirectionStrength.z * deltaTime);
                         }
                         else {
-                            velocity += (*front_) * (normalizedDirectionStrength.z * deltaTime);
+                            velocity += (*front_) * (normalizedDirectionStrength.z * FREE_FLIGHT_MULTIPLIER * deltaTime);
                         }
 
                     }
@@ -127,14 +128,32 @@ namespace mav {
 
                 void jump(float strength) {
 
-                    if (onTheGround) {
-                        velocity.y += strength;
+                    if (remainingJumps > 0
+                    && timeSinceLastJump >= timeLimitBetweenJumps)
+                    {
+                        velocity.y = strength;
                         onTheGround = false;
+
+                        --remainingJumps;
+                        timeSinceLastJump = 0;
                     }
 
                 }
 
+                void groundHitted() {
+                    onTheGround = true;
+                    remainingJumps = maxJumps;
+                    timeSinceLastJump = timeLimitBetweenJumps;
+                }
+
+                void groundLeft() {
+                    onTheGround = false;
+                    --remainingJumps;
+                }
+
                 bool update(float elapsedTime, World const& world) {
+
+                    timeSinceLastJump += elapsedTime;
                     
                     //If we're not in free flight we apply gravity
                     if (!freeFlight)
@@ -163,13 +182,17 @@ namespace mav {
                         auto [collisionVelocity, encounteredCollision] = world.collide(boundingBox_, velocity * elapsedTime);
 
                         //On the collisions, put velocity at 0
-                        if (encounteredCollision.y != 0) {
-                            if (encounteredCollision.y == -1) onTheGround = true;
-                            velocity.y = 0.0f;
-                        }
-
+                        if (encounteredCollision.y != 0) velocity.y = 0.0f;
                         if (encounteredCollision.x != 0) velocity.x = 0.0f;
                         if (encounteredCollision.z != 0) velocity.z = 0.0f;
+
+                        //Here we hitted the ground
+                        if (encounteredCollision.y == -1) {
+                            groundHitted();
+                        }
+                        else {
+                            if (onTheGround) groundLeft();
+                        }
 
                         //True velocity recalculated
                         //velocity = collisionVelocity / elapsedTime;
@@ -199,6 +222,12 @@ namespace mav {
             glm::vec3 velocity;
             bool freeFlight = !GRAVITY_ON;
             bool onTheGround = false;
+
+            //Jump information
+            int remainingJumps = 0;
+            int maxJumps = 2;
+            float timeSinceLastJump = 0;
+            float timeLimitBetweenJumps = 0.25;
 
         protected:
 

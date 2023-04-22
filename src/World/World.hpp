@@ -15,6 +15,7 @@
 #include <vector>
 #include <queue>
 #include <unordered_map>
+#include <set>
 #include <mutex>
 #include <memory>
 #include <optional>
@@ -33,6 +34,8 @@ namespace mav {
 			void createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator);
 			void bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted, const VoxelMapGenerator * voxelMapGenerator);
 
+			Chunk* getChunk(int x, int y, int z);
+
 			void drawAll();
 
 			//TODO: Save entre les draw la position de l'utilisateur et garder en mémoir les chunks a draw, et update ce vecteur si l'utilisateur à bougé
@@ -46,9 +49,10 @@ namespace mav {
 			 * @param x 
 			 * @param y 
 			 * @param z 
-			 * @return Return a constant pointer to the found voxel if found, or nullptr if not.
+			 * @return Return a pair containing pointer to the found voxel and a pointer to the corresponding chunk if found,
+			 * or a pair of nullptr if not.
 			 */
-			const SimpleVoxel* getVoxel(float x, float y, float z) const;
+			std::pair<SimpleVoxel*, Chunk*> getVoxel(float x, float y, float z) const;
 
 			/**
 			 * @brief Cast a ray in the world to find the face encountered.
@@ -96,6 +100,8 @@ namespace mav {
 			//Threading
 			ThreadPool threadPool; //Note that destruction is done in reverse order than construction. So threadPool will be destructed first, preventing error when joining threads.
 			
+			//Chunk that need to have their vertices regenerated
+			std::set<Chunk*> needToRegenerateChunks;
 	};
 
 }
