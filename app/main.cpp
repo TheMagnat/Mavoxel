@@ -21,6 +21,10 @@ int main(int argc, char const *argv[]){
 
 	srand(time(NULL));
 
+    //TODO: verify that on C++ IEC 60559 is respected, and verify -0.0 + 0.0 = 0.0.
+    std::cout << std::boolalpha << std::numeric_limits<float>::is_iec559 << '\n';
+    std::cout << -0.0f << " -> " << (-0.0f + 0.0f) << std::endl;
+
     Game game(&gameWindow);
     game.initChunks();
 

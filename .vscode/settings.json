@@ -116,6 +116,7 @@
 		"AABB",
 		"GLFW",
 		"Mavoxel",
+		"offsetted",
 		"perlin",
 		"vertice",
 		"voxel",

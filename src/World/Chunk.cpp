@@ -44,13 +44,17 @@ namespace mav{
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
 		//TODO set "glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize))" dans un vec3 "centerPosition"
-		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ), size_(size), voxelSize_(voxelSize), positionOffsets_( -((float)(size - 1) / 2.0f) * voxelSize ), collisionBox_(glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)), size*voxelSize), world_(world), voxelMapGenerator_(voxelMapGenerator)
+		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ),
+		size_(size), voxelSize_(voxelSize), positionOffsets_( -((float)(size - 1) / 2.0f) * voxelSize ),
+		centerWorldPosition_(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)),
+		collisionBox_(glm::vec3(centerWorldPosition_), size*voxelSize),
+		world_(world), voxelMapGenerator_(voxelMapGenerator)
 #ifndef NDEBUG
 		, chunkSides(&Global::debugShader, world->environment, {
 			{0.1f, 0.1f, 0.1f},
 			{0.5f, 0.5f, 0.5f},
 			{1.0f, 1.0f, 1.0f}
-		}, size*voxelSize, glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)) )
+		}, size*voxelSize, centerWorldPosition_ )
 #endif
 		{
 
@@ -514,7 +518,7 @@ namespace mav{
 
 		//world_->shader->setVec3("light.position", glm::vec3(0, 50, 100));
 
-
+		world_->shader->setFloat("time", world_->environment->totalElapsedTime);
 
 		//Calcule camera
 

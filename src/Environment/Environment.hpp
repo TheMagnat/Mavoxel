@@ -11,6 +11,7 @@ namespace mav {
 
         const Mesh* sun;
         const Camera* camera;
+        float totalElapsedTime = 0.0f;
 
     };
 

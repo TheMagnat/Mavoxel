@@ -225,10 +225,15 @@ namespace mav {
 		
 		glm::vec3 dir = glm::normalize(direction);
 
+		//For processor following the IEC 60559 standard, adding 0.0f will get ride of the negative zero problem.
+		// dir.x += 0.0f;
+		// dir.y += 0.0f;
+		// dir.z += 0.0f;
+
 		//Positive or negative direction
-		float xStep = dir.x < 0 ? -1 : 1;
-		float yStep = dir.y < 0 ? -1 : 1;
-		float zStep = dir.z < 0 ? -1 : 1;
+		float xStep = std::signbit(dir.x) ? -1 : 1;
+		float yStep = std::signbit(dir.y) ? -1 : 1;
+		float zStep = std::signbit(dir.z) ? -1 : 1;
 
 		//Index of the first voxel
 		float x = floor(startPosition.x / voxelSize_) * voxelSize_;

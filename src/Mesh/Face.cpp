@@ -97,14 +97,7 @@ namespace mav {
 
 		shader_->setVec3("light.position", environment_->sun->getPosition());
 
-		// shader_->setFloat("light.constant",  1.0f);
-		// shader_->setFloat("light.linear",    0.09f);
-		// shader_->setFloat("light.quadratic", 0.032f);
-
-
-		//shader_->setVec3("light.position", glm::vec3(0, 50, 100));
-
-
+        shader_->setFloat("time", environment_->totalElapsedTime);
 
 		//Calcule camera
 

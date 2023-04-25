@@ -30,6 +30,16 @@ namespace mav {
 
         }
 
+        std::array<glm::vec3, 4> getOffsettedPoints(float offsetValue) {
+            std::array<glm::vec3, 4> offsettedPoints = points;
+
+            for (glm::vec3& point : offsettedPoints) {
+                point += normal * offsetValue;
+            }
+
+            return offsettedPoints;
+        }
+
         //Information about the voxel owning the face
         SimpleVoxel* voxel;
         Chunk* chunk;

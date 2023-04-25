@@ -146,6 +146,7 @@ namespace mav {
 			int size_;
 			float voxelSize_;
 			float positionOffsets_;
+			glm::vec3 centerWorldPosition_;
 
 			AABB collisionBox_;
 

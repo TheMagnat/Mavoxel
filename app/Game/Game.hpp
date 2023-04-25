@@ -54,7 +54,6 @@ class Game {
         // mav::Voxel selectionVoxel(&selectVoxelShader, &environment, grassMaterial, VOXEL_SIZE);
         // mav::LightVoxel sun(&whiteShader, &environment, sunMaterial, 50);
 
-
         Game(const mav::Window* window) : window_(window), totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
             world(&chunkShader, &environment, CHUNK_SIZE, VOXEL_SIZE),
@@ -127,6 +126,7 @@ class Game {
 
                     currentlyLookingFace->chunk->deleteVoxel(currentlyLookingFace->voxel->getChunkPosition());
 
+                    //Threader les generateVertices
                     for (mav::Chunk* chunkPtr : world.needToRegenerateChunks) {
                         chunkPtr->generateVertices();
                         chunkPtr->graphicUpdate();
@@ -142,7 +142,7 @@ class Game {
                 if (currentlyLookingFace) {
 
                     #ifdef TIME
-			            Profiler profiler("Click on mouse delete");
+			            Profiler profiler("Click on mouse add");
 		            #endif
 
                     glm::ivec3 newVoxelPositionToChunk = currentlyLookingFace->voxel->getChunkPosition();
@@ -276,6 +276,7 @@ class Game {
 
             //To modify
             totalElapsedTime_ += elapsedTime;
+            environment.totalElapsedTime = totalElapsedTime_;
             //
 
             //Loading phase
@@ -301,19 +302,28 @@ class Game {
             glClearColor(0.5294f, 0.8078f, 0.9216f, 1);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // If we find a voxel in front of the user
-            currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
-            if ( currentlyLookingFace ) {
-                selectionFace.generateVertices(currentlyLookingFace->points);
-                selectionFace.graphicUpdate();                
-                selectionFace.draw();
-            }            
+            //Draw non transparent objects
+            glDisable( GL_BLEND );
 
             world.draw(player.getCamera()->Position, RENDER_DISTANCE);
-
+            
             sun.draw();
             lines.draw();
             player.draw();
+            
+
+            //Draw transparent objects
+            glEnable( GL_BLEND );
+
+            // If we find a voxel in front of the user
+            currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
+            if ( currentlyLookingFace ) {
+                //TODO: faire un calcul de distance entre la face et le position du joueur et ajuster l'offset en fonction de ça
+                float offsetValue = 0.0001f + 0.002f * glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0]);
+                selectionFace.generateVertices(currentlyLookingFace->getOffsettedPoints( offsetValue ));
+                selectionFace.graphicUpdate();                
+                selectionFace.draw();
+            }
 
             // std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
             // std::cout << "Position = x: " << player.position.x << " y: " << player.position.y << " z: " << player.position.z << std::endl;
