@@ -7,17 +7,12 @@ namespace mav {
 
     struct ChunkCoordinates {
         
-        ChunkCoordinates(int xPos, int yPos, int zPos) : x(xPos), y(yPos), z(zPos) {} 
-
+        ChunkCoordinates(int xPos, int yPos, int zPos);
+        bool operator==(ChunkCoordinates const& toCompare) const;
+        
         int x;
         int y;
         int z;
-
-
-        bool operator==(ChunkCoordinates const& toCompare) const { 
-            return (x == toCompare.x && y == toCompare.y && z == toCompare.z);
-        }
-
 
     };
 

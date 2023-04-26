@@ -2,7 +2,6 @@
 #pragma once
 
 #include <glm/vec3.hpp>
-#include <glm/gtx/scalar_relational.hpp>
 
 namespace mav {
 
@@ -17,10 +16,6 @@ namespace mav {
         AABB(glm::vec3 const& pos, glm::vec3 const& extents);
         void updatePos(glm::vec3 const& pos);
         void updatePos(float x, float y, float z);
-
-    private:
-
-        float halfSize_;
 
     };
 

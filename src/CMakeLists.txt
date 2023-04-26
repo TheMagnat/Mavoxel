@@ -31,7 +31,7 @@ elseif ( APPLE )
 endif ( MSVC )
 
 ## Compilation features
-target_compile_features(Mavoxel PRIVATE cxx_std_17)
+target_compile_features(Mavoxel PRIVATE cxx_std_20)
 
 ## Preprocessor macro
 target_compile_definitions(Mavoxel PRIVATE TIME)

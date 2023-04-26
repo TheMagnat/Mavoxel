@@ -7,14 +7,9 @@ namespace mav {
     class Gravity {
 
         public:
-            Gravity(float strength) : strength_(strength) {}
+            Gravity(float strength);
 
-
-            void apply(glm::vec3& velocity, float deltaTime) const {
-
-                velocity.y -= strength_ * deltaTime;
-
-            }
+            void apply(glm::vec3& velocity, float deltaTime) const;
 
         private:
             float strength_;

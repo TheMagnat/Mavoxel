@@ -305,8 +305,10 @@ class Game {
             //Draw non transparent objects
             glDisable( GL_BLEND );
 
-            world.draw(player.getCamera()->Position, RENDER_DISTANCE);
-            
+            //Compare both draw perf
+            world.drawAll();
+            //world.draw(player.getCamera()->Position, RENDER_DISTANCE);
+
             sun.draw();
             lines.draw();
             player.draw();
@@ -318,10 +320,9 @@ class Game {
             // If we find a voxel in front of the user
             currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
             if ( currentlyLookingFace ) {
-                //TODO: faire un calcul de distance entre la face et le position du joueur et ajuster l'offset en fonction de ça
-                float offsetValue = 0.0001f + 0.002f * glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0]);
+                float offsetValue = 0.0001f + 0.02f * std::log(glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0])/10.0f + 1);
                 selectionFace.generateVertices(currentlyLookingFace->getOffsettedPoints( offsetValue ));
-                selectionFace.graphicUpdate();                
+                selectionFace.graphicUpdate();
                 selectionFace.draw();
             }
 

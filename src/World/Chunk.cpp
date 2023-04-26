@@ -42,19 +42,18 @@ namespace mav{
 	};
 
 	
-	Chunk::Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
-		//TODO set "glm::vec3(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize))" dans un vec3 "centerPosition"
+	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
 		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ),
-		size_(size), voxelSize_(voxelSize), positionOffsets_( -((float)(size - 1) / 2.0f) * voxelSize ),
-		centerWorldPosition_(posX*(size*voxelSize), posY*(size*voxelSize), posZ*(size*voxelSize)),
-		collisionBox_(glm::vec3(centerWorldPosition_), size*voxelSize),
+		size_((int)size), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
+		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
+		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
 		world_(world), voxelMapGenerator_(voxelMapGenerator)
 #ifndef NDEBUG
 		, chunkSides(&Global::debugShader, world->environment, {
 			{0.1f, 0.1f, 0.1f},
 			{0.5f, 0.5f, 0.5f},
 			{1.0f, 1.0f, 1.0f}
-		}, size*voxelSize, centerWorldPosition_ )
+		}, size_*voxelSize, centerWorldPosition_ )
 #endif
 		{
 
@@ -178,7 +177,7 @@ namespace mav{
 		return voxels_.voxelIndices[position.x][position.y][position.z];
 	}
 
-	std::pair<SimpleVoxel*, Chunk*> Chunk::getSideVoxel(glm::ivec3 voxelPosition, u_int8_t side) {
+	std::pair<SimpleVoxel*, Chunk*> Chunk::getSideVoxel(glm::ivec3 voxelPosition, uint8_t side) {
 
 		#ifdef TIME
 			Profiler profiler("Get side voxel");
@@ -367,7 +366,7 @@ namespace mav{
 		glm::vec3 const& voxelWorldPosition = voxel.getPosition();
 
 		std::vector<bool> foundVoxels;
-		foundVoxels.reserve(8);
+		foundVoxels.resize(8);
 		for(uint8_t i = 0; i < 8; ++i) {
 			
 			glm::ivec3 neibhborChunkPosition = voxelChunkPosition + positionToLookUp[faceIndex][i];
@@ -387,8 +386,8 @@ namespace mav{
 				}
 			}
 			
-			if (foundVoxel == 1) foundVoxels.push_back(true);
-			else foundVoxels.push_back(false);
+			if (foundVoxel == 1) foundVoxels[i] = true;
+			else foundVoxels[i] = false;
 			
 		}
 

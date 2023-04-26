@@ -1,5 +1,4 @@
 #include <Collision/AABB.hpp>
-#include <iostream>
 
 namespace mav {
 

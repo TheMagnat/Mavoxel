@@ -20,12 +20,12 @@ namespace mav {
          * This vector store a pair for each face that tell which axe is fixed (first) and what's its value (second).
         */
         static const std::vector<std::pair<size_t, float>> faceFixedValue {
-            {1, -1}, //bottom
-            {2, 1}, //front
-            {0, 1}, //right
-            {2, -1}, //back
-            {0, -1}, //left
-            {1, 1} //top
+            {1, -1.0f}, //bottom
+            {2, 1.0f}, //front
+            {0, 1.0f}, //right
+            {2, -1.0f}, //back
+            {0, -1.0f}, //left
+            {1, 1.0f} //top
         };
 
         /**
@@ -44,10 +44,10 @@ namespace mav {
 
         //top left, bottom left, bottom right, top right
         static const std::vector<std::pair<float, float>> verticesTexturesPositions {
-            {0, 1},
-            {0, 0},
-            {1, 0},
-            {1, 1}
+            {0.0f, 1.0f},
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f}
         };
 
         size_t nbVerticesPerFace = 4 * nbDataInVertices; //number of vertices per face * number of information per vertice

@@ -23,11 +23,12 @@ namespace mav {
 
         glm::vec3 color(0, 1, 0);
 
+        //TODO: Declare this upper and use it in face, voxel, debug voxel...
         static const std::vector<std::pair<float, float>> verticesTexturesPositions {
-            {0, 1},
-            {0, 0},
-            {1, 0},
-            {1, 1}
+            {0.0f, 1.0f},
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f}
         };
 
         for(size_t j = 0; j < 4; ++j){

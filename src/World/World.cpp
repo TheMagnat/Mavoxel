@@ -15,7 +15,10 @@ namespace mav {
 
 	World::World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, float voxelSize)
 		//TODO: Rendre le nombre de thread paramétrable
-		: chunkSize_(chunkSize), voxelSize_(voxelSize), shader(shaderPtrP), environment(environmentP), threadPool(4) {}
+		: chunkSize_(chunkSize), voxelSize_(voxelSize), shader(shaderPtrP), environment(environmentP), threadPool(4) {
+			//TODO: Think of a better way to prevent having to put a mutex in getChunk... Maybe storing directly the unique_ptr in the map ?
+			allChunk_.reserve(10000);
+		}
 
 	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator){
 
@@ -63,7 +66,7 @@ namespace mav {
 	Chunk* World::getChunk(int x, int y, int z) {
 		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(x, y, z));
 		if (chunkIt == chunkCoordToIndex_.end()) return nullptr;
-
+		
 		Chunk* foundChunk = allChunk_[chunkIt->second].get();
 		if (foundChunk->state == 0) return nullptr;
 
@@ -127,7 +130,7 @@ namespace mav {
 		while(!readyToUpdateChunks.empty() && nbToUpdate-- != 0) {
 			
 			#ifdef TIME
-				Profiler profiler("Graphic update");
+				Profiler profiler("Graphic update (in loop)");
 			#endif
 
 			size_t currentChunkIndex = readyToUpdateChunks.front();

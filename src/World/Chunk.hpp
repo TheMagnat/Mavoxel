@@ -51,7 +51,7 @@ namespace mav {
 		static std::array<uint8_t, 6> faceToInverseFace;
 
 		public:
-			Chunk(World* world, int posX, int posY, int posZ, int size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
+			Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
 
 			void generateVoxels();
 			void generateVertices();
@@ -124,7 +124,7 @@ namespace mav {
 			 * Return a pair containing a pointer to the side voxel of the position if it exist or nullptr otherwise
 			 * and a pointer to the side chunk if the voxel is not in the current chunk, or nullptr otherwise.
 			*/
-			std::pair<SimpleVoxel*, Chunk*> getSideVoxel(glm::ivec3 position, u_int8_t side);
+			std::pair<SimpleVoxel*, Chunk*> getSideVoxel(glm::ivec3 position, uint8_t side);
 
 			/**
 			 * Get the real chunk from the given voxel chunk position.
@@ -143,7 +143,7 @@ namespace mav {
 			int posY_;
 			int posZ_;
 
-			int size_;
+			int size_; //Note: we store size as an int because size_t could cause problem with negativity
 			float voxelSize_;
 			float positionOffsets_;
 			glm::vec3 centerWorldPosition_;

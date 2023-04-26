@@ -23,6 +23,7 @@
 namespace mav {
 
 	class Chunk;
+	struct CollisionFace;
 
 	class World {
 

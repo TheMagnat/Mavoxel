@@ -1,5 +1,10 @@
 #pragma once
 
+#if defined(_WIN32)
+//We include windows first even if we don't need to prevent a warning that happen if we include glad without including windows before it
+#include <windows.h>
+#endif
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 

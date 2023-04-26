@@ -24,12 +24,12 @@ namespace mav {
 
 
         std::vector<std::pair<size_t, float>> faceFixedValue {
-            {1, -1}, //bottom
-            {2, 1}, //front
-            {0, 1}, //right
-            {2, -1}, //back
-            {0, -1}, //left
-            {1, 1} //top
+            {1, -1.0f}, //bottom
+            {2, 1.0f}, //front
+            {0, 1.0f}, //right
+            {2, -1.0f}, //back
+            {0, -1.0f}, //left
+            {1, 1.0f} //top
         };
 
         /**
@@ -47,10 +47,10 @@ namespace mav {
         };
 
         static const std::vector<std::pair<float, float>> verticesTexturesPositions {
-            {0, 1},
-            {0, 0},
-            {1, 0},
-            {1, 1}
+            {0.0f, 1.0f},
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f}
         };
         
         for (size_t i = 0; i < 6; ++i)
