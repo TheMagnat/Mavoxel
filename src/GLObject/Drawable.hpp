@@ -10,7 +10,7 @@ namespace mav {
     class Drawable {
 
         public:
-            Drawable(bool shouldInitialized, size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader);
+            Drawable(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader);
 
             //To generate vertices
             virtual void generateVertices() = 0;
@@ -19,7 +19,7 @@ namespace mav {
              * To initialize the VAO.
              * If fullInit is set to true, also generate vertices and call graphic update to set graphic buffer data
             */
-            void initialize(bool fullInit = false);
+            void initialize();
 
             //To update the VAO buffers
             void graphicUpdate();
@@ -35,7 +35,7 @@ namespace mav {
             std::vector<float> vertices_;
             
             std::vector<int> indices_;
-            size_t indicesSize_;
+            int indicesSize_ = 0;
 
         };
 

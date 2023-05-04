@@ -1,6 +1,7 @@
 
 #include "GLObject/GLObject.hpp"
 #include <iostream>
+#include "GLObject.hpp"
 namespace mav {
 
 	VAO::VAO(){}
@@ -16,7 +17,11 @@ namespace mav {
 		setAll(vertices, totalAttributeSize, allAttribute, indices);
 	}
 
-	void VAO::init(bool isEBO){
+    VAO::operator bool() const {
+		return VAO_ != 0;
+    }
+
+    void VAO::init(bool isEBO){
 		glGenVertexArrays(1, &VAO_);
 		glGenBuffers(1, &VBO_);
 
@@ -81,19 +86,7 @@ namespace mav {
 		return VAO_;
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    void VAO::bind() const {
+		glBindVertexArray(VAO_);
+    }
 }

@@ -72,3 +72,4 @@ add_custom_command(TARGET app POST_BUILD
 
 ## Preprocessor macro
 target_compile_definitions(app PRIVATE TIME)
+target_compile_definitions(app PRIVATE RAY_CAST)

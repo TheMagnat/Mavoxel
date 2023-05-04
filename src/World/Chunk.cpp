@@ -43,7 +43,7 @@ namespace mav{
 
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
-		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ),
+		: Drawable(10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ),
 		size_((int)size), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
 		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
 		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
@@ -55,10 +55,13 @@ namespace mav{
 			{1.0f, 1.0f, 1.0f}
 		}, size_*voxelSize, centerWorldPosition_ )
 #endif
+#ifdef RAY_CAST
+		, texture(size)
+#endif
 		{
 
 			#ifndef NDEBUG
-				chunkSides.initialize(true);
+				chunkSides.initialize();
     		#endif
 
 		}
@@ -77,6 +80,10 @@ namespace mav{
 		voxels_.data.reserve(voxelData.count);
 		
 		voxels_.initializeIndices(size_);
+
+		#ifdef RAY_CAST
+		voxels_.fillMatrix(voxelMap);
+		#endif
 
 		// Calculate the coordinates of each points
 		for (size_t x = 0; x < size_; ++x) {
@@ -456,6 +463,12 @@ namespace mav{
 
 		}
 
+	}
+
+	void Chunk::updateTexture() {
+		#ifdef RAY_CAST
+		texture.setData(voxels_.voxelMatrix);
+		#endif
 	}
 
 	void Chunk::draw(){

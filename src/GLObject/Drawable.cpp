@@ -5,23 +5,14 @@
 
 namespace mav {
 
-    Drawable::Drawable(bool shouldInitialized, size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader)
+    Drawable::Drawable(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader)
         : shader_(shader), attributesSum_(attributesSum), attributes_(attributes) {
-
-        if (shouldInitialized) {
-            initialize(false);
+            vao_.init(true);
         }
 
-    }
-
-    void Drawable::initialize(bool fullInit) {
-        vao_.init(true);
-
-        if (fullInit) {
-            generateVertices();
-            graphicUpdate();
-        }
-
+    void Drawable::initialize() {
+        generateVertices();
+        graphicUpdate();
     }
 
     void Drawable::graphicUpdate(){
@@ -31,7 +22,7 @@ namespace mav {
 		#endif
 
         vao_.setAll(vertices_, attributesSum_, attributes_, indices_);
-        indicesSize_ = indices_.size();
+        indicesSize_ = (int)indices_.size();
         // vertices_.clear();
         // indices_.clear();
     }

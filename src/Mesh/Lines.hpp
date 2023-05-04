@@ -8,7 +8,7 @@ namespace mav {
     class Lines : public Drawable {
 
         public:
-            Lines(Shader* shaderPtr, const Camera* cameraPtr) : Drawable(true, 6, {{3}, {3}}, shaderPtr), camera(cameraPtr), lastUpdatePosition_(0) {}
+            Lines(Shader* shaderPtr, const Camera* cameraPtr) : Drawable(6, {{3}, {3}}, shaderPtr), camera(cameraPtr), lastUpdatePosition_(0) {}
 
             void generateVertices() {}
 

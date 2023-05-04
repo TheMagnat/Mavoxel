@@ -38,6 +38,8 @@ namespace mav {
             bool getFaceState(uint8_t faceIndex) const;
 
             // Getters
+            int getId() const;
+
             glm::vec3 const& getPosition() const;
             glm::ivec3 const& getChunkPosition() const;
 

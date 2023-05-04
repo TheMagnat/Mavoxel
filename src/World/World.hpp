@@ -36,6 +36,8 @@ namespace mav {
 			void bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted, const VoxelMapGenerator * voxelMapGenerator);
 
 			Chunk* getChunk(int x, int y, int z);
+			Chunk* getChunkFromWorldPos(glm::vec3 position);
+			glm::ivec3 getChunkIndex(glm::vec3 position) const;
 
 			void drawAll();
 
@@ -75,6 +77,7 @@ namespace mav {
 			 */
 			std::pair<glm::vec3, glm::vec3> collide(mav::AABB const& box, glm::vec3 direction) const;
 
+			size_t getChunkSize() const;
 
 			// Threaded
 			void updateReadyChunk(size_t nbToUpdate = 1);

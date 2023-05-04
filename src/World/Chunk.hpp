@@ -19,11 +19,37 @@
 
 #endif
 
+#ifdef RAY_CAST
+#include <GLObject/Texture3D.hpp>
+#endif
+
 namespace mav {
 
 	struct VoxelMatrix {
 		std::vector<SimpleVoxel> data;
 		VoxelMap voxelIndices;
+
+		#ifdef RAY_CAST
+		std::vector<uint8_t> voxelMatrix;
+
+		void fillMatrix(VoxelMap const& matrix) {
+
+			size_t chunkSize = matrix.size();
+
+			voxelMatrix.clear();
+            voxelMatrix.reserve(chunkSize * chunkSize * chunkSize);
+
+			for (size_t z = 0; z < chunkSize; ++z) {
+				for (size_t y = 0; y < chunkSize; ++y) {
+					for (size_t x = 0; x < chunkSize; ++x) {
+						voxelMatrix.push_back( matrix[x][y][z] );
+					}
+				}
+			}
+
+		}
+
+		#endif
 
 		void initializeIndices(size_t size) {
 
@@ -132,7 +158,14 @@ namespace mav {
 			*/
 			Chunk* getChunk(glm::ivec3& voxelChunkPosition) const;
 
+			#ifdef RAY_CAST
+			const Texture3D* getTexture() const {
+				return &texture;
+			}
+			#endif
+
 			//OpenGL
+			void updateTexture();
 			void draw();
 
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
@@ -152,6 +185,11 @@ namespace mav {
 
 			//Voxels informations
 			VoxelMatrix voxels_;
+
+			#ifdef RAY_CAST
+			Texture3D texture;
+			#endif
+
 
 			//Reference to the world
 			World* world_;

@@ -6,7 +6,7 @@
 namespace mav {
 
     Mesh::Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shaderPtr, Environment* environmentP, Material materialP, float sizeP, glm::vec3 positionP)
-        : Drawable(false, attributesSum, attributes, shaderPtr), size(sizeP), position(positionP), material(materialP), environment_(environmentP) {
+        : Drawable(attributesSum, attributes, shaderPtr), size(sizeP), position(positionP), material(materialP), environment_(environmentP) {
             updatePosition();
         }
 

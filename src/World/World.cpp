@@ -30,7 +30,7 @@ namespace mav {
 		Chunk* currentChunkPtr = allChunk_.back().get();
 
 		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
-		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex, chunkPosX, chunkPosY, chunkPosZ](){
+		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex](){
 			
 			#ifdef TIME
 				Profiler profiler("Full chunks generation");
@@ -73,6 +73,42 @@ namespace mav {
 		return foundChunk;
 	}
 
+	Chunk* World::getChunkFromWorldPos(glm::vec3 position) {
+
+		//Calculate center position
+		float xSign = position.x < 0 ? -1 : 1;
+		float ySign = position.y < 0 ? -1 : 1;
+		float zSign = position.z < 0 ? -1 : 1;
+		
+		float trueChunkSize = chunkSize_ * voxelSize_;
+		float halfChunkSize = trueChunkSize / 2.0f;
+
+		int xIndex = (position.x + halfChunkSize * xSign) / trueChunkSize;
+		int yIndex = (position.y + halfChunkSize * ySign) / trueChunkSize;
+		int zIndex = (position.z + halfChunkSize * zSign) / trueChunkSize;
+
+		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(xIndex, yIndex, zIndex));
+		if (chunkIt == chunkCoordToIndex_.end()) return nullptr;
+		
+		Chunk* foundChunk = allChunk_[chunkIt->second].get();
+		if (foundChunk->state == 0) return nullptr;
+
+		return foundChunk;
+	}
+
+	glm::ivec3 World::getChunkIndex(glm::vec3 position) const {
+		
+		//Calculate center position
+		glm::vec3 sign = glm::sign(position);
+		
+		float trueChunkSize = chunkSize_ * voxelSize_;
+		float halfChunkSize = trueChunkSize / 2.0f;
+
+		glm::ivec3 ret = (position + halfChunkSize * sign) / trueChunkSize;
+
+		return ret;
+
+	}
 
 	std::vector<glm::vec3> World::getAroundChunks(glm::vec3 position, float distance, bool sorted) const {
 		
@@ -136,6 +172,7 @@ namespace mav {
 			size_t currentChunkIndex = readyToUpdateChunks.front();
 			readyToUpdateChunks.pop();
 
+			allChunk_[currentChunkIndex]->updateTexture();
 			allChunk_[currentChunkIndex]->graphicUpdate();
 			allChunk_[currentChunkIndex]->state = 2;
 
@@ -275,6 +312,10 @@ namespace mav {
 		float tDeltaX = voxelSize_ / dir.x * xStep;
 		float tDeltaY = voxelSize_ / dir.y * yStep;
 		float tDeltaZ = voxelSize_ / dir.z * zStep;
+
+		glm::vec3 test = glm::abs(glm::vec3(voxelSize_) / dir);
+		glm::vec3 signtest = glm::sign(direction);
+		glm::vec3 sideDist = (glm::sign(direction) * (glm::vec3(x, y, z) - startPosition) + (glm::sign(direction) * (voxelSize_ * 0.5f)) + (voxelSize_ * 0.5f)) * test / voxelSize_;
 
 		//This value represent the distance traveled to get to the next voxel along the axis
 		float travelingX = tMaxX;
@@ -451,6 +492,10 @@ namespace mav {
 		//We return the total done movements and the remaining
 		return {savedMovements + direction, encounteredCollisions};
 		
+	}
+
+	size_t World::getChunkSize() const {
+		return chunkSize_;
 	}
 	
 }

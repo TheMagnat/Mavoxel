@@ -185,6 +185,10 @@ namespace mav {
         return stateOfFaces_[faceIndex];
     }
 
+    int SimpleVoxel::getId() const {
+        return id_;
+    }
+
     glm::vec3 const& SimpleVoxel::getPosition() const {
         return position_;
     }

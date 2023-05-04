@@ -13,6 +13,8 @@
 #include <Mesh/LightVoxel.hpp>
 #include <Mesh/Lines.hpp>
 
+#include <RayCasting/RayCastingRenderer.hpp>
+
 #include <glm/gtx/scalar_multiplication.hpp>
 
 #include <Physics/Gravity.hpp>
@@ -22,7 +24,7 @@
 
 #define SOLO_CHUNK false
 #define GENERATE_CHUNK false
-#define NB_CHUNK_PER_AXIS 4
+#define NB_CHUNK_PER_AXIS 2
 
 //TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utilisert la perspective de la caméra partout.
 #define CHUNK_SIZE 32 //size_t
@@ -59,7 +61,9 @@ class Game {
             world(&chunkShader, &environment, CHUNK_SIZE, VOXEL_SIZE),
             selectionFace(&selectVoxelShader, &environment, grassMaterial, VOXEL_SIZE),
             sun(&whiteShader, &environment, sunMaterial, 50),
-            lines(&colorShader, player.getCamera())
+            lines(&colorShader, player.getCamera()),
+            //Ray casting
+            RCRender(&world, &rayCastingShader, &environment)
         {
 
             //Init shaders
@@ -71,6 +75,8 @@ class Game {
             selectVoxelShader.load("Shaders/basic_color.vs", "Shaders/select_color.fs");
             whiteShader.load("Shaders/basic_color.vs", "Shaders/sun_color.fs");
             colorShader.load("Shaders/only_color.vs", "Shaders/only_color.fs");
+
+            rayCastingShader.load("Shaders/only_texPos.vs", "Shaders/only_texPos.fs");
 
             player.setGravity(&gravity);
 
@@ -87,10 +93,8 @@ class Game {
             mav::SimpleVoxel::generateGeneralFaces(VOXEL_SIZE);
 
             //Initialize single meshes
-            selectionFace.initialize();
-            lines.initialize();
-
-            sun.initialize(true);
+            RCRender.initialize();
+            sun.initialize();
 
             //Sun
             //sun.setPosition(0, 200, 0);
@@ -112,6 +116,7 @@ class Game {
                 world.bulkCreateChunk(center, NB_CHUNK_PER_AXIS * CHUNK_SIZE * VOXEL_SIZE, true, &generator);
 
             }
+
         }
 
         void mouseClickCallback(int button, int action, int mods){
@@ -177,6 +182,10 @@ class Game {
 
             if(key == GLFW_KEY_P && action == GLFW_PRESS) {
                 Profiler::printProfiled(std::cout);
+            }
+
+            if(key == GLFW_KEY_T && action == GLFW_PRESS) {
+                rayCasting = 1 - rayCasting;
             }
 
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
@@ -268,6 +277,8 @@ class Game {
         }
 
         void gameLoop(float elapsedTime) {
+
+            //std::cout << "(~" << ((int)(1.0f/elapsedTime)) << " fps) " << elapsedTime << std::endl;
             
             if (elapsedTime > 1.0f) {
                 std::cout << "WARNING: Long elapsed time : " << elapsedTime << "s, reduced to 1.0s" << std::endl;
@@ -291,10 +302,10 @@ class Game {
             //Update player position
             player.update(elapsedTime, world);
                         
-            sun.setPosition(-800.f, 800.f, 0.f); // Fix position
+            // sun.setPosition(-750.f, 800.f, 150.f); // Fix position
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
-            // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
+            sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 150.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
             //Drawing phase
@@ -326,6 +337,8 @@ class Game {
                 selectionFace.draw();
             }
 
+            if (rayCasting) RCRender.draw();
+
             // std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
             // std::cout << "Position = x: " << player.position.x << " y: " << player.position.y << " z: " << player.position.z << std::endl;
 
@@ -340,6 +353,8 @@ class Game {
         mav::Shader selectVoxelShader;
         mav::Shader whiteShader;
         mav::Shader colorShader;
+
+        mav::Shader rayCastingShader;
 
 
         float totalElapsedTime_;
@@ -359,5 +374,9 @@ class Game {
         mav::Lines lines;
 
         std::optional<mav::CollisionFace> currentlyLookingFace;
+
+        //Ray Casting
+        mav::RayCastingRenderer RCRender;
+        bool rayCasting = true;
 
 };

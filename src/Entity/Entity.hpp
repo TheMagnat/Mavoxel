@@ -10,7 +10,7 @@
 #include <Mesh/DebugVoxel.hpp>
 
 
-#define GRAVITY_ON true
+#define GRAVITY_ON false
 
 namespace mav {
 

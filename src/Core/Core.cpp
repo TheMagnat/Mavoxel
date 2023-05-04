@@ -21,7 +21,6 @@ namespace mav {
 	    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 		#endif
 	  
-		
 
 	    window_ = glfwCreateWindow(width, height, windowName.data(), NULL, NULL);
 		
