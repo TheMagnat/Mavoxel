@@ -24,6 +24,11 @@ if ( MSVC )
     set(LIB_PATH "C:/Libraries/Bin")
     set(LIB_HEADERS_PATH "C:/Libraries/Include")
 
+    set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.243.0/")
+    set(VULKAN_HEADERS_PATH "C:/VulkanSDK/1.3.243.0/Include")
+
+    find_package(Vulkan REQUIRED)
+
 elseif ( APPLE )
 
     message("Apple detected") 
@@ -35,7 +40,7 @@ endif ( MSVC )
 
 ## Extern libs and headers
 link_directories(${LIB_PATH})
-include_directories(${LIB_HEADERS_PATH})
+include_directories(${LIB_HEADERS_PATH} ${VULKAN_HEADERS_PATH})
 
 
 message("Mavoxel Arch: ${CMAKE_SYSTEM_PROCESSOR}") 
@@ -43,5 +48,6 @@ message("Mavoxel Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 option(MAIN_NOISE "Build noise main" OFF)
 
 
+add_subdirectory(vulkan_wrapper VulkanWrapper)
 add_subdirectory(src Mavoxel)
 add_subdirectory(app App)
