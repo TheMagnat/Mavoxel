@@ -29,6 +29,11 @@ if ( MSVC )
 
     find_package(Vulkan REQUIRED)
 
+    set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.243.0/")
+    set(VULKAN_HEADERS_PATH "C:/VulkanSDK/1.3.243.0/Include")
+
+    find_package(Vulkan REQUIRED)
+
 elseif ( APPLE )
 
     message("Apple detected") 
