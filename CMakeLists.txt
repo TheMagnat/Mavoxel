@@ -21,8 +21,8 @@ if ( MSVC )
 
 
     #TODO: Faire plusieurs conf en fonction du système
-    set(LIB_PATH "C:/libs/dlls")
-    set(LIB_HEADERS_PATH "C:/libs/headers")
+    set(LIB_PATH "C:/Libraries/Bin")
+    set(LIB_HEADERS_PATH "C:/Libraries/Include")
 
 elseif ( APPLE )
 
