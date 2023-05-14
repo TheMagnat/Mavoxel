@@ -147,8 +147,8 @@ namespace vuw {
 
                 rasterizer.lineWidth = 1.0f; //Define the thickness of the lines. If not 1.0, the extension "wideLines" should be activated
     
-                //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-                rasterizer.cullMode = VK_CULL_MODE_NONE;
+                rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+                // rasterizer.cullMode = VK_CULL_MODE_NONE;
                 rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; //Clockwise or not to evaluate front face
                 // rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE; //Clockwise or not to evaluate front face
 
