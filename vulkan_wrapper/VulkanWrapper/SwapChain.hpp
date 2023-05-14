@@ -64,9 +64,9 @@ class SwapChain {
             SwapChainHelper::SwapChainSupportDetails swapChainSupport = SwapChainHelper::querySwapChainSupport(device.getPhysical(), surface.get());
 
             VkSurfaceFormatKHR surfaceFormat = SwapChainHelper::chooseSwapSurfaceFormat(swapChainSupport.formats);
-            //VkPresentModeKHR presentMode = SwapChainHelper::chooseSwapPresentMode(swapChainSupport.presentModes);
+            VkPresentModeKHR presentMode = SwapChainHelper::chooseSwapPresentMode(swapChainSupport.presentModes);
             //To force no v-sync
-            VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+            // VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
             VkExtent2D extent = SwapChainHelper::chooseSwapExtent(swapChainSupport.capabilities, window);
 
