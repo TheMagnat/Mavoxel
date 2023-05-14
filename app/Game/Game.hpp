@@ -179,6 +179,10 @@ class Game {
                 Profiler::printProfiled(std::cout);
             }
 
+            if(key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+                std::cout << "FPS: " << (1.0f/(totalElapsedTime_/(float)frameCount)) << std::endl;
+            }
+
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
 
                 static bool first = true;
@@ -269,6 +273,9 @@ class Game {
 
         void gameLoop(float elapsedTime) {
             
+            ++frameCount;
+
+
             if (elapsedTime > 1.0f) {
                 std::cout << "WARNING: Long elapsed time : " << elapsedTime << "s, reduced to 1.0s" << std::endl;
                 elapsedTime = 1.0f;
@@ -360,4 +367,6 @@ class Game {
 
         std::optional<mav::CollisionFace> currentlyLookingFace;
 
+        //Debug / Benchmark
+        size_t frameCount = 0;
 };
