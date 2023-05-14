@@ -49,7 +49,7 @@ namespace mav {
             void update(float elapsedTime);
             bool update(float elapsedTime, World const& world);
             
-            void draw() const;
+            void draw(VkCommandBuffer commandBuffer) const;
 
         public:
             glm::vec3 velocity;

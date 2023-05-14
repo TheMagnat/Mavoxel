@@ -132,8 +132,13 @@ namespace mav {
 			*/
 			Chunk* getChunk(glm::ivec3& voxelChunkPosition) const;
 
-			//OpenGL
-			void draw();
+			//Vulkan
+			void draw(VkCommandBuffer commandBuffer);
+			void debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+
+			std::vector<uint32_t> getVertexAttributesSizes() const override;
+
+			void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
 
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
 			int state;

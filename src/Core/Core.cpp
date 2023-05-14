@@ -12,65 +12,9 @@ namespace mav {
 	
 	Window::Window(std::string const& windowName, int width, int height) : mouseEventFunction_(nullptr), keyEventFunction_(nullptr) {
 
-		glfwInit();
-	    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	    
-	    #ifdef __APPLE__
-	    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-		#endif
-	  
-		
+		std::cout << "Deprecated Window" << std::endl;
+		throw 1;
 
-	    window_ = glfwCreateWindow(width, height, windowName.data(), NULL, NULL);
-		
-		if (window_ == NULL){
-		    std::cout << "Failed to create GLFW window" << std::endl;
-		    glfwTerminate();
-		    throw 1;
-		}
-
-		glfwGetWindowSize(window_, &width, &height);
-
-		Global::width	= width;
-		Global::height	= height;
-
-		glfwMakeContextCurrent(window_);
-
-
-		glfwSetWindowUserPointer(window_, this);
-
-		auto mouseMoveCallback = [](GLFWwindow* w, double xPos, double yPos){
-			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseMovingCallback(xPos, yPos);
-		};
-		glfwSetCursorPosCallback(window_, mouseMoveCallback);
-
-		auto mouseClickCallback = [](GLFWwindow* w, int button, int action, int mods){
-			static_cast<Window*>(glfwGetWindowUserPointer(w))->mouseClickCallback(button, action, mods);
-		};
-		glfwSetMouseButtonCallback(window_, mouseClickCallback);
-		
-		auto keyCallback = [](GLFWwindow* w, int key, int scancode, int action, int mods){
-			static_cast<Window*>(glfwGetWindowUserPointer(w))->keyCallback(key, scancode, action, mods);
-		};
-		glfwSetKeyCallback(window_, keyCallback);
-
-
-		//Desactivate the mouse
-		glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		
-		//FPS 60
-	    glfwSwapInterval(1);
-
-		//glfwSetFramebufferSizeCallback(window_, framebuffer_size_callback);
-
-
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-		{
-	    	std::cout << "Failed to initialize GLAD" << std::endl;
-	    	throw 2;
-		}
 		
 
 	}

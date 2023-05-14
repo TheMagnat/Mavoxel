@@ -39,5 +39,7 @@ target_compile_features(VulkanWrapper PRIVATE cxx_std_20)
 ### Copy resources
 
 ### Preprocessor macro
+target_compile_definitions(VulkanWrapper PUBLIC GLFW_INCLUDE_VULKAN)
+
 target_compile_definitions(VulkanWrapper PUBLIC GLM_FORCE_RADIANS)
 target_compile_definitions(VulkanWrapper PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)

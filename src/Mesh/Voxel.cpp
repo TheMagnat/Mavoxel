@@ -5,8 +5,8 @@
 
 namespace mav {
 
-	Voxel::Voxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(8, {{3}, {3}, {2}}, shaderPtr, environment, material, size, position) {}
+	Voxel::Voxel(Environment* environment, Material material, float size, glm::vec3 position)
+        : Mesh(8, {{3}, {3}, {2}}, environment, material, size, position) {}
 
 
     void Voxel::generateVertices(){
@@ -14,7 +14,7 @@ namespace mav {
         size_t nbOfData = 8;
 
         size_t verticesNb = 6*4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
-        indicesSize_ = 6*6; //Number of face * number of triangle * number of vertice per triangle
+        size_t indicesSize_ = 6*6; //Number of face * number of triangle * number of vertice per triangle
 
         vertices_.resize(verticesNb);
         indices_.resize(indicesSize_);
@@ -116,8 +116,14 @@ namespace mav {
 
         }
 
-        indicesSize_ = indices_.size();
     }
 
+    std::vector<uint32_t> Voxel::getVertexAttributesSizes() const {
+        return {3, 3, 2};
+    }
+
+    void Voxel::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
+        //TODO
+    }
 
 }

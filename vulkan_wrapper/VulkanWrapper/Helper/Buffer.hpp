@@ -47,7 +47,9 @@ class Buffer {
             allocCreateInfo.flags = flags;
             allocCreateInfo.priority = 1.0f;
             
-            vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &imageAllocation, nullptr);
+            VkResult result = vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &imageAllocation, nullptr);
+            if (result != VK_SUCCESS)
+                throw std::exception("Failed to allocate memory for image buffer.");
 
             // VkMemoryRequirements memRequirements;
             // vkGetImageMemoryRequirements(device, image, &memRequirements);
@@ -65,7 +67,7 @@ class Buffer {
 
         }
 
-        static void create(VmaAllocator allocator, VkDeviceSize size, VkBufferUsageFlags usage, VmaAllocationCreateFlags flags, VkBuffer& buffer, VmaAllocation& bufferAllocation, VmaAllocationInfo* bufferAllocInfo) {
+        static void create(VmaAllocator allocator, VkDeviceSize size, VkBufferUsageFlags usage, VmaAllocationCreateFlags flags, VkBuffer& buffer, VmaAllocation& bufferAllocation, VmaAllocationInfo& bufferAllocInfo) {
             VkBufferCreateInfo bufCreateInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
             bufCreateInfo.size = size;
             bufCreateInfo.usage = usage;
@@ -81,8 +83,9 @@ class Buffer {
             VmaTotalStatistics stats;
             vmaCalculateStatistics (allocator, &stats);
 
-            vmaCreateBuffer(allocator, &bufCreateInfo, &allocCreateInfo, &buffer, &bufferAllocation, bufferAllocInfo);
-
+            VkResult result = vmaCreateBuffer(allocator, &bufCreateInfo, &allocCreateInfo, &buffer, &bufferAllocation, &bufferAllocInfo);
+            if (result != VK_SUCCESS)
+                throw std::exception("Failed to allocate memory for buffer.");
 
             vmaCalculateStatistics (allocator, &stats);
 
@@ -129,6 +132,11 @@ class Buffer {
             // copyRegion.srcOffset = 0; // Optional
             // copyRegion.dstOffset = 0; // Optional
             copyRegion.size = size;
+
+            if (dstBuffer == VK_NULL_HANDLE) {
+                std::cout << "Null" << std::endl;
+            }
+
             vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
             // End recording

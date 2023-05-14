@@ -2,12 +2,12 @@
 #include <Mesh/Face.hpp>
 
 #include <Core/Global.hpp>
-
+#include <GLObject/BufferTemplates.hpp>
 
 namespace mav {
 
-	Face::Face(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(8, {{3}, {3}, {2}}, shaderPtr, environment, material, size, position) {}
+	Face::Face(Environment* environment, Material material, float size, glm::vec3 position)
+        : Mesh(8, {{3}, {3}, {2}}, environment, material, size, position) {}
 
     void Face::generateVertices() {}
 
@@ -16,7 +16,7 @@ namespace mav {
         size_t nbOfData = 8;
 
         size_t verticesNb = 4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
-        indicesSize_ = 2*3; //Number of triangle * number of point per triangle
+        size_t indicesSize_ = 2*3; //Number of triangle * number of point per triangle
 
         vertices_.resize(verticesNb);
         indices_.resize(indicesSize_);
@@ -66,55 +66,29 @@ namespace mav {
 
     }
 
-    void Face::draw(){
+    std::vector<uint32_t> Face::getVertexAttributesSizes() const {
+        return {3, 3, 2};
+    }
 
-		glBindVertexArray(vao_.get());
-		
+    void Face::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
+        
+        //Binding 0
+		ModelViewProjectionObject mvp{};
+		mvp.model = glm::mat4(1.0f);
+		mvp.view = environment_->camera->GetViewMatrix();
+		mvp.projection = environment_->camera->Projection;
+		mvp.projection[1][1] *= -1;
 
-		//SET LE SHADER
-		shader_->use();
-    
-		glm::mat4 model = glm::mat4(1.0f);
-        model = model * translationMatrix_;
-        //model = glm::rotate(model, 45.0f, glm::vec3(0.0f, 1.0f, 1.0f));
-		//model = model * rotationMat_;
-		//model = glm::scale(model, glm::vec3(size));
+		mvp.modelNormal = glm::transpose(glm::inverse(mvp.model));
+		// mvp.modelNormal = glm::mat3(1.0f);
+		// glm::mat3(glm::transpose(glm::inverse(model))
 
+		//Binding 1
+		float totalTime = environment_->totalElapsedTime;
 
-		shader_->setMat4("model", model);
-		shader_->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
+		shader->updateUniform(0, currentFrame, &mvp, sizeof(mvp));
+		shader->updateUniform(1, currentFrame, &totalTime, sizeof(totalTime));
 
-		////TOUT LES NEED
-		shader_->use();
-
-		shader_->setVec3("material.ambient", material.ambient);
-		shader_->setVec3("material.diffuse", material.diffuse);
-		shader_->setVec3("material.specular", material.specular);
-		shader_->setFloat("material.shininess", material.shininess);
-
-		shader_->setVec3("light.ambient",  environment_->sun->material.ambient);
-		shader_->setVec3("light.diffuse",  environment_->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
-		shader_->setVec3("light.specular", environment_->sun->material.specular);
-
-		shader_->setVec3("light.position", environment_->sun->getPosition());
-
-        shader_->setFloat("time", environment_->totalElapsedTime);
-
-		//Calcule camera
-
-		glm::mat4 view(environment_->camera->GetViewMatrix());
-		//glm::mat4 view(glm::lookAt(cameraPtr_->Position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-
-		shader_->setMat4("view", view);
-
-		//Position de la cam
-		shader_->setVec3("viewPos", environment_->camera->Position);
-
-		shader_->setMat4("projection", environment_->camera->Projection);
-
-
-		glDrawElements(GL_TRIANGLES, (int)indices_.size(), GL_UNSIGNED_INT, 0);
-
-	}
+    }
 
 }

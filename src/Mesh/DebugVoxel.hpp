@@ -17,14 +17,15 @@ namespace mav {
 
 		public:
 
-			DebugVoxel(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+			DebugVoxel(Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
 			void generateVertices() override;
 
-			void draw() const override;
-
 			//Unique
 			void setColor(glm::vec3 const& color);
+
+			std::vector<uint32_t> getVertexAttributesSizes() const override;
+            void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
 		
 		private:
 

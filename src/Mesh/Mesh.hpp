@@ -23,7 +23,7 @@ namespace mav {
         public:
 
             //TODO: retirer cette dépendant à un material qui est peu utilisé
-            Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+            Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
 
             void setPosition(glm::vec3 const& newPosition);
@@ -31,9 +31,6 @@ namespace mav {
             void updatePosition();
 
             glm::vec3 const& getPosition() const;
-
-            virtual void draw() const;
-
 
         public:
 

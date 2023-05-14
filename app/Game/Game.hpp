@@ -3,6 +3,9 @@
 
 #include <Core/Global.hpp>
 
+#include <GLObject/BufferTemplates.hpp>
+#include <GLObject/DrawableSingle.hpp>
+
 #include <Generator/VoxelMapGenerator.hpp>
 
 #include <Entity/Player.hpp>
@@ -19,6 +22,10 @@
 #include <Collision/Frustum.hpp>
 #include <Helper/FrustumPoints.hpp>
 #include <Helper/Benchmark/Profiler.hpp>
+
+#ifndef NDEBUG
+#include <Core/DebugGlobal.hpp>
+#endif
 
 #define SOLO_CHUNK false
 #define GENERATE_CHUNK false
@@ -50,27 +57,71 @@ class Game {
 
     public:
 
-        // mav::World world();
-        // mav::Voxel selectionVoxel(&selectVoxelShader, &environment, grassMaterial, VOXEL_SIZE);
-        // mav::LightVoxel sun(&whiteShader, &environment, sunMaterial, 50);
+        Game(const vuw::Window* window) : window_(window),
+            //Shaders
+            chunkShader(mav::Global::vulkanWrapper->generateShader("Shaders/simple_voxel.vert.spv", "Shaders/simple_voxel.frag.spv")),
+            selectVoxelShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/select_color.frag.spv")),
+            whiteShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/sun_color.frag.spv")),
+            colorShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_color.vert.spv", "Shaders/only_color.frag.spv")),
 
-        Game(const mav::Window* window) : window_(window), totalElapsedTime_(0),
+            totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
             world(&chunkShader, &environment, CHUNK_SIZE, VOXEL_SIZE),
-            selectionFace(&selectVoxelShader, &environment, grassMaterial, VOXEL_SIZE),
-            sun(&whiteShader, &environment, sunMaterial, 50),
-            lines(&colorShader, player.getCamera())
+
+            ////Single objects
+            //Objects
+            selectionFace(&environment, grassMaterial, VOXEL_SIZE),
+            sun(&environment, sunMaterial, 50),
+            lines(player.getCamera()),
+
+            //Wrappers
+            selectionFaceWrapper(&selectVoxelShader, &selectionFace),
+            sunWrapper(&whiteShader, &sun),
+            linesWrapper(&colorShader, &lines)
         {
 
             //Init shaders
             #ifndef NDEBUG
-                mav::Global::debugShader.load("Shaders/only_color_uni.vs", "Shaders/only_color_uni.fs");
+                mav::DebugGlobal::debugShader->addUniformBufferObjects({
+                    {0, sizeof(ModelViewProjectionObjectNoNormal), VK_SHADER_STAGE_VERTEX_BIT},
+                    {1, sizeof(glm::vec3), VK_SHADER_STAGE_FRAGMENT_BIT}
+                });
+                mav::DebugGlobal::debugShader->generateBindingsAndSets();
+            
             #endif
 
-            chunkShader.load("Shaders/simple_voxel.vs", "Shaders/simple_voxel.fs");
-            selectVoxelShader.load("Shaders/basic_color.vs", "Shaders/select_color.fs");
-            whiteShader.load("Shaders/basic_color.vs", "Shaders/sun_color.fs");
-            colorShader.load("Shaders/only_color.vs", "Shaders/only_color.fs");
+            chunkShader.addUniformBufferObjects({
+                {0, sizeof(ModelViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT},
+                {1, sizeof(glm::vec3), VK_SHADER_STAGE_FRAGMENT_BIT},
+                {2, sizeof(LightObject), VK_SHADER_STAGE_FRAGMENT_BIT}
+            });
+            chunkShader.generateBindingsAndSets();
+
+            selectVoxelShader.addUniformBufferObjects({
+                {0, sizeof(ModelViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT},
+                {1, sizeof(float), VK_SHADER_STAGE_FRAGMENT_BIT}
+            });
+            selectVoxelShader.generateBindingsAndSets();
+
+            whiteShader.addUniformBufferObjects({
+                {0, sizeof(ModelViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT}
+            });
+            whiteShader.generateBindingsAndSets();
+
+            colorShader.addUniformBufferObjects({
+                {0, sizeof(ViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT}
+            });
+            colorShader.generateBindingsAndSets();
+
+            // Init objects
+            world.initializePipeline();
+            selectionFaceWrapper.initializePipeline();
+            
+            sunWrapper.initializePipeline();
+            sunWrapper.initializeVertices();
+
+            //Note: Lines use line primitive topology type.
+            linesWrapper.initializePipeline(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
 
             player.setGravity(&gravity);
 
@@ -79,18 +130,18 @@ class Game {
             environment.camera = player.getCamera();
 
             #ifndef NDEBUG
-                mav::Global::debugEnvironment.sun = &sun;
-                mav::Global::debugEnvironment.camera = player.getCamera();
+                mav::DebugGlobal::debugEnvironment.sun = &sun;
+                mav::DebugGlobal::debugEnvironment.camera = player.getCamera();
             #endif
 
             //Generate date of voxel faces
             mav::SimpleVoxel::generateGeneralFaces(VOXEL_SIZE);
 
             //Initialize single meshes
-            selectionFace.initialize();
-            lines.initialize();
+            // selectionFace.initialize();
+            // lines.initialize();
 
-            sun.initialize(true);
+            sun.initialize();
 
             //Sun
             //sun.setPosition(0, 200, 0);
@@ -179,6 +230,26 @@ class Game {
                 Profiler::printProfiled(std::cout);
             }
 
+            if(key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+                std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
+                std::cout << "FPS: " << (1.0f/(totalElapsedTime_/(float)frameCount)) << std::endl;
+            }
+
+            if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+                int newCursorMode;
+                int currentCursorMode = glfwGetInputMode(window_->get(), GLFW_CURSOR);
+
+                if (currentCursorMode == GLFW_CURSOR_DISABLED) {
+                    newCursorMode = GLFW_CURSOR_NORMAL;
+                }
+                else {
+                    newCursorMode = GLFW_CURSOR_DISABLED;
+                }
+
+                glfwSetInputMode(window_->get(), GLFW_CURSOR, newCursorMode);
+
+            }
+
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
 
                 static bool first = true;
@@ -203,7 +274,8 @@ class Game {
                     //Save true projection
                     glm::mat4 projectionSave = camera->Projection;
                     
-                    camera->setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.1f, 100.0f);
+                    VkExtent2D const& extent = mav::Global::vulkanWrapper->getExtent();
+                    camera->setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
                     
                     camera->maintainFrustum = true;
                     camera->updateFrustum();
@@ -267,8 +339,16 @@ class Game {
             player.updateCamera(xPos, yPos);
         }
 
+        void resizeCallback(int width, int height) {
+            mav::Global::vulkanWrapper->gotResized();
+        }
+
         void gameLoop(float elapsedTime) {
-            
+
+            // std::cout << "Elapsed time: " << elapsedTime << std::endl;
+            // std::cout << "FPS: " << (1.0f/elapsedTime) << std::endl;
+            ++frameCount;
+
             if (elapsedTime > 1.0f) {
                 std::cout << "WARNING: Long elapsed time : " << elapsedTime << "s, reduced to 1.0s" << std::endl;
                 elapsedTime = 1.0f;
@@ -291,31 +371,36 @@ class Game {
             //Update player position
             player.update(elapsedTime, world);
                         
-            sun.setPosition(-800.f, 800.f, 0.f); // Fix position
+            sun.setPosition(-200.f, 200.f, 0.f); // Fix position
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
             // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
             //Drawing phase
-            //glClearColor(0.5, 0.5, 0.5, 1);
-            glClearColor(0.5294f, 0.8078f, 0.9216f, 1);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            uint32_t currentFrame = mav::Global::vulkanWrapper->getCurrentFrame();
 
-            //Draw non transparent objects
-            glDisable( GL_BLEND );
+            VkCommandBuffer currentCommandBuffer = mav::Global::vulkanWrapper->beginRecordingDraw();
+            if (!currentCommandBuffer) {
+                std::cout << "Can't acquire new image to start recording a draw." << std::endl;
+                return;
+            }
 
-            //Compare both draw perf
-            world.drawAll();
-            //world.draw(player.getCamera()->Position, RENDER_DISTANCE);
-
-            sun.draw();
-            lines.draw();
-            player.draw();
+            //Can be here or before "beginRecordingDraw"
+            // updateUniformBuffer(currentFrame, timeFromStart);
             
+            // testShader_.recordPushConstant(currentCommandBuffer, &timeFromStart, sizeof(timeFromStart));
 
-            //Draw transparent objects
-            glEnable( GL_BLEND );
+            // testGraphicsPipeline_.bind(currentCommandBuffer);
+            // testShader_.bind(currentCommandBuffer, currentFrame);
+            // vertexData_.bind(currentCommandBuffer);
+            // vertexData_.draw(currentCommandBuffer);
+
+            world.drawAll(currentCommandBuffer, currentFrame);
+
+            sunWrapper.draw(currentCommandBuffer, currentFrame);
+            linesWrapper.draw(currentCommandBuffer, currentFrame);
+            // player.draw();
 
             // If we find a voxel in front of the user
             currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
@@ -323,8 +408,38 @@ class Game {
                 float offsetValue = 0.0001f + 0.02f * std::log(glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0])/10.0f + 1);
                 selectionFace.generateVertices(currentlyLookingFace->getOffsettedPoints( offsetValue ));
                 selectionFace.graphicUpdate();
-                selectionFace.draw();
+                selectionFaceWrapper.draw(currentCommandBuffer, currentFrame);
             }
+
+
+            //Bind pipeline
+            //Bind shader
+            //Bind vertexData
+            //Draw vertexData
+
+            mav::Global::vulkanWrapper->endRecordingDraw();
+            return;
+
+
+            // glClearColor(0.5294f, 0.8078f, 0.9216f, 1);
+            // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            //Draw non transparent objects
+            // glDisable( GL_BLEND );
+
+            //Compare both draw perf
+            // world.drawAll();
+            //world.draw(player.getCamera()->Position, RENDER_DISTANCE);
+
+            // sun.draw();
+            // lines.draw();
+            // player.draw();
+            
+
+            //Draw transparent objects
+            // glEnable( GL_BLEND );
+
+
 
             // std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
             // std::cout << "Position = x: " << player.position.x << " y: " << player.position.y << " z: " << player.position.z << std::endl;
@@ -333,13 +448,14 @@ class Game {
 
     private:
 
-        const mav::Window* window_;
+        const vuw::Window* window_;
 
         //Shaders
-        mav::Shader chunkShader;
-        mav::Shader selectVoxelShader;
-        mav::Shader whiteShader;
-        mav::Shader colorShader;
+        // mav::Shader chunkShader;
+        vuw::Shader chunkShader;
+        vuw::Shader selectVoxelShader;
+        vuw::Shader whiteShader;
+        vuw::Shader colorShader;
 
 
         float totalElapsedTime_;
@@ -354,10 +470,19 @@ class Game {
         mav::Gravity gravity;
 
         mav::World world;
+
         mav::Face selectionFace;
+        mav::DrawableSingle selectionFaceWrapper;
+
         mav::LightVoxel sun;
+        mav::DrawableSingle sunWrapper;
+        
         mav::Lines lines;
+        mav::DrawableSingle linesWrapper;
 
         std::optional<mav::CollisionFace> currentlyLookingFace;
+
+        //Debug / Benchmark
+        size_t frameCount = 0;
 
 };

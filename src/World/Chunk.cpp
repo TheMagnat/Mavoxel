@@ -1,12 +1,16 @@
 
 #include <World/Chunk.hpp>
-#include <Core/Global.hpp>
+#include <GLObject/BufferTemplates.hpp>
 
 #include <iostream>
 
 #ifdef TIME
-	//Help/debug
-	#include <Helper/Benchmark/Profiler.hpp>
+//Help/debug
+#include <Helper/Benchmark/Profiler.hpp>
+#endif
+
+#ifndef NDEBUG
+#include <Core/DebugGlobal.hpp>
 #endif
 
 namespace {
@@ -43,13 +47,13 @@ namespace mav{
 
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
-		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ),
+		: Drawable(), state(0), posX_(posX), posY_(posY), posZ_(posZ),
 		size_((int)size), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
 		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
 		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
 		world_(world), voxelMapGenerator_(voxelMapGenerator)
 #ifndef NDEBUG
-		, chunkSides(&Global::debugShader, world->environment, {
+		, chunkSides(world->environment, {
 			{0.1f, 0.1f, 0.1f},
 			{0.5f, 0.5f, 0.5f},
 			{1.0f, 1.0f, 1.0f}
@@ -58,7 +62,7 @@ namespace mav{
 		{
 
 			#ifndef NDEBUG
-				chunkSides.initialize(true);
+				chunkSides.initialize();
     		#endif
 
 		}
@@ -458,81 +462,68 @@ namespace mav{
 
 	}
 
-	void Chunk::draw(){
-
-		if (indicesSize_ == 0) return;
-
-		//Verify if chunks is inside camera frustum
-		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
+	void Chunk::debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
 
 		#ifndef NDEBUG
+
+			bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
+
 			//We always want to draw the debug chunk sides so we do it before the checks
 			if (isVisible) chunkSides.setColor(glm::vec3(1.0f));
 			else chunkSides.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
 			
-			chunkSides.draw();
+			chunkSides.updateUniforms(DebugGlobal::debugShader.get(), currentFrame);
+			chunkSides.draw(commandBuffer);
+
 		#endif
 
+	}
+
+
+	void Chunk::draw(VkCommandBuffer commandBuffer) {
+
+		if (indices_.empty()) return;
+
+		//Verify if chunks is inside camera frustum
+		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
 		if (!isVisible) return;
 
-		glBindVertexArray(vao_.get());
-		
+		vertexData_.bind(commandBuffer);
+		vertexData_.draw(commandBuffer);
 
-		//SET LE SHADER
-		world_->shader->use();
-    
-		glm::mat4 model = glm::mat4(1.0f);
-        //TODO: ADD CHUNK TRANSLATION
-		//model = model * translationMatrix_;
-        
-		//model = glm::rotate(model, 45.0f, glm::vec3(0.0f, 1.0f, 1.0f));
-		//model = model * rotationMat_;
-		//TODO: Size ?
-		//model = glm::scale(model, glm::vec3(voxelSize_));
+	}
 
+	std::vector<uint32_t> Chunk::getVertexAttributesSizes() const {
+		return {3, 3, 2, 1, 1};
+	}
 
-		world_->shader->setMat4("model", model);
-		world_->shader->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
+	void Chunk::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
 
-		////TOUT LES NEED
-		world_->shader->use();
-
-		/*
-		world_->shader->setVec3("material.ambient", material.ambient);
-		world_->shader->setVec3("material.diffuse", material.diffuse);
-		world_->shader->setVec3("material.specular", material.specular);
-		world_->shader->setFloat("material.shininess", material.shininess);
-		*/
-
-		world_->shader->setVec3("light.ambient",  world_->environment->sun->material.ambient);
-		world_->shader->setVec3("light.diffuse",  world_->environment->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
-		world_->shader->setVec3("light.specular", world_->environment->sun->material.specular);
-
-		world_->shader->setVec3("light.position", world_->environment->sun->getPosition());
-
-		// world_->shader->setFloat("light.constant",  1.0f);
-		// world_->shader->setFloat("light.linear",    0.09f);
-		// world_->shader->setFloat("light.quadratic", 0.032f);
+		//Binding 0
+		ModelViewProjectionObject mvp{};
+		mvp.model = glm::mat4(1.0f);
+		mvp.view = world_->environment->camera->GetViewMatrix();
+		mvp.projection = world_->environment->camera->Projection;
+		mvp.projection[1][1] *= -1;
 
 
-		//world_->shader->setVec3("light.position", glm::vec3(0, 50, 100));
+		mvp.modelNormal = glm::transpose(glm::inverse(mvp.model));
+		// mvp.modelNormal = glm::mat3(1.0f);
+		// glm::mat3(glm::transpose(glm::inverse(model))
 
-		world_->shader->setFloat("time", world_->environment->totalElapsedTime);
+		//Binding 1
+		glm::vec3 viewPos = world_->environment->camera->Position;
 
-		//Calcule camera
+		//Binding 2
+		LightObject light{};
+		light.position = world_->environment->sun->getPosition();
+		light.ambient = world_->environment->sun->material.ambient;
+		light.diffuse = world_->environment->sun->material.diffuse;
+		light.specular = world_->environment->sun->material.specular;
 
-		glm::mat4 view(world_->environment->camera->GetViewMatrix());
-		//glm::mat4 view(glm::lookAt(cameraPtr_->Position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-
-		world_->shader->setMat4("view", view);
-
-		//Position de la cam
-		world_->shader->setVec3("viewPos", world_->environment->camera->Position);
-
-		world_->shader->setMat4("projection", world_->environment->camera->Projection);
-
-
-		glDrawElements(GL_TRIANGLES, (int)indicesSize_, GL_UNSIGNED_INT, 0);
+		shader->updateUniform(0, currentFrame, &mvp, sizeof(mvp));
+		shader->updateUniform(1, currentFrame, &viewPos, sizeof(viewPos));
+		shader->updateUniform(2, currentFrame, &light, sizeof(light));
 
 	}
 

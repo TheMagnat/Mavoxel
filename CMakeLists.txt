@@ -24,13 +24,8 @@ if ( MSVC )
     set(LIB_PATH "C:/Libraries/Bin")
     set(LIB_HEADERS_PATH "C:/Libraries/Include")
 
-    set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.243.0/")
-    set(VULKAN_HEADERS_PATH "C:/VulkanSDK/1.3.243.0/Include")
-
-    find_package(Vulkan REQUIRED)
-
-    set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.243.0/")
-    set(VULKAN_HEADERS_PATH "C:/VulkanSDK/1.3.243.0/Include")
+    set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.246.0/")
+    set(VULKAN_HEADERS_PATH "C:/VulkanSDK/1.3.246.0/Include")
 
     find_package(Vulkan REQUIRED)
 
