@@ -17,9 +17,12 @@ namespace mav {
 
 		public:
 
-			Voxel(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+			Voxel(Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
 			void generateVertices() override;
+
+			std::vector<uint32_t> getVertexAttributesSizes() const override;
+            virtual void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
 
     };
 

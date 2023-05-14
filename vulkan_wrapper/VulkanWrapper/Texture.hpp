@@ -77,7 +77,7 @@ class Texture {
             VmaAllocation stagingBufferAllocation;
             VmaAllocationInfo bufferAllocInfo;
 
-            Buffer::create(device_->getAllocator(), size_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, stagingBuffer, stagingBufferAllocation, &bufferAllocInfo);
+            Buffer::create(device_->getAllocator(), size_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, stagingBuffer, stagingBufferAllocation, bufferAllocInfo);
 
             memcpy(bufferAllocInfo.pMappedData, data.data(), static_cast<size_t>(size_));
     

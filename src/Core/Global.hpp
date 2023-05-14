@@ -1,11 +1,7 @@
 #pragma once
 
-#include <GLObject/Shader.hpp>
+#include <VulkanWrapper/VulkanWrapper.hpp>
 
-#include <vector>
-#include <cstddef>
-#include <Helper/ThreadPool.hpp>
-#include <Environment/Environment.hpp>
 
 namespace mav {
 
@@ -13,15 +9,7 @@ namespace mav {
 
 		public:
 
-			static size_t width;
-			static size_t height;
-
-		#ifndef NDEBUG
-
-			static mav::Shader debugShader;
-			static mav::Environment debugEnvironment;
-
-		#endif
+			static vuw::VulkanWrapper* vulkanWrapper;
 		
 	};
 

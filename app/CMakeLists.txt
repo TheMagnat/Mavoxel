@@ -2,6 +2,7 @@
 file(GLOB_RECURSE CppSources ${CMAKE_SOURCE_DIR}/app/*.cpp)
 set(CppHeaders "${CMAKE_SOURCE_DIR}/app")
 set(MavoxelHeaders "${CMAKE_SOURCE_DIR}/src")
+set(VulkanWrapperHeaders "${CMAKE_SOURCE_DIR}/vulkan_wrapper")
 
 add_executable(app ${CppSources})
 
@@ -22,7 +23,16 @@ target_include_directories(app
     ${MavoxelHeaders}
 )
 
+# Vulkan Wrapper headers
+target_include_directories(app
+    PRIVATE
+    ${VulkanWrapperHeaders}
+)
+
 ## Add libs
+
+# Vulkan Wrapper Lib from the current projet
+target_link_libraries(app PRIVATE VulkanWrapper)
 
 # Mavoxel Lib from the current projet
 target_link_libraries(app PRIVATE Mavoxel)
@@ -38,10 +48,10 @@ target_compile_features(app PRIVATE cxx_std_20)
 ##Shaders
 
 #We get all shader files
-file(GLOB_RECURSE shaders RELATIVE ${CMAKE_SOURCE_DIR}/resources ${CMAKE_SOURCE_DIR}/resources/*s)
+file(GLOB_RECURSE shaders RELATIVE ${CMAKE_SOURCE_DIR}/resources ${CMAKE_SOURCE_DIR}/resources/*spv)
 
 #We create a custom command to generate all our shaders in the output dir
-add_custom_command(OUTPUT ${shaders})
+add_custom_command(OUTPUT ${shaders} COMMAND)
 
 #We specify that the name in the output is symbolic and we will not create a file exactly on this path
 set_source_files_properties(${shaders} PROPERTIES SYMBOLIC 1)

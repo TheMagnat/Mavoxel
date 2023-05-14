@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glad/glad.h>
+// #include <glad/glad.h>
 #include <glm/glm.hpp>
 
 #include <string>
@@ -23,7 +23,7 @@ public:
     Shader();
 	Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr);
 
-    void load(const GLchar* vertexPath, const GLchar* fragmentPath, const char* geometryPath = nullptr);
+    void load(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr);
     // Activation du shader
     void use() const;
 
@@ -50,7 +50,7 @@ public:
     void setMat4(const std::string &name, const glm::mat4 &mat) const;
 
 private:
-    void checkCompileErrors(GLuint shader, std::string type);
+    void checkCompileErrors(unsigned int shader, std::string type);
 
 };
 

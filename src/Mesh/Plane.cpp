@@ -249,7 +249,7 @@ namespace mav {
 
 	void Plane::draw(){
 
-		glBindVertexArray(vao_.get());
+		// glBindVertexArray(vao_.get());
 		
 		//SET LE SHADER
 		shaderPtr_->use();
@@ -301,7 +301,7 @@ namespace mav {
 		shaderPtr_->setMat4("projection", cameraPtr_->Projection);
 
 
-		glDrawElements(GL_TRIANGLES, (int)indicesNb_, GL_UNSIGNED_INT, 0);
+		// glDrawElements(GL_TRIANGLES, (int)indicesNb_, GL_UNSIGNED_INT, 0);
 
 	}
 

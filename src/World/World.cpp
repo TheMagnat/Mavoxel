@@ -2,23 +2,42 @@
 #include <World/World.hpp>
 #include <Core/Global.hpp>
 
+
 #include <iostream>
 #include <chrono>
 
 #include <algorithm>
 
-#ifdef TIME
-	#include <Helper/Benchmark/Profiler.hpp>
+#ifndef NDEBUG
+#include <Core/DebugGlobal.hpp>
 #endif
+
+#ifdef TIME
+#include <Helper/Benchmark/Profiler.hpp>
+#endif
+
+
 
 namespace mav {
 
-	World::World(Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, float voxelSize)
+	World::World(vuw::Shader* shaderPtrP, Environment* environmentP, size_t chunkSize, float voxelSize)
 		//TODO: Rendre le nombre de thread paramétrable
-		: chunkSize_(chunkSize), voxelSize_(voxelSize), shader(shaderPtrP), environment(environmentP), threadPool(4) {
+		: DrawableContainer(shaderPtrP), chunkSize_(chunkSize), voxelSize_(voxelSize), environment(environmentP), threadPool(4)
+		#ifndef NDEBUG
+		, debugSideContainer_(mav::DebugGlobal::debugShader.get())
+		#endif
+		{
 			//TODO: Think of a better way to prevent having to put a mutex in getChunk... Maybe storing directly the unique_ptr in the map ?
 			allChunk_.reserve(10000);
 		}
+
+	void World::initializePipeline() {
+		DrawableContainer::initializePipeline({3, 3, 2, 1, 1});
+		
+		#ifndef NDEBUG
+			debugSideContainer_.initializePipeline({3}, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+		#endif
+	}
 
 	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator){
 
@@ -28,6 +47,10 @@ namespace mav {
 		chunkCoordToIndex_.emplace(ChunkCoordinates(chunkPosX, chunkPosY, chunkPosZ), newChunkIndex);
 
 		Chunk* currentChunkPtr = allChunk_.back().get();
+
+		#ifndef NDEBUG
+		mav::DebugGlobal::debugShader->addObject();
+		#endif
 
 		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
 		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex](){
@@ -179,7 +202,12 @@ namespace mav {
 		}
 	}
 
-	void World::drawAll(){
+	void World::drawAll(VkCommandBuffer currentCommandBuffer, uint32_t currentFrame){
+		
+		if (allChunk_.empty()) return;
+
+		allChunk_[0]->updateUniforms(shader_, currentFrame);
+		DrawableContainer::bind(currentCommandBuffer, currentFrame);
 
 		for(size_t i(0), maxSize(allChunk_.size()); i < maxSize; ++i){
 			
@@ -188,11 +216,27 @@ namespace mav {
 			// If chunk not ready to be drawn, skip it
 			if (allChunk_[i]->state != 2) continue;
 
-			allChunk_[i]->draw();
+			allChunk_[i]->draw(currentCommandBuffer);
 		}
 
+		//DEBUG
+		#ifndef NDEBUG
+			
+			for(size_t i(0), maxSize(allChunk_.size()); i < maxSize; ++i){
+			
+				//TODO: Add camera vision logic to skip unecessary chunk draw
+				debugSideContainer_.bind(currentCommandBuffer, i, currentFrame);
+
+				// If chunk not ready to be drawn, skip it
+				if (allChunk_[i]->state != 2) continue;
+
+				allChunk_[i]->debugDraw(currentCommandBuffer, currentFrame);
+			}
+
+		#endif
 	}
 
+	/*
 	void World::draw(glm::vec3 position, float renderDistance) {
 
 		static size_t count = 0;
@@ -224,6 +268,7 @@ namespace mav {
 
 
 	}
+	*/
 
 	std::pair<SimpleVoxel*, Chunk*> World::getVoxel(float x, float y, float z) const {
 

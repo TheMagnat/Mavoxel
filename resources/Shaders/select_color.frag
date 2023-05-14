@@ -1,13 +1,15 @@
-#version 330 core
+#version 450 core
 
-out vec4 outFragColor;
+layout(location = 0) out vec4 outFragColor;
 
-in vec3 FragPos;
-in vec3 Normal;
-in vec2 TexPos;
+layout(location = 0) in vec3 FragPos;
+layout(location = 1) in vec3 Normal;
+layout(location = 2) in vec2 TexPos;
 
-uniform vec3 viewPos;
-uniform float time;
+layout(set = 0, binding = 1) uniform timeInformation {
+    float time;
+};
+
 
 void main() {
 

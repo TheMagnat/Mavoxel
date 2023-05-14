@@ -1,7 +1,7 @@
 #pragma once
 
-#include <GLObject/Shader.hpp>
-#include <GLObject/GLObject.hpp>
+#include <VulkanWrapper/VertexData.hpp>
+#include <VulkanWrapper/Shader.hpp>
 
 #include <vector>
 
@@ -10,32 +10,32 @@ namespace mav {
     class Drawable {
 
         public:
-            Drawable(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Shader* shader);
+            Drawable();
+
+            bool empty();
 
             //To generate vertices
             virtual void generateVertices() = 0;
 
             /**
-             * To initialize the VAO.
-             * If fullInit is set to true, also generate vertices and call graphic update to set graphic buffer data
+             * Generate vertices and call graphic update to set graphic buffer data
             */
             void initialize();
 
-            //To update the VAO buffers
+            //To update the Vertex Data
             void graphicUpdate();
 
+            virtual void draw(VkCommandBuffer commandBuffer) const;
+
+            //Virtual global graphics setup
+            virtual std::vector<uint32_t> getVertexAttributesSizes() const = 0;
+            virtual void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const = 0;
+
         protected:
-            //OpenGL
-            Shader* shader_;
+            vuw::VertexData vertexData_;
 
-            VAO vao_;
-            size_t attributesSum_;
-            std::vector<VAO::Attribute> attributes_;
-
-            std::vector<float> vertices_;
-            
-            std::vector<int> indices_;
-            int indicesSize_ = 0;
+            std::vector<float> vertices_;            
+            std::vector<uint32_t> indices_;
 
         };
 

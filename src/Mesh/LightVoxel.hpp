@@ -17,7 +17,9 @@ namespace mav {
 
 		public:
 
-			LightVoxel(Shader* shaderPtr, Environment* environment, Material material, size_t size = 10);
+			LightVoxel(Environment* environment, Material material, size_t size = 10);
+
+      void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
 
     };
 
