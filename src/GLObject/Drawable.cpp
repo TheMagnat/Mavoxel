@@ -21,6 +21,7 @@ namespace mav {
 
         generateVertices();
         graphicUpdate();
+    }
 
     void Drawable::graphicUpdate(){
 

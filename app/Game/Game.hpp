@@ -33,7 +33,7 @@
 #define GENERATE_CHUNK false
 #define NB_CHUNK_PER_AXIS 2
 
-//TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utilisert la perspective de la caméra partout.
+//TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utiliser la perspective de la caméra partout.
 #define CHUNK_SIZE 32 //size_t
 #define VOXEL_SIZE 0.5f //float
 #define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 4

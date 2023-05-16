@@ -264,7 +264,7 @@ namespace mav{
 			if (sideVoxel) {
 				sideVoxel->setFaceState(faceToInverseFace[faceIndex], true);
 			}
-			//We force to regenerate even if it was not edited to regenrate AO
+			//We force to regenerate even if it was not edited to regenerate AO
 			if (sideChunk) world_->needToRegenerateChunks.insert(sideChunk);
 
 		}
@@ -308,7 +308,7 @@ namespace mav{
 
 		Chunk* affectedChunk = this;
 
-		//In this case, we need to insert it in the neibor chunk
+		//In this case, we need to insert it in the neighbor chunk
 		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) {
 			affectedChunk = getChunk(position);
 		}
@@ -340,7 +340,7 @@ namespace mav{
 				sideVoxel->setFaceState(Chunk::faceToInverseFace[faceIndex], false);
 			}
 
-			// If the voxel is not from the current chunk, notify that we need to regenrate for AO
+			// If the voxel is not from the current chunk, notify that we need to regenerate for AO
 			if (sideChunk) world_->needToRegenerateChunks.insert(sideChunk);
 		}
 
@@ -381,13 +381,13 @@ namespace mav{
 		foundVoxels.resize(8);
 		for(uint8_t i = 0; i < 8; ++i) {
 			
-			glm::ivec3 neibhborChunkPosition = voxelChunkPosition + positionToLookUp[faceIndex][i];
-			int foundVoxel = findVoxel(neibhborChunkPosition);
+			glm::ivec3 neighborChunkPosition = voxelChunkPosition + positionToLookUp[faceIndex][i];
+			int foundVoxel = findVoxel(neighborChunkPosition);
 			if (foundVoxel == 2) {
 
-				const Chunk * neihborChunk = getChunk(neibhborChunkPosition);
-				if (neihborChunk) {
-					foundVoxel = neihborChunk->findVoxel(neibhborChunkPosition);
+				const Chunk * neighborChunk = getChunk(neighborChunkPosition);
+				if (neighborChunk) {
+					foundVoxel = neighborChunk->findVoxel(neighborChunkPosition);
 				}
 				else {
 					foundVoxel = voxelMapGenerator_->isIn(

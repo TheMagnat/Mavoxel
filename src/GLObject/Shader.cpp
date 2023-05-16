@@ -55,7 +55,7 @@ void Shader::load(const char* vertexPath, const char* fragmentPath, const char* 
 	// catch (std::ifstream::failure &e)
 	// {
 	// 	open_ = false;
-	// 	std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+	// 	std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ" << std::endl;
 	// }
 	// const char* vShaderCode = vertexCode.c_str();
 	// const char * fShaderCode = fragmentCode.c_str();
@@ -89,7 +89,7 @@ void Shader::load(const char* vertexPath, const char* fragmentPath, const char* 
 	// 	glAttachShader(ID, geometry);
 	// glLinkProgram(ID);
 	// checkCompileErrors(ID, "PROGRAM");
-	// // delete the shaders as they're linked into our program now and no longer necessery
+	// // delete the shaders as they're linked into our program now and no longer necessary
 	// glDeleteShader(vertex);
 	// glDeleteShader(fragment);
 	// if (geometryPath != nullptr)

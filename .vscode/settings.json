@@ -117,6 +117,7 @@
 	"cSpell.words": [
 		"AABB",
 		"framebuffer",
+		"glfw",
 		"GLFW",
 		"Mavoxel",
 		"offsetted",
@@ -125,5 +126,6 @@
 		"voxel",
 		"voxels"
 	],
-	"cmake.configureOnOpen": true
+	"cmake.configureOnOpen": true,
+	"cSpell.language": "en,fr"
 }
