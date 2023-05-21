@@ -120,6 +120,7 @@
 		"glfw",
 		"GLFW",
 		"Mavoxel",
+		"Octree",
 		"offsetted",
 		"perlin",
 		"vertice",

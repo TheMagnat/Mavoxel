@@ -20,13 +20,16 @@ you can use a totally different main file.
 #include <Core/DebugGlobal.hpp>
 #endif
 
+//Test
+#include <Octree/SparseVoxelOctree.hpp>
+
 const uint16_t MAX_FRAMES_IN_FLIGHT = 2;
 const bool DEPTH_CHECK = true;
 
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 
-
+/*
 int main(int argc, char const *argv[]){
 
 	srand(time(NULL));
@@ -72,4 +75,50 @@ int main(int argc, char const *argv[]){
     #endif
 
 	return 0;
+}
+*/
+
+//Octree main test
+int main(int argc, char const *argv[]){
+
+    SparseVoxelOctree tree(2);
+    
+    auto valueTest2 = tree.get({3, 3, 3});
+
+    tree.set({3, 3, 3}, 11);
+    tree.set({2, 3, 3}, 11);
+    tree.set({3, 2, 3}, 11);
+    tree.set({2, 2, 3}, 11);
+    tree.set({3, 3, 2}, 11);
+    tree.set({2, 3, 2}, 11);
+    tree.set({3, 2, 2}, 11);
+    tree.set({2, 2, 2}, 11);
+
+    tree.set({2, 2, 2}, 11);
+
+    tree.set({3, 3, 3}, 0);
+    tree.set({2, 3, 3}, 0);
+    tree.set({3, 2, 3}, 0);
+    tree.set({2, 2, 3}, 0);
+    tree.set({3, 3, 2}, 0);
+    tree.set({2, 3, 2}, 0);
+    tree.set({3, 2, 2}, 0);
+    tree.set({2, 2, 2}, 0);
+
+    auto valueTest = tree.get({3, 3, 3});
+
+    // tree.set({0, 0, 0}, 22);
+
+    tree.set({3, 2, 2}, 33);
+
+    auto value = tree.get({3, 0, 1}); //0
+    auto value2 = tree.get({3, 0, 2}); //0
+
+    auto value3 = tree.get({3, 3, 3}); //11
+    auto value4 = tree.get({3, 0, 2}); //0
+    auto value5 = tree.get({3, 0, 2}); //0
+    auto value6 = tree.get({3, 2, 2}); //33
+
+
+    return 0;
 }

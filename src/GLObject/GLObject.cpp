@@ -86,6 +86,6 @@ namespace mav {
 	}
 
     void VAO::bind() const {
-		glBindVertexArray(VAO_);
+		// glBindVertexArray(VAO_);
     }
 }

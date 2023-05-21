@@ -29,7 +29,7 @@
 #include <Core/DebugGlobal.hpp>
 #endif
 
-#define SOLO_CHUNK false
+#define SOLO_CHUNK true
 #define GENERATE_CHUNK false
 #define NB_CHUNK_PER_AXIS 2
 
@@ -65,6 +65,7 @@ class Game {
             selectVoxelShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/select_color.frag.spv")),
             whiteShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/sun_color.frag.spv")),
             colorShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_color.vert.spv", "Shaders/only_color.frag.spv")),
+            rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/only_texPos.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
@@ -76,13 +77,15 @@ class Game {
             sun(&environment, sunMaterial, 50),
             lines(player.getCamera()),
 
-            //Ray casting
-            RCRender(&world, &rayCastingShader, &environment)
-
             //Wrappers
             selectionFaceWrapper(&selectVoxelShader, &selectionFace),
             sunWrapper(&whiteShader, &sun),
-            linesWrapper(&colorShader, &lines)
+            linesWrapper(&colorShader, &lines),
+
+            //Ray casting
+            RCRenderer(&world, &environment),
+            RCRendererWrapper(&rayCastingShader, &RCRenderer)
+
         {
 
             //Init shaders
@@ -118,8 +121,14 @@ class Game {
             });
             colorShader.generateBindingsAndSets();
 
+            // rayCastingShader.addUniformBufferObjects({
+            //     {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
+            // });
+            // rayCastingShader.generateBindingsAndSets();
+
             // Init objects
             world.initializePipeline();
+
             selectionFaceWrapper.initializePipeline();
             
             sunWrapper.initializePipeline();
@@ -127,8 +136,11 @@ class Game {
 
             //Note: Lines use line primitive topology type.
             linesWrapper.initializePipeline(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+            
+            //Ray casting
+            // RCRendererWrapper.initializePipeline();
+            // RCRendererWrapper.initializeVertices();
 
-            rayCastingShader.load("Shaders/only_texPos.vs", "Shaders/only_texPos.fs");
 
             player.setGravity(&gravity);
 
@@ -150,7 +162,7 @@ class Game {
 
             sun.initialize();
 
-            RCRender.initialize();
+            RCRenderer.initialize();
 
             //Sun
             //sun.setPosition(0, 200, 0);
@@ -165,6 +177,21 @@ class Game {
                 //world.createChunk(1, 0, -1, &generator);
                 // world.createChunk(2, 0, 0, &generator);
                 world.createChunk(0, 0, 0, &generator);
+
+                //DEBUG
+                rayCastingShader.addUniformBufferObjects({
+                    {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
+                });
+                rayCastingShader.addTexture(mav::Global::vulkanWrapper->generateTexture3D(
+                    world.getChunk(0, 0, 0)->voxels_.voxelMatrix,
+                    {1, CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE, VK_SHADER_STAGE_FRAGMENT_BIT}
+                ));
+                rayCastingShader.generateBindingsAndSets();
+                
+                //Ray casting
+                RCRendererWrapper.initializePipeline();
+                RCRendererWrapper.initializeVertices();
+
             }
             else {
 
@@ -388,7 +415,7 @@ class Game {
             sun.setPosition(-200.f, 200.f, 0.f); // Fix position
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
-            sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 150.0f); // Simulate a sun rotation
+            // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
             //Drawing phase
@@ -430,8 +457,8 @@ class Game {
             //Bind shader
             //Bind vertexData
             //Draw vertexData
-            //TODO
-            //if (rayCasting) RCRender.draw();
+
+            if (rayCasting) RCRendererWrapper.draw(currentCommandBuffer, currentFrame);
 
             mav::Global::vulkanWrapper->endRecordingDraw();
             return;
@@ -473,7 +500,8 @@ class Game {
         vuw::Shader whiteShader;
         vuw::Shader colorShader;
 
-        mav::Shader rayCastingShader;
+        //Ray-Casting
+        vuw::Shader rayCastingShader;
 
 
         float totalElapsedTime_;
@@ -501,7 +529,8 @@ class Game {
         std::optional<mav::CollisionFace> currentlyLookingFace;
 
         //Ray Casting
-        mav::RayCastingRenderer RCRender;
+        mav::RayCastingRenderer RCRenderer;
+        mav::DrawableSingle RCRendererWrapper;
         bool rayCasting = true;
 
         //Debug / Benchmark

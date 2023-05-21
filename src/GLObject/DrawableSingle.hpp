@@ -15,8 +15,7 @@ namespace mav {
             }
 
             void initializeVertices() {
-                drawableItem_->generateVertices();
-                drawableItem_->graphicUpdate();
+                drawableItem_->initialize();
             }
             
             //Note: you must call "initializePipeline" and "initializeVertices" before calling draw

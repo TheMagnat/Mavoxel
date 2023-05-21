@@ -53,7 +53,7 @@ namespace mav {
 		#endif
 
 		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
-		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex](){
+		// auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex](){
 			
 			#ifdef TIME
 				Profiler profiler("Full chunks generation");
@@ -67,7 +67,7 @@ namespace mav {
 			std::lock_guard<std::mutex> lock(readyToUpdateChunksMutex);
 			readyToUpdateChunks.push(newChunkIndex);
 
-		});
+		// });
 
 	}
 

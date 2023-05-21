@@ -145,7 +145,6 @@ namespace vuw {
             void generateBindingsAndSets() {
                 createLayoutPart();
                 //Shader::createDescriptorPool();
-                std::cout << "Multi Shader error: generateBindingsAndSets" << std::endl;
             }
 
             void createLayoutPart() override {

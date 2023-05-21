@@ -6,6 +6,7 @@
 #include <VulkanWrapper/Device.hpp>
 #include <VulkanWrapper/Allocator.hpp>
 #include <VulkanWrapper/Texture.hpp>
+#include <VulkanWrapper/Texture3D.hpp>
 
 #include <VulkanWrapper/Helper/Buffer.hpp>
 
@@ -162,6 +163,15 @@ namespace vuw {
                     device_, commandPool, queue,
                     texture, textureInformations
                 );
+                
+            }
+
+            void addTexture3D(VkCommandPool commandPool, VkQueue queue, std::vector<uint8_t> const& texture, Texture::TextureInformations const& textureInformations) {
+
+                textures_.emplace_back(Texture3D(
+                    device_, commandPool, queue,
+                    texture, textureInformations
+                ));
                 
             }
 

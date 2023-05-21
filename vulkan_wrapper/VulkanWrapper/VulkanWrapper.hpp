@@ -21,6 +21,8 @@
 #include <VulkanWrapper/Shader.hpp>
 #include <VulkanWrapper/MultiShader.hpp>
 #include <VulkanWrapper/GraphicsPipeline.hpp>
+#include <VulkanWrapper/Texture.hpp>
+#include <VulkanWrapper/Texture3D.hpp>
 
 #include <unordered_set>
 
@@ -208,6 +210,10 @@ namespace vuw {
 
             Texture generateTexture(std::vector<uint8_t> const& textureData, Texture::TextureInformations const& textureInformations) const {
                 return Texture(&device_, commandPool_.get(), device_.getGraphicsQueue(), textureData, textureInformations);
+            }
+
+            Texture generateTexture3D(std::vector<uint8_t> const& textureData, Texture::TextureInformations const& textureInformations) const {
+                return Texture3D(&device_, commandPool_.get(), device_.getGraphicsQueue(), textureData, textureInformations);
             }
 
             void waitIdle() const {

@@ -175,7 +175,7 @@ namespace mav {
 
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
 			int state;
-			
+		//TODO: private
 		public:
 			int posX_;
 			int posY_;

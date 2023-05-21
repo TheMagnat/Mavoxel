@@ -1,4 +1,9 @@
-#version 330 core
+#version 450 core
+
+//PRAMS
+#define RAY_DISTANCE 128
+
+
 
 //Structures definition
 struct Camera {
@@ -60,21 +65,26 @@ Material materials[] = Material[](
 
 
 //Inpute / Outputs
-out vec4 outFragColor;
-in vec2 TexPos;
+layout (location = 0) out vec4 outFragColor;
+layout (location = 0) in vec2 TexPos;
 
 //Uniforms
-uniform float xRatio;
-uniform Camera camera;
-uniform Sun sun;
+layout (set = 0, binding = 0) uniform RayCastInformations {
+    float xRatio;
+    Camera camera;
+    Sun sun;
+};
 
 #define TEXTURES_LEN 5
 #define TEXTURES_TOTAL_LEN (TEXTURES_LEN * TEXTURES_LEN * TEXTURES_LEN)
 #define CENTER_OFFSET ivec3(2, 2, 2)
 
-uniform usampler3D chunkTextures[TEXTURES_TOTAL_LEN];
-uniform ivec3 centerChunkPosition;
+layout(binding = 1) uniform usampler3D chunkTexture_one;
 
+// uniform ivec3 centerChunkPosition;
+// uniform usampler3D chunkTextures[TEXTURES_TOTAL_LEN];
+
+ivec3 centerChunkPosition = ivec3(0, 0, 0);
 float voxelSize = 0.5;
 int chunSize = 32;
 
@@ -90,22 +100,23 @@ uint findVoxel(vec3 voxelPosition) {
 
     ivec3 centeredChunkPosition = (chunkPosition - centerChunkPosition) + CENTER_OFFSET;
 
-    if (centeredChunkPosition.x < 0) return 0u;
-    if (centeredChunkPosition.y < 0) return 0u;
-    if (centeredChunkPosition.z < 0) return 0u;
+    if (centeredChunkPosition.x < 0) return 0;
+    if (centeredChunkPosition.y < 0) return 0;
+    if (centeredChunkPosition.z < 0) return 0;
 
-    if (centeredChunkPosition.x >= TEXTURES_LEN) return 0u;
-    if (centeredChunkPosition.y >= TEXTURES_LEN) return 0u;
-    if (centeredChunkPosition.z >= TEXTURES_LEN) return 0u;
+    if (centeredChunkPosition.x >= TEXTURES_LEN) return 0;
+    if (centeredChunkPosition.y >= TEXTURES_LEN) return 0;
+    if (centeredChunkPosition.z >= TEXTURES_LEN) return 0;
 
     int indexInTextureArray = centeredChunkPosition.x * TEXTURES_LEN * TEXTURES_LEN + centeredChunkPosition.y * TEXTURES_LEN + centeredChunkPosition.z;
     
-    //if ( chunkPosition != ivec3(0, 0, 0) ) return 0u;
+    // if ( chunkPosition != ivec3(0, 0, 0) ) return 0;
     //Verifier que la chunk position existe, et trouver la texture associé
 
     ivec3 voxelChunkPosition = ivec3( ( (voxelPosition + halfChunkSize) - chunkPosition * trueChunkSize ) / voxelSize );
 
-    return texelFetch(chunkTextures[indexInTextureArray], voxelChunkPosition, 0).r;
+    //return texelFetch(chunkTextures[indexInTextureArray], voxelChunkPosition, 0).r;
+    return texelFetch(chunkTexture_one, voxelChunkPosition, 0).r;
 
 }
 
@@ -120,13 +131,14 @@ uint castWorldRay(vec3 eye, vec3 ray, out float dist, out vec3 norm, out vec3 hi
     if (ray.z == 0.0) ray.z = 0.0;
     
     vec3 pos = vec3(floor(eye / voxelSize) * voxelSize);
-    vec3 ri = 1.0 / ray;
-    vec3 rs = sign(ray);
-    vec3 ris = ri * rs;
+    vec3 ri = 1.0 / ray; //Inversed ray
+    vec3 rs = sign(ray); //Sign of ray
+
+    vec3 ris = ri * rs; 
     vec3 dis = (pos - eye + (voxelSize * 0.5) + rs * (voxelSize * 0.5)) * ri;
     
     vec3 dim = vec3(0.0);
-    for (int i = 0; i < 128; ++i) {
+    for (int i = 0; i < RAY_DISTANCE; ++i) {
 
         //TODO: regarder si dot(dis - (ris * voxelSize), dim) dépasse distance max
         dist = dot(dis - (ris * voxelSize), dim);
@@ -309,7 +321,7 @@ vec3 getRayTarget() {
     //vec2 ndc = (2.0 * TexPos - screenSize) / screenSize;
     vec3 near = camera.position + camera.front * 2.5;
     vec3 right = camera.right * uv.x;
-    vec3 up = camera.up * uv.y;
+    vec3 up = -camera.up * uv.y;
     return near + right + up;
 }
 
@@ -338,4 +350,5 @@ void main() {
     // outFragColor = vec4(vec3(distFromCenter), 1.0);
 
     outFragColor = vec4(castRayOutput, 1.0);
+    //outFragColor = vec4(vec3()
 }

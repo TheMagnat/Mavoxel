@@ -1,8 +1,6 @@
 
 #include <GLObject/Drawable.hpp>
-#include <GLObject/Shader.hpp>
-#include <GLObject/Texture3D.hpp>
-#include <Core/Global.hpp>
+// #include <Core/Global.hpp>
 
 #include <Environment/Environment.hpp>
 
@@ -13,36 +11,45 @@ namespace mav {
 
         public:
 
-            Quad(Shader* shaderPtr, Environment* environment)
-                : Drawable(5, {{3}, {2}}, shaderPtr), environment_(environment) {}
+            Quad(Environment* environment)
+                : environment_(environment) {}
+
+            
+            std::vector<uint32_t> getVertexAttributesSizes() const override {
+                return {{3}, {2}};
+            }
+
+            virtual void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override {
+                //TODO
+            }
+
 
             void generateVertices() override {
 
                 vertices_= {
-                    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, // top left 
-                    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,  // bottom left
-                    1.0f, -1.0f, 0.0f, 1.0f, 0.0f,  // bottom right
-                    1.0f,  1.0f, 0.0f, 1.0f, 1.0f,  // top right
+                    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, // bottom left 
+                    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,  // top left
+                    1.0f, -1.0f, 0.0f, 1.0f, 0.0f,  // top right
+                    1.0f,  1.0f, 0.0f, 1.0f, 1.0f,  // bottom right
                 };
 
+                //Clockwise
+                // indices_ = {
+                //     0, 1, 3, //First triangle
+                //     2, 3, 1 //Second triangle
+                // };
+
+                //Counter clockwise
                 indices_ = {
-                    0, 1, 3, //First triangle
-                    2, 3, 1 //Second triangle
+                    0, 3, 1, //First triangle
+                    2, 1, 3 //Second triangle
                 };
 
-            }
-
-            void draw() {
-                vao_.bind();
-
-                shader_->use();
-
-                glDrawElements(GL_TRIANGLES, indicesSize_, GL_UNSIGNED_INT, 0);
             }
 
 
         protected:
-            //Environement
+            //Environment
             Environment* environment_;
 
     };

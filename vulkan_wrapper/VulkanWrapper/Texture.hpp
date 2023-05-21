@@ -19,8 +19,12 @@ class Texture {
             uint32_t binding;
             uint32_t width;
             uint32_t height;
+            uint32_t depth; //Note : should be 1 if not used
             VkShaderStageFlags flags;
         };
+
+        Texture(const Device* device, size_t dataSize, TextureInformations const& textureInformations)
+            : device_(device), size_(dataSize), textureInformations_(textureInformations) {}
 
         Texture(const Device* device, VkCommandPool commandPool, VkQueue queue,
             std::vector<uint8_t> const& data, TextureInformations const& textureInformations)
@@ -29,6 +33,7 @@ class Texture {
             createTextureBuffers(commandPool, queue, data);
             textureImageView_= Image::createImageView(device_->get(), textureImage_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
             createTextureSampler();
+
         }
         
 
@@ -71,7 +76,7 @@ class Texture {
 
         }
 
-        void createTextureBuffers(VkCommandPool commandPool, VkQueue queue, std::vector<uint8_t> const& data) {
+        virtual void createTextureBuffers(VkCommandPool commandPool, VkQueue queue, std::vector<uint8_t> const& data) {
             
             VkBuffer stagingBuffer;
             VmaAllocation stagingBufferAllocation;
@@ -95,7 +100,7 @@ class Texture {
             vmaDestroyBuffer(device_->getAllocator(), stagingBuffer, stagingBufferAllocation);
         }
 
-        void createTextureSampler() {
+        virtual void createTextureSampler() {
 
             VkSamplerCreateInfo samplerInfo{};
             samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -141,7 +146,7 @@ class Texture {
             return textureSampler_;
         }
 
-    private:
+    protected:
         VkDeviceSize size_;
         TextureInformations textureInformations_;
         
