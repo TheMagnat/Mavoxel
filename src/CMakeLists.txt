@@ -43,7 +43,7 @@ endif ( MSVC )
 target_compile_features(Mavoxel PRIVATE cxx_std_20)
 
 ## Preprocessor macro
-target_compile_definitions(Mavoxel PRIVATE TIME)
 target_compile_definitions(Mavoxel PRIVATE NOMINMAX)
 
+target_compile_definitions(Mavoxel PRIVATE TIME)
 target_compile_definitions(Mavoxel PRIVATE RAY_CAST)

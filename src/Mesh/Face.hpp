@@ -24,7 +24,7 @@ namespace mav {
 			void generateVertices(std::array<glm::vec3, 4> const& points);
 
 			std::vector<uint32_t> getVertexAttributesSizes() const override;
-            void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
 
     };
 

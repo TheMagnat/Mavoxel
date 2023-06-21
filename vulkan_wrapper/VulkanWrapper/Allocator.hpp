@@ -6,30 +6,34 @@
 
 #include <VulkanWrapper/Instance.hpp>
 
-class Device;
+namespace vuw {
 
-class Allocator {
+    class Device;
 
-    public:
+    class Allocator {
 
-        Allocator();
-        
-        Allocator(Instance const& instance, Device const& device);
-        ~Allocator();
-        
-        Allocator(Allocator&&) = delete;
-        Allocator& operator=(Allocator&&) = delete;
+        public:
 
-        Allocator(const Allocator&) = delete;
-        Allocator& operator=(const Allocator&) = delete;
+            Allocator();
+            
+            Allocator(Instance const& instance, Device const& device);
+            ~Allocator();
+            
+            Allocator(Allocator&&) = delete;
+            Allocator& operator=(Allocator&&) = delete;
 
-        void initializeAllocator(Instance const& instance, Device const& device);
+            Allocator(const Allocator&) = delete;
+            Allocator& operator=(const Allocator&) = delete;
 
-        VmaAllocator get() const {
-            return allocator_;
-        }
+            void initializeAllocator(Instance const& instance, Device const& device);
 
-    private:
-        VmaAllocator allocator_;
+            VmaAllocator get() const {
+                return allocator_;
+            }
 
-};
+        private:
+            VmaAllocator allocator_;
+
+    };
+
+}

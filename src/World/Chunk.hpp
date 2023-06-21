@@ -6,6 +6,8 @@
 #include <World/Generator.hpp>
 #include <GLObject/Drawable.hpp>
 
+#include <Octree/SparseVoxelOctree.hpp>
+
 #include <GLObject/GLObject.hpp>
 
 #include <vector>
@@ -19,9 +21,6 @@
 
 #endif
 
-#ifdef RAY_CAST
-#include <GLObject/Texture3D.hpp>
-#endif
 
 namespace mav {
 
@@ -77,10 +76,11 @@ namespace mav {
 		static std::array<uint8_t, 6> faceToInverseFace;
 
 		public:
-			Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
+			Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
 
 			void generateVoxels();
 			void generateVertices();
+			void graphicUpdate();
 
 			std::array<float, 4> generateAmbientOcclusion(SimpleVoxel const& voxel, uint8_t faceIndex) const;
 
@@ -158,25 +158,25 @@ namespace mav {
 			*/
 			Chunk* getChunk(glm::ivec3& voxelChunkPosition) const;
 
-			#ifdef RAY_CAST
-			const Texture3D* getTexture() const {
-				return &texture;
-			}
-			#endif
+			glm::ivec3 getPosition() const;
 
 			//Vulkan
-			void updateTexture();
 			void draw(VkCommandBuffer commandBuffer);
 			void debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame);
 
 			std::vector<uint32_t> getVertexAttributesSizes() const override;
 
-			void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
+			void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
 
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
 			int state;
 		//TODO: private
 		public:
+
+			//Voxels informations
+			SparseVoxelOctree svo_; //SVO must be initialized first to then get it's len
+			VoxelMatrix voxels_;
+
 			int posX_;
 			int posY_;
 			int posZ_;
@@ -188,18 +188,11 @@ namespace mav {
 
 			AABB collisionBox_;
 
-			//Voxels informations
-			VoxelMatrix voxels_;
-
-			#ifdef RAY_CAST
-			Texture3D texture;
-			#endif
 
 
 			//Reference to the world
 			World* world_;
 			const VoxelMapGenerator * voxelMapGenerator_;
-
 
 			#ifndef NDEBUG
 				DebugVoxel chunkSides;

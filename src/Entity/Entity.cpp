@@ -11,7 +11,7 @@
 const static float friction = 0.01;
 const static float aerialFriction = 0.75;
 const static float minimumLength = 0.001;
-const static float dampingFactor = 0.5f;
+const static float dampingFactor = 0.5;
 
 namespace mav {
 
@@ -188,7 +188,7 @@ namespace mav {
             }
 
             //True velocity recalculated
-            //velocity = collisionVelocity / elapsedTime;
+            // velocity = collisionVelocity / elapsedTime;
         
             //camera_.ProcessKeyboard(collisionVelocity);
             boundingBox_.center += collisionVelocity;

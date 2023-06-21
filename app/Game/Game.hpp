@@ -10,7 +10,6 @@
 
 #include <Entity/Player.hpp>
 #include <World/World.hpp>
-#include <Mesh/Plane.hpp>
 #include <Mesh/Voxel.hpp>
 #include <Mesh/Face.hpp>
 #include <Mesh/LightVoxel.hpp>
@@ -29,13 +28,14 @@
 #include <Core/DebugGlobal.hpp>
 #endif
 
-#define SOLO_CHUNK true
+#define SOLO_CHUNK false
 #define GENERATE_CHUNK false
-#define NB_CHUNK_PER_AXIS 2
+#define NB_CHUNK_PER_AXIS 3
 
 //TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utiliser la perspective de la caméra partout.
-#define CHUNK_SIZE 32 //size_t
-#define VOXEL_SIZE 0.5f //float
+#define SVO_DEPTH 7 //size_t
+#define CHUNK_SIZE (uint32_t)std::pow(2, SVO_DEPTH) //uint32_t
+#define VOXEL_SIZE 1.0f //float
 #define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 4
 
 //Player variables
@@ -65,16 +65,16 @@ class Game {
             selectVoxelShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/select_color.frag.spv")),
             whiteShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/sun_color.frag.spv")),
             colorShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_color.vert.spv", "Shaders/only_color.frag.spv")),
-            rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/only_texPos.frag.spv")),
+            rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/ray_tracing.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
-            world(&chunkShader, &environment, CHUNK_SIZE, VOXEL_SIZE),
+            world(&chunkShader, &environment, SVO_DEPTH, VOXEL_SIZE),
 
             ////Single objects
             //Objects
             selectionFace(&environment, grassMaterial, VOXEL_SIZE),
-            sun(&environment, sunMaterial, 50),
+            sun(&environment, sunMaterial, 1),
             lines(player.getCamera()),
 
             //Wrappers
@@ -83,7 +83,7 @@ class Game {
             linesWrapper(&colorShader, &lines),
 
             //Ray casting
-            RCRenderer(&world, &environment),
+            RCRenderer(&world, &environment, SVO_DEPTH),
             RCRendererWrapper(&rayCastingShader, &RCRenderer)
 
         {
@@ -121,10 +121,21 @@ class Game {
             });
             colorShader.generateBindingsAndSets();
 
-            // rayCastingShader.addUniformBufferObjects({
-            //     {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
-            // });
-            // rayCastingShader.generateBindingsAndSets();
+            //Ray Casting
+            rayCastingShader.addUniformBufferObjects({
+                {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                {1, sizeof(WorldOctreeInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
+            });
+            rayCastingShader.addSSBO({
+                //Binding, Stage flag, count, ssbo ptr
+                2, VK_SHADER_STAGE_FRAGMENT_BIT, RAYTRACING_SVO_SIZE, std::vector<const vuw::SSBO*>(RAYTRACING_SVO_SIZE, nullptr)
+            });
+            rayCastingShader.addUniformBufferObjects({
+                {3, sizeof(int), VK_SHADER_STAGE_FRAGMENT_BIT, RAYTRACING_SVO_SIZE},
+            });
+
+            
+            rayCastingShader.generateBindingsAndSets();
 
             // Init objects
             world.initializePipeline();
@@ -138,8 +149,9 @@ class Game {
             linesWrapper.initializePipeline(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
             
             //Ray casting
-            // RCRendererWrapper.initializePipeline();
-            // RCRendererWrapper.initializeVertices();
+            RCRendererWrapper.initializePipeline();
+            RCRendererWrapper.initializeVertices();
+
 
 
             player.setGravity(&gravity);
@@ -174,23 +186,24 @@ class Game {
             if (SOLO_CHUNK) {
                 //world.createChunk(1, 0, 0, &generator);
                 // world.createChunk(1, 0, 1, &generator);
-                //world.createChunk(1, 0, -1, &generator);
+                // world.createChunk(0, 0, -1, &generator);
+                // world.createChunk(0, 0, 1, &generator);
                 // world.createChunk(2, 0, 0, &generator);
                 world.createChunk(0, 0, 0, &generator);
 
-                //DEBUG
-                rayCastingShader.addUniformBufferObjects({
-                    {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
-                });
-                rayCastingShader.addTexture(mav::Global::vulkanWrapper->generateTexture3D(
-                    world.getChunk(0, 0, 0)->voxels_.voxelMatrix,
-                    {1, CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE, VK_SHADER_STAGE_FRAGMENT_BIT}
-                ));
-                rayCastingShader.generateBindingsAndSets();
+                //DEBUG RAY-CAST
+                // rayCastingShader.addUniformBufferObjects({
+                //     {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
+                // });
+                // rayCastingShader.addTexture(mav::Global::vulkanWrapper->generateTexture3D(
+                //     world.getChunk(0, 0, 0)->voxels_.voxelMatrix,
+                //     {1, CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE, VK_SHADER_STAGE_FRAGMENT_BIT}
+                // ));
+                // rayCastingShader.generateBindingsAndSets();
                 
-                //Ray casting
-                RCRendererWrapper.initializePipeline();
-                RCRendererWrapper.initializeVertices();
+                // //Ray casting
+                // RCRendererWrapper.initializePipeline();
+                // RCRendererWrapper.initializeVertices();
 
             }
             else {
@@ -236,7 +249,7 @@ class Game {
                     glm::ivec3 newVoxelPositionToChunk = currentlyLookingFace->voxel->getChunkPosition();
                     newVoxelPositionToChunk += currentlyLookingFace->normal;
 
-                    currentlyLookingFace->chunk->addVoxel(newVoxelPositionToChunk, 1);
+                    currentlyLookingFace->chunk->addVoxel(newVoxelPositionToChunk, 4);
 
                     for (mav::Chunk* chunkPtr : world.needToRegenerateChunks) {
                         chunkPtr->generateVertices();
@@ -412,7 +425,8 @@ class Game {
             //Update player position
             player.update(elapsedTime, world);
                         
-            sun.setPosition(-200.f, 200.f, 0.f); // Fix position
+            sun.setPosition(-200.f, 100.f, 0.f); // Fix position
+            // sun.setPosition(player.getCamera()->Position + player.getCamera()->Front * 50); // Front of player
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
             // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
@@ -437,52 +451,48 @@ class Game {
             // vertexData_.bind(currentCommandBuffer);
             // vertexData_.draw(currentCommandBuffer);
 
-            world.drawAll(currentCommandBuffer, currentFrame);
-
-            sunWrapper.draw(currentCommandBuffer, currentFrame);
-            linesWrapper.draw(currentCommandBuffer, currentFrame);
-            // player.draw();
 
             // If we find a voxel in front of the user
-            currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front);
+            currentlyLookingFace = world.castRay(player.getCamera()->Position, player.getCamera()->Front, 500);
+            // currentlyLookingFace = world.castSVORay(player.getCamera()->Position, player.getCamera()->Front, 500);
+            // currentlyLookingFaceTwo = world.castSVORay(player.getCamera()->Position, player.getCamera()->Front);
             if ( currentlyLookingFace ) {
-                float offsetValue = 0.0001f + 0.02f * std::log(glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0])/10.0f + 1);
-                selectionFace.generateVertices(currentlyLookingFace->getOffsettedPoints( offsetValue ));
-                selectionFace.graphicUpdate();
-                selectionFaceWrapper.draw(currentCommandBuffer, currentFrame);
+
+                // glm::vec3 collisionFaceWorldPosition = glm::vec3(currentlyLookingFace->voxel->getChunkPosition()) + (glm::vec3(currentlyLookingFace->chunk->getPosition()) * std::pow(2, SVO_DEPTH)) - (float)(std::pow(2, SVO_DEPTH) / 2.0);
+
+                collisionInformations = mav::CollisionInformations {
+                    currentlyLookingFace->voxel->getChunkPosition(),
+                    currentlyLookingFace->chunk->getPosition(),
+                    currentlyLookingFace->normal 
+                };
+
+                environment.collisionInformations = &collisionInformations;
+            }
+            else {
+                environment.collisionInformations = nullptr;
             }
 
+            if (rayCasting) {
+                RCRendererWrapper.draw(currentCommandBuffer, currentFrame);
+            }
+            else {
 
-            //Bind pipeline
-            //Bind shader
-            //Bind vertexData
-            //Draw vertexData
+                world.drawAll(currentCommandBuffer, currentFrame);
 
-            if (rayCasting) RCRendererWrapper.draw(currentCommandBuffer, currentFrame);
+                sunWrapper.draw(currentCommandBuffer, currentFrame);
+                linesWrapper.draw(currentCommandBuffer, currentFrame);
+                // player.draw();
+
+                if ( currentlyLookingFace ) {
+                    float offsetValue = 0.0001f + 0.02f * std::log(glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0])/10.0f + 1);
+                    selectionFace.generateVertices(currentlyLookingFace->getOffsettedPoints( offsetValue ));
+                    selectionFace.graphicUpdate();
+                    selectionFaceWrapper.draw(currentCommandBuffer, currentFrame);
+                }
+
+            }
 
             mav::Global::vulkanWrapper->endRecordingDraw();
-            return;
-
-
-            // glClearColor(0.5294f, 0.8078f, 0.9216f, 1);
-            // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            //Draw non transparent objects
-            // glDisable( GL_BLEND );
-
-            //Compare both draw perf
-            // world.drawAll();
-            //world.draw(player.getCamera()->Position, RENDER_DISTANCE);
-
-            // sun.draw();
-            // lines.draw();
-            // player.draw();
-            
-
-            //Draw transparent objects
-            // glEnable( GL_BLEND );
-
-
 
             // std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
             // std::cout << "Position = x: " << player.position.x << " y: " << player.position.y << " z: " << player.position.z << std::endl;
@@ -527,6 +537,7 @@ class Game {
         mav::DrawableSingle linesWrapper;
 
         std::optional<mav::CollisionFace> currentlyLookingFace;
+        mav::CollisionInformations collisionInformations;
 
         //Ray Casting
         mav::RayCastingRenderer RCRenderer;

@@ -2,7 +2,6 @@
 
 #include <Mesh/Mesh.hpp>
 
-#include <GLObject/Shader.hpp>
 #include <Environment/Environment.hpp>
 #include <GLObject/GLObject.hpp>
 
@@ -25,7 +24,7 @@ namespace mav {
 			void setColor(glm::vec3 const& color);
 
 			std::vector<uint32_t> getVertexAttributesSizes() const override;
-            void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override;
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
 		
 		private:
 

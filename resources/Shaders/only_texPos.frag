@@ -1,5 +1,7 @@
 #version 450 core
 
+//OLD RAY CAST SHADER
+
 //PRAMS
 #define RAY_DISTANCE 128
 
@@ -79,8 +81,11 @@ layout (set = 0, binding = 0) uniform RayCastInformations {
 #define TEXTURES_TOTAL_LEN (TEXTURES_LEN * TEXTURES_LEN * TEXTURES_LEN)
 #define CENTER_OFFSET ivec3(2, 2, 2)
 
-layout(binding = 1) uniform usampler3D chunkTexture_one;
+// layout(binding = 1) uniform usampler3D chunkTexture_one;
 
+layout(std140, binding = 1) readonly buffer ssboOctree {
+    int octreeData[];
+};
 // uniform ivec3 centerChunkPosition;
 // uniform usampler3D chunkTextures[TEXTURES_TOTAL_LEN];
 
@@ -116,7 +121,8 @@ uint findVoxel(vec3 voxelPosition) {
     ivec3 voxelChunkPosition = ivec3( ( (voxelPosition + halfChunkSize) - chunkPosition * trueChunkSize ) / voxelSize );
 
     //return texelFetch(chunkTextures[indexInTextureArray], voxelChunkPosition, 0).r;
-    return texelFetch(chunkTexture_one, voxelChunkPosition, 0).r;
+    //return texelFetch(chunkTexture_one, voxelChunkPosition, 0).r;
+    return 0;
 
 }
 
@@ -344,11 +350,21 @@ void main() {
     // vec3 rayOrigin = camera.position;
     // vec3 rayDirection = normalize(vec3(uv.x, uv.y,1));
 
-    vec3 castRayOutput = castRay(camera.position, rayDirection);
+
+    //HERE TODO ADAPT TO OCTREE
+    //vec3 castRayOutput = castRay(camera.position, rayDirection);
 
     // float distFromCenter = length(uv);
     // outFragColor = vec4(vec3(distFromCenter), 1.0);
 
-    outFragColor = vec4(castRayOutput, 1.0);
-    //outFragColor = vec4(vec3()
+    // outFragColor = vec4(castRayOutput, 1.0);
+
+    if (octreeData[0] == 2296) {
+        outFragColor = vec4(vec3(1.0), 1.0);
+    }
+    else {
+        outFragColor = vec4(vec3(0.0), 1.0);
+    }
+
+    
 }

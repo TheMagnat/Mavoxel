@@ -2,29 +2,33 @@
 #include <VulkanWrapper/SwapChain.hpp>
 
 
-void SwapChain::initializeFramebuffers(RenderPass const& renderPass) {
+namespace vuw {
 
-    swapChainFramebuffers_.resize(swapChainImageViews_.size());
+    void SwapChain::initializeFramebuffers(RenderPass const& renderPass) {
 
-    std::vector<VkImageView> attachments(1 + depthCheck_);
-    if (depthCheck_) attachments[1] = depthImageView_;
+        swapChainFramebuffers_.resize(swapChainImageViews_.size());
 
-    for (size_t i = 0; i < swapChainImageViews_.size(); i++) {
+        std::vector<VkImageView> attachments(1 + depthCheck_);
+        if (depthCheck_) attachments[1] = depthImageView_;
 
-        attachments[0] = swapChainImageViews_[i];
+        for (size_t i = 0; i < swapChainImageViews_.size(); i++) {
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderPass.get();
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapChainExtent_.width;
-        framebufferInfo.height = swapChainExtent_.height;
-        framebufferInfo.layers = 1;
+            attachments[0] = swapChainImageViews_[i];
 
-        if (vkCreateFramebuffer(devicePtr_, &framebufferInfo, nullptr, &swapChainFramebuffers_[i]) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create framebuffer !");
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = renderPass.get();
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebufferInfo.pAttachments = attachments.data();
+            framebufferInfo.width = swapChainExtent_.width;
+            framebufferInfo.height = swapChainExtent_.height;
+            framebufferInfo.layers = 1;
+
+            if (vkCreateFramebuffer(devicePtr_, &framebufferInfo, nullptr, &swapChainFramebuffers_[i]) != VK_SUCCESS) {
+                throw std::runtime_error("Failed to create framebuffer !");
+            }
         }
+
     }
 
 }

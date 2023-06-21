@@ -3,22 +3,27 @@
 #include <Mesh/Simple/Quad.hpp>
 #include <VulkanWrapper/Shader.hpp>
 
+//TODO: set them in CMAKE
+#define RAYTRACING_CHUNK_RANGE 2
+#define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
+#define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
+
 namespace mav {
 
     class RayCastingRenderer : public Quad {
 
         public:
-            RayCastingRenderer(World* world, Environment* environment)
-                : world_(world), environment_(environment), Quad(environment_),
-                emptyTexture_(world->getChunkSize()), emptyDataMatrix_(std::pow(world->getChunkSize(), 3), 0) {
+            RayCastingRenderer(World* world, Environment* environment, size_t svoDepth)
+                : svoDepth_(svoDepth), world_(world), environment_(environment), Quad(environment_) {
 
-                emptyTexture_.setData(emptyDataMatrix_);
 
             }
 
-            void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const override {
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override {
                 
+                //Uniforms
                 RayCastInformations rci;
+                WorldOctreeInformations woi;
 
                 //Screen ratio
                 VkExtent2D const& extent = Global::vulkanWrapper->getExtent();
@@ -33,75 +38,81 @@ namespace mav {
                 //Sun informations
                 rci.sun.position = environment_->sun->getPosition();
 
+                //Time
+                rci.time = environment_->totalElapsedTime;
+
+                if (environment_->collisionInformations) {
+                    
+                    //TODO: better
+                    rci.voxelCursorPosition = glm::vec3(environment_->collisionInformations->voxelLocalPosition) + (glm::vec3(environment_->collisionInformations->chunkPosition) * std::pow(2, svoDepth_)) - (float)(std::pow(2, svoDepth_) / 2.0);
+                    rci.faceCursorNormal = environment_->collisionInformations->normal;
+                }
+                else {
+                    rci.voxelCursorPosition = glm::vec3(0.0f);
+                    rci.faceCursorNormal = glm::vec3(0.0f);
+                }
+                
+
+                //Current chunk position
+                woi.centerChunkPosition = world_->getChunkIndex(environment_->camera->Position);
+                woi.depth = svoDepth_;
+                woi.len = std::pow(2, svoDepth_);
+                woi.voxelSize = world_->getVoxelSize();
+
+                //Uniform on binding 0
                 shader->updateUniform(0, currentFrame, &rci, sizeof(rci));
 
-            }
+                //Uniform on binding 1
+                shader->updateUniform(1, currentFrame, &woi, sizeof(woi));
 
 
-            void draw() {
-                std::cout << "Deprecated RC draw" << std::endl;
+                //Buffers
+                static const int range = RAYTRACING_CHUNK_RANGE;
+                static const int len = RAYTRACING_CHUNK_PER_AXIS;
 
-                // vao_.bind();
-
-                // shader_->use();
-
-
-
-                // Bind the chunk texture to texture unit 0
-                //Chunk* centerChunk = world_->getChunkFromWorldPos(environment_->camera->Position);
-                glm::ivec3 centerPosition = world_->getChunkIndex(environment_->camera->Position);
-
-                static const int range = 2;
-                int len = range * 2 + 1;
-
-                unsigned int textureUnit = 0;
-                std::vector<int> textureUnits;
-                textureUnits.reserve(len * len * len);
+                std::vector<const vuw::SSBO*> svoSsboInRange;
+                std::vector<mav::SparseVoxelOctree*> ssboDebug;
+                std::vector<int> svoInformations;
+                svoSsboInRange.reserve(RAYTRACING_SVO_SIZE);
+                
+                unsigned int ssboIndex = 0;
                 for (int x = -range; x <= range; ++x) {
                 for (int y = -range; y <= range; ++y) {
                 for (int z = -range; z <= range; ++z) {
                     
-                    Chunk* chunkPtr = world_->getChunk(centerPosition.x + x, centerPosition.y + y, centerPosition.z + z);
-                    if (chunkPtr) {
-                        
-                        chunkPtr->getTexture()->bind(textureUnit);
-
-                        
-                        
+                    Chunk* chunkPtr = world_->getChunk(woi.centerChunkPosition.x + x, woi.centerChunkPosition.y + y, woi.centerChunkPosition.z + z);
+                    if (chunkPtr && chunkPtr->state == 2) {
+                        svoSsboInRange.push_back(&chunkPtr->svo_.getSSBO());
+                        svoInformations.push_back(0);
+                        ssboDebug.push_back(&chunkPtr->svo_);
                     }
                     else {
-                        emptyTexture_.bind(textureUnit);
+                        svoSsboInRange.push_back(nullptr);
+                        svoInformations.push_back(1);
+                        ssboDebug.push_back(nullptr);
                     }
                     
-                    textureUnits.push_back(textureUnit++);
-
                 }
                 }
                 }
 
-                // Set the value of the sampler3D uniforms variables
-                // shader_->setIntV("chunkTextures", textureUnits);
-                // shader_->setIVec3("centerChunkPosition", centerPosition);
+                shader->updateUniformArray(2, currentFrame, svoInformations, sizeof(int));
 
-                // shader_->setFloat("xRatio", (float)Global::width/(float)Global::height);
-                // shader_->setVec3("camera.position", environment_->camera->Position);
-                // shader_->setVec3("camera.front", environment_->camera->Front);
-                // shader_->setVec3("camera.up", environment_->camera->Up);
-                // shader_->setVec3("camera.right", environment_->camera->Right);
+                shader->updateSSBOs(0, svoSsboInRange);
 
-                // shader_->setVec3("sun.position", environment_->sun->getPosition());
-
-                // glDrawElements(GL_TRIANGLES, indicesSize_, GL_UNSIGNED_INT, 0);
+                //TODO: Vérifier if modification entre frame d'avant et mtn sur les ptr de ssbo utilisé, et si oui call "updateDescriptorSets"
+                
+                shader->updateDescriptorSets(currentFrame);
 
             }
 
+
         private:
+
+            size_t svoDepth_;
+
             World* world_;
             Environment* environment_;
-
-            //Empty texture
-            Texture3D emptyTexture_;
-            std::vector<uint8_t> emptyDataMatrix_;
 
     };
 

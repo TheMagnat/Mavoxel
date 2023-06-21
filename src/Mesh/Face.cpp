@@ -70,7 +70,7 @@ namespace mav {
         return {3, 3, 2};
     }
 
-    void Face::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
+    void Face::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
         
         //Binding 0
 		ModelViewProjectionObject mvp{};

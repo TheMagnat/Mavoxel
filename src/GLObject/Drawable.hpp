@@ -29,7 +29,9 @@ namespace mav {
 
             //Virtual global graphics setup
             virtual std::vector<uint32_t> getVertexAttributesSizes() const = 0;
-            virtual void updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const = 0;
+
+            //To call before every drawing to update uniforms, buffer, textures...
+            virtual void updateShader(vuw::Shader* shader, uint32_t currentFrame) const = 0;
 
         protected:
             vuw::VertexData vertexData_;

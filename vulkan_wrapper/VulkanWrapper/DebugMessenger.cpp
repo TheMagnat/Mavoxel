@@ -16,36 +16,40 @@ namespace {
 
 }
 
-DebugMessenger::DebugMessenger(Instance const& instance, bool initialize) {
-    if (initialize) setup(instance.get());
-}
+namespace vuw {
 
-DebugMessenger::~DebugMessenger() {
-    clean();
-}
-
-//Setup and clean phase
-void DebugMessenger::setup(VkInstance instance) {
-    
-    assert(instance != nullptr);
-    assert(debugMessenger_ == nullptr);
-
-    instance_ = instance;
-
-    VkDebugUtilsMessengerCreateInfoEXT createInfo = DebugMessengerHelper::generateCreateInfo();
-
-    if (getInstanceAndCreateDebugMessenger(instance, &createInfo, nullptr, &debugMessenger_) != VK_SUCCESS) {
-        throw std::runtime_error("failed to set up debug messenger!");
+    DebugMessenger::DebugMessenger(Instance const& instance, bool initialize) {
+        if (initialize) setup(instance.get());
     }
 
-}
-
-void DebugMessenger::clean(const VkAllocationCallbacks* pAllocator) {
-
-    assert(instance_ != nullptr);
-
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance_, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        func(instance_, debugMessenger_, pAllocator);
+    DebugMessenger::~DebugMessenger() {
+        clean();
     }
+
+    //Setup and clean phase
+    void DebugMessenger::setup(VkInstance instance) {
+        
+        assert(instance != nullptr);
+        assert(debugMessenger_ == nullptr);
+
+        instance_ = instance;
+
+        VkDebugUtilsMessengerCreateInfoEXT createInfo = DebugMessengerHelper::generateCreateInfo();
+
+        if (getInstanceAndCreateDebugMessenger(instance, &createInfo, nullptr, &debugMessenger_) != VK_SUCCESS) {
+            throw std::runtime_error("failed to set up debug messenger!");
+        }
+
+    }
+
+    void DebugMessenger::clean(const VkAllocationCallbacks* pAllocator) {
+
+        assert(instance_ != nullptr);
+
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance_, "vkDestroyDebugUtilsMessengerEXT");
+        if (func != nullptr) {
+            func(instance_, debugMessenger_, pAllocator);
+        }
+    }
+
 }

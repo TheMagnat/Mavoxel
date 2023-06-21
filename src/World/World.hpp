@@ -31,7 +31,7 @@ namespace mav {
 	class World : public DrawableContainer {
 
 		public:
-			World(vuw::Shader* shaderPtrP, Environment* environmentP, size_t chunkSize = 32, float voxelSize = 1);
+			World(vuw::Shader* shaderPtrP, Environment* environmentP, size_t octreeDepth = 5, float voxelSize = 1.0f);
 
 			void initializePipeline();
 
@@ -72,6 +72,8 @@ namespace mav {
 			 */
 			std::optional<CollisionFace> castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance = 50) const;
 			
+			std::optional<CollisionFace> castSVORay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance = 50) const;
+
 			/**
 			 * @brief Verify if a moving bounding box enter in collision with our world.
 			 * 
@@ -83,11 +85,13 @@ namespace mav {
 			std::pair<glm::vec3, glm::vec3> collide(mav::AABB const& box, glm::vec3 direction) const;
 
 			size_t getChunkSize() const;
+			float getVoxelSize() const;
 
 			// Threaded
 			void updateReadyChunk(size_t nbToUpdate = 1);
 
 		private:
+			size_t octreeDepth_;
 			size_t chunkSize_;
 			float voxelSize_;
 

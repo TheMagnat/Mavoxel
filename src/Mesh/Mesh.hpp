@@ -1,6 +1,5 @@
 #pragma once
 
-#include <GLObject/Shader.hpp>
 #include <GLObject/Camera.hpp>
 #include <GLObject/GLObject.hpp>
 #include <GLObject/Drawable.hpp>
@@ -45,7 +44,7 @@ namespace mav {
             //Model data
             glm::mat4 translationMatrix_;
 
-            //Environement
+            //Environment
             Environment* environment_;
 
 

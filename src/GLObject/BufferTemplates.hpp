@@ -47,4 +47,14 @@ struct RayCastInformations {
     alignas(16) float xRatio;
     alignas(16) CameraObject camera;
     alignas(16) SunObject sun;
+    alignas(16) float time;
+    alignas(16) glm::vec3 voxelCursorPosition;
+    alignas(16) glm::vec3 faceCursorNormal;
+};
+
+struct WorldOctreeInformations {
+    glm::ivec3 centerChunkPosition;
+    int depth;
+    int len;
+    float voxelSize;
 };

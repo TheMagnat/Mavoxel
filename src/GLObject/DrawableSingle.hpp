@@ -23,7 +23,7 @@ namespace mav {
                 
                 if (drawableItem_->empty()) return;
 
-                drawableItem_->updateUniforms(shader_, currentFrame);
+                drawableItem_->updateShader(shader_, currentFrame);
                 DrawableContainer::bind(commandBuffer, currentFrame);
                 drawableItem_->draw(commandBuffer);
             }

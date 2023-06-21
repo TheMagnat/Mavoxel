@@ -59,8 +59,8 @@ namespace mav {
             //Jump information
             int remainingJumps = 0;
             int maxJumps = 2;
-            float timeSinceLastJump = 0;
-            float timeLimitBetweenJumps = 0.25;
+            float timeSinceLastJump = 0.0f;
+            float timeLimitBetweenJumps = 0.25f;
 
         protected:
 

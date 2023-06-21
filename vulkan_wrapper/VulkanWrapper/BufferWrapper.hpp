@@ -11,6 +11,7 @@ namespace vuw {
 
         public:
 
+            BufferWrapper();
             BufferWrapper(VmaAllocator allocator, VkBuffer buffer, VmaAllocation bufferAllocation) : allocator_(allocator), buffer_(buffer), bufferAllocation_(bufferAllocation) {}
 
             ~BufferWrapper() {
@@ -24,8 +25,11 @@ namespace vuw {
             BufferWrapper& operator=(const BufferWrapper&) = delete;
 
             void clean() {
-                std::cout << "Safe buffer freed" << std::endl;
-                vmaDestroyBuffer(allocator_, buffer_, bufferAllocation_);
+                if (allocator_) {
+                    vmaDestroyBuffer(allocator_, buffer_, bufferAllocation_);
+                    buffer_ = nullptr;
+                    bufferAllocation_ = nullptr;
+                }
             }
 
         private:

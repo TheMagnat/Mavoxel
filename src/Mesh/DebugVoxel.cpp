@@ -20,7 +20,7 @@ namespace mav {
         indices_.resize(indicesSize_);
 
         glm::vec3 color(0, 1, 0);
-        float verticeLenght = 0.5f;
+        float verticeLength = 0.5f;
 
 
         std::vector<std::pair<size_t, float>> faceFixedValue {
@@ -68,9 +68,9 @@ namespace mav {
                 size_t verticeOffset = j*nbOfData;
 
                 //Position
-                vertices_[faceOffset + verticeOffset + fixedIndex] = fixedValue * verticeLenght;
-                vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticeLenght;
-                vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticeLenght;
+                vertices_[faceOffset + verticeOffset + fixedIndex] = fixedValue * verticeLength;
+                vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticeLength;
+                vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticeLength;
 
                 //Here we change first value
                 if (j % 2 == 0) {
@@ -111,7 +111,7 @@ namespace mav {
         return {3};
     }
 
-    void DebugVoxel::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
+    void DebugVoxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
         
         //Binding 0
         ModelViewProjectionObjectNoNormal mvp{};

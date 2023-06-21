@@ -9,7 +9,7 @@ namespace mav {
     LightVoxel::LightVoxel(Environment* environment, Material material, size_t size)
         : Voxel(environment, material, size) {}
 
-    void LightVoxel::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
+    void LightVoxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
         //Binding 0
         ModelViewProjectionObject mvp{};
         glm::mat4 model(1.0f);

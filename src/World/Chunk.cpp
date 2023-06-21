@@ -46,11 +46,12 @@ namespace mav{
 	};
 
 	
-	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
+	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
 		: Drawable(), state(0), posX_(posX), posY_(posY), posZ_(posZ),
-		size_((int)size), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
+		size_((int)svo_.getLen()), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
 		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
 		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
+		svo_(octreeDepth),
 		world_(world), voxelMapGenerator_(voxelMapGenerator)
 #ifndef NDEBUG
 		, chunkSides(world->environment, {
@@ -59,9 +60,7 @@ namespace mav{
 			{1.0f, 1.0f, 1.0f}
 		}, size_*voxelSize, centerWorldPosition_ )
 #endif
-#ifdef RAY_CAST
-		, texture(size)
-#endif
+
 		{
 
 			#ifndef NDEBUG
@@ -104,6 +103,7 @@ namespace mav{
 
 					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
 					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), glm::ivec3(x, y, z), voxelMap[x][y][z]);
+					svo_.set(glm::uvec3(x, y, z), voxelMap[x][y][z]);
 
 					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
@@ -244,6 +244,7 @@ namespace mav{
 		#endif
 
 		voxels_.voxelIndices[position.x][position.y][position.z] = -1;
+		svo_.set(position, 0);
 
 		// Move the last voxel at the place of the old voxel to prevent moving all the indexes
 		// and put the correct index in the indexes map for the moved voxel
@@ -273,6 +274,10 @@ namespace mav{
 		world_->needToRegenerateChunks.insert(this);
 
 		return true;
+	}
+
+	glm::ivec3 Chunk::getPosition() const {
+		return glm::ivec3(posX_, posY_, posZ_);
 	}
 
 	Chunk* Chunk::getChunk(glm::ivec3& voxelChunkPosition) const {
@@ -330,6 +335,7 @@ namespace mav{
 
 		voxels_.voxelIndices[x][y][z] = voxels_.data.size();
 		voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), position, newVoxelId);
+		svo_.set(position, newVoxelId);
 
 		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 		for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
@@ -470,9 +476,11 @@ namespace mav{
 
 	}
 
-	void Chunk::updateTexture() {
+	void Chunk::graphicUpdate() {
+		Drawable::graphicUpdate();
+		
 		#ifdef RAY_CAST
-		texture.setData(voxels_.voxelMatrix);
+		svo_.updateBuffer();
 		#endif
 	}
 	
@@ -486,7 +494,7 @@ namespace mav{
 			if (isVisible) chunkSides.setColor(glm::vec3(1.0f));
 			else chunkSides.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
 			
-			chunkSides.updateUniforms(DebugGlobal::debugShader.get(), currentFrame);
+			chunkSides.updateShader(DebugGlobal::debugShader.get(), currentFrame);
 			chunkSides.draw(commandBuffer);
 
 		#endif
@@ -511,7 +519,7 @@ namespace mav{
 		return {3, 3, 2, 1, 1};
 	}
 
-	void Chunk::updateUniforms(vuw::Shader* shader, uint32_t currentFrame) const {
+	void Chunk::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
 
 		//Binding 0
 		ModelViewProjectionObject mvp{};

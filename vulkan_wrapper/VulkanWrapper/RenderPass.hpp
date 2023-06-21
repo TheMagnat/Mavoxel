@@ -8,41 +8,46 @@
 
 #include <stdexcept>
 
-//To correct circular include
-class SwapChain;
 
-class RenderPass {
+namespace vuw {
 
-    public:
-        RenderPass(Device const& device, SwapChain const& swapChain, bool depthCheck = false) : devicePtr_(device.get()) {
-            initializeRenderPass(swapChain, depthCheck);
-        };
+    //To correct circular include
+    class SwapChain;
 
-        ~RenderPass() {
-            clean();
-        }
+    class RenderPass {
 
-        void clean() {
-            if (renderPass_) vkDestroyRenderPass(devicePtr_, renderPass_, nullptr);
-        }
+        public:
+            RenderPass(Device const& device, SwapChain const& swapChain, bool depthCheck = false) : devicePtr_(device.get()) {
+                initializeRenderPass(swapChain, depthCheck);
+            };
 
-        RenderPass(RenderPass&&) = delete; //TODO: Declarer un move constructor
-        RenderPass& operator=(RenderPass&&) = delete;
+            ~RenderPass() {
+                clean();
+            }
 
-        RenderPass(const RenderPass&) = delete;
-        RenderPass& operator=(const RenderPass&) = delete;
+            void clean() {
+                if (renderPass_) vkDestroyRenderPass(devicePtr_, renderPass_, nullptr);
+            }
 
-        void initializeRenderPass(SwapChain const& swapChain, bool depthCheck);
+            RenderPass(RenderPass&&) = delete; //TODO: Declarer un move constructor
+            RenderPass& operator=(RenderPass&&) = delete;
 
-        VkRenderPass get() const {
-            return renderPass_;
-        }
-        
+            RenderPass(const RenderPass&) = delete;
+            RenderPass& operator=(const RenderPass&) = delete;
 
-    private:
-        VkDevice devicePtr_;
+            void initializeRenderPass(SwapChain const& swapChain, bool depthCheck);
 
-        VkRenderPass renderPass_;
+            VkRenderPass get() const {
+                return renderPass_;
+            }
+            
+
+        private:
+            VkDevice devicePtr_;
+
+            VkRenderPass renderPass_;
 
 
-};
+    };
+
+}

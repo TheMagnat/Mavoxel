@@ -11,6 +11,7 @@
 #include <VulkanWrapper/CommandBuffers.hpp>
 #include <VulkanWrapper/SynchronisationObjects.hpp>
 #include <VulkanWrapper/DeadBufferHandler.hpp>
+#include <VulkanWrapper/SSBO.hpp>
 
 
 //Debug
@@ -61,7 +62,7 @@ namespace vuw {
                 vkResetFences(device_.get(), 1, &syncObjs_.inFlightFences[currentFrame_]);
                                 
                 //TODO: Voir l'ordre ?
-                //TODO: LE DEPLACER
+                //TODO: LE DÉPLACER
                 // updateUniformBuffer(currentFrame_);
 
                 //Selected command buffer to store the draw calls
@@ -202,6 +203,10 @@ namespace vuw {
 
             GraphicsPipeline generateGraphicsPipeline(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
                 return GraphicsPipeline(device_, shader, swapChain_.getExtent(), renderPass_, vertexAttributesSize, depthCheck_, topology);
+            }
+
+            SSBO generateSSBO() {
+                return SSBO(&device_, commandPool_.get());
             }
 
             VertexData generateVertexData() {

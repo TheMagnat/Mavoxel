@@ -8,29 +8,33 @@
 #include <cassert>
 
 
-class DebugMessenger {
+namespace vuw {
 
-    public:
-        DebugMessenger(Instance const& instance, bool initialize);
+    class DebugMessenger {
 
-        ~DebugMessenger();
+        public:
+            DebugMessenger(Instance const& instance, bool initialize);
 
-        DebugMessenger(DebugMessenger&&) = delete; //TODO: Declarer un move constructor
-        DebugMessenger& operator=(DebugMessenger&&) = delete;
+            ~DebugMessenger();
 
-        DebugMessenger(const DebugMessenger&) = delete;
-        DebugMessenger& operator=(const DebugMessenger&) = delete;
-        
-        //Setup and clean phase
-        void setup(VkInstance instance);
+            DebugMessenger(DebugMessenger&&) = delete; //TODO: Declarer un move constructor
+            DebugMessenger& operator=(DebugMessenger&&) = delete;
 
-        void clean(const VkAllocationCallbacks* pAllocator = nullptr);
+            DebugMessenger(const DebugMessenger&) = delete;
+            DebugMessenger& operator=(const DebugMessenger&) = delete;
+            
+            //Setup and clean phase
+            void setup(VkInstance instance);
+
+            void clean(const VkAllocationCallbacks* pAllocator = nullptr);
 
 
-    private:
-        VkDebugUtilsMessengerEXT debugMessenger_ = nullptr;
+        private:
+            VkDebugUtilsMessengerEXT debugMessenger_ = nullptr;
 
-        //Save a pointer to the Vulkan instance
-        VkInstance instance_ = nullptr;
+            //Save a pointer to the Vulkan instance
+            VkInstance instance_ = nullptr;
 
-};
+    };
+
+}
