@@ -2,24 +2,25 @@
 #include <Mesh/DebugVoxel.hpp>
 
 #include <Core/Global.hpp>
+#include <GLObject/BufferTemplates.hpp>
 
 namespace mav {
 
-	DebugVoxel::DebugVoxel(Shader* shaderPtr, Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(3, {{3}}, shaderPtr, environment, material, size, position), color_(1.0f, 1.0f, 1.0f) {}
+	DebugVoxel::DebugVoxel(Environment* environment, Material material, float size, glm::vec3 position)
+        : Mesh(3, {{3}}, environment, material, size, position), color_(1.0f, 1.0f, 1.0f) {}
 
     void DebugVoxel::generateVertices() {
 
         size_t nbOfData = 3;
 
         size_t verticesNb = 6*4*nbOfData; //Number of face * number of vertices per face * number of information per vertice
-        indicesSize_ = 6*4*2; //Number of face * number of line * number of vertice per line
+        size_t indicesSize_ = 6*4*2; //Number of face * number of line * number of vertice per line
 
         vertices_.resize(verticesNb);
         indices_.resize(indicesSize_);
 
         glm::vec3 color(0, 1, 0);
-        float verticeLenght = 0.5f;
+        float verticeLength = 0.5f;
 
 
         std::vector<std::pair<size_t, float>> faceFixedValue {
@@ -67,9 +68,9 @@ namespace mav {
                 size_t verticeOffset = j*nbOfData;
 
                 //Position
-                vertices_[faceOffset + verticeOffset + fixedIndex] = fixedValue * verticeLenght;
-                vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticeLenght;
-                vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticeLenght;
+                vertices_[faceOffset + verticeOffset + fixedIndex] = fixedValue * verticeLength;
+                vertices_[faceOffset + verticeOffset + secondIndex] = secondValue * verticeLength;
+                vertices_[faceOffset + verticeOffset + firstIndex] = firstValue * verticeLength;
 
                 //Here we change first value
                 if (j % 2 == 0) {
@@ -106,36 +107,35 @@ namespace mav {
         color_ = color;
     }
 
-    void DebugVoxel::draw() const {
+    std::vector<uint32_t> DebugVoxel::getVertexAttributesSizes() const {
+        return {3};
+    }
 
-		glBindVertexArray(vao_.get());
-		
-		//SET LE SHADER
-		shader_->use();
-    
-		glm::mat4 model = glm::mat4(1.0f);
-        model = model * translationMatrix_;
-        //model = glm::rotate(model, 45.0f, glm::vec3(0.0f, 1.0f, 1.0f));
-		//model = model * rotationMat_;
-		model = glm::scale(model, glm::vec3(size));
+    void DebugVoxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
+        
+        //Binding 0
+        ModelViewProjectionObjectNoNormal mvp{};
+        glm::mat4 model(1.0f);
+        model = glm::translate(model, position);
+        model = glm::scale(model, glm::vec3(size));
 
+        glm::mat4 model2(1.0f);
+        model2 = model2 * translationMatrix_;
+        model2 = glm::scale(model2, glm::vec3(size));
 
-		shader_->setMat4("model", model);
-
-		////TOUT LES NEED
-		shader_->use();
-
-		shader_->setVec3("Color", color_);
-
-		//Calcule camera
-		glm::mat4 view(environment_->camera->GetViewMatrix());
-
-		shader_->setMat4("view", view);
-		shader_->setMat4("projection", environment_->camera->Projection);
+        glm::mat4 model3(1.0f);
+        model3 = glm::translate(model3, position);
+        model3 = glm::scale(model3, glm::vec3(size));
 
 
-		glDrawElements(GL_LINES, (int)indices_.size(), GL_UNSIGNED_INT, 0);
+        mvp.model = model;
+        mvp.view = environment_->camera->GetViewMatrix();
+        mvp.projection = environment_->camera->Projection;
+        mvp.projection[1][1] *= -1;
 
-	}
+        shader->updateUniform(0, currentFrame, &mvp, sizeof(mvp));
+        shader->updateUniform(1, currentFrame, (void*)&color_, sizeof(color_));
+
+    }
 
 }

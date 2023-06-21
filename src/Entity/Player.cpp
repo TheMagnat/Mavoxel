@@ -82,8 +82,8 @@ namespace mav {
             firstMouse = false;
         }
 
-        float xOffset = xPos - lastX;
-        float yOffset = lastY - yPos; // inversé car va de bas en haut
+        float xOffset = (float)(xPos - lastX);
+        float yOffset = (float)(lastY - yPos); // inversé car va de bas en haut
 
         lastX = xPos;
         lastY = yPos;

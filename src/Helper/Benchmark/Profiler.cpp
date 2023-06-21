@@ -33,7 +33,7 @@ Profiler::~Profiler() {
 
 void Profiler::printProfiled(std::ostream & stream)
 {
-    stream << std::fixed << "\nProfiled functions :" << std::endl;
+    stream << std::fixed << std::setprecision(10) << "\nProfiled functions :" << std::endl;
 
     std::lock_guard<std::mutex> lock(Profiler::staticMutex_);
     for (auto const& savedTime : savedTimes_) {

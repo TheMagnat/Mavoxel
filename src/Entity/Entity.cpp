@@ -1,7 +1,9 @@
 
 #include <Entity/Entity.hpp>
 
-#include <Core/Global.hpp>
+#ifndef NDEBUG
+#include <Core/DebugGlobal.hpp>
+#endif
 
 #define FREE_FLIGHT_MULTIPLIER 5.0f
 
@@ -9,14 +11,14 @@
 const static float friction = 0.01;
 const static float aerialFriction = 0.75;
 const static float minimumLength = 0.001;
-const static float dampingFactor = 0.5f;
+const static float dampingFactor = 0.5;
 
 namespace mav {
 
     //TODO: peut être avoir un bool qui vérifie qu'on peut utiliser front et right ?
     Entity::Entity(AABB boundingBox) : velocity(0.0f), front_(nullptr), right_(nullptr), boundingBox_(boundingBox), gravity_(nullptr)
     #ifndef NDEBUG
-        , entityBox(&Global::debugShader, &Global::debugEnvironment, {
+        , entityBox(&DebugGlobal::debugEnvironment, {
             {0.1f, 0.1f, 0.1f},
             {0.5f, 0.5f, 0.5f},
             {1.0f, 1.0f, 1.0f}
@@ -26,7 +28,7 @@ namespace mav {
     {
 
         #ifndef NDEBUG
-            entityBox.initialize(true);
+            entityBox.initialize();
             entityBox.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
         #endif
 
@@ -186,7 +188,7 @@ namespace mav {
             }
 
             //True velocity recalculated
-            //velocity = collisionVelocity / elapsedTime;
+            // velocity = collisionVelocity / elapsedTime;
         
             //camera_.ProcessKeyboard(collisionVelocity);
             boundingBox_.center += collisionVelocity;
@@ -203,9 +205,9 @@ namespace mav {
 
     }
     
-    void Entity::draw() const {
+    void Entity::draw(VkCommandBuffer commandBuffer) const {
         #ifndef NDEBUG
-            entityBox.draw();
+            entityBox.draw(commandBuffer);
         #endif
     }
 

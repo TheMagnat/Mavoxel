@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <glad/glad.h>
+// #include <glad/glad.h>
 
 
 namespace mav {
@@ -18,7 +18,7 @@ namespace mav {
 
 
 			VAO();
-
+			//ADD DESTRUCTOR TO RELEASE DATA
 			/**
 			*	Constructor that call setAll.
 			*/
@@ -27,6 +27,7 @@ namespace mav {
 			//Same as above but with an EBO.
 			VAO(std::vector<float> const& vertices, unsigned int totalAttributeSize, std::vector<Attribute> const& allAttribute, std::vector<int> const& indice);
 
+			operator bool() const;
 
 			/**
 			*	Configure the vertex Array.
@@ -45,14 +46,15 @@ namespace mav {
 			void setIndices(std::vector<int> const& indices);
 
 			unsigned int get() const;
+			void bind() const;
 
 		private:
 
-			unsigned int VAO_;
-			unsigned int VBO_;
+			unsigned int VAO_ = 0;
+			unsigned int VBO_ = 0;
 
 			//If EBO activated
-			unsigned int EBO_;
+			unsigned int EBO_ = 0;
 
 	};
 

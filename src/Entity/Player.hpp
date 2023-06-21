@@ -26,8 +26,8 @@ namespace mav {
             private:
                 //Camera logic
                 Camera camera_;
-                float lastX;
-                float lastY;
+                double lastX;
+                double lastY;
                 bool firstMouse = true;
 
                 float baseFov = 45.0f;

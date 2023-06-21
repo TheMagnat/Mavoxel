@@ -10,7 +10,7 @@
 #include <Mesh/DebugVoxel.hpp>
 
 
-#define GRAVITY_ON true
+#define GRAVITY_ON false
 
 namespace mav {
 
@@ -49,7 +49,7 @@ namespace mav {
             void update(float elapsedTime);
             bool update(float elapsedTime, World const& world);
             
-            void draw() const;
+            void draw(VkCommandBuffer commandBuffer) const;
 
         public:
             glm::vec3 velocity;
@@ -59,8 +59,8 @@ namespace mav {
             //Jump information
             int remainingJumps = 0;
             int maxJumps = 2;
-            float timeSinceLastJump = 0;
-            float timeLimitBetweenJumps = 0.25;
+            float timeSinceLastJump = 0.0f;
+            float timeLimitBetweenJumps = 0.25f;
 
         protected:
 
