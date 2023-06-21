@@ -110,17 +110,36 @@
 		"future": "cpp",
 		"ranges": "cpp",
 		"span": "cpp",
-		"xtree": "cpp"
+		"xtree": "cpp",
+		"shared_mutex": "cpp",
+		"unordered_set": "cpp"
 	},
 	"cSpell.words": [
 		"AABB",
+		"framebuffer",
+		"glfw",
 		"GLFW",
 		"Mavoxel",
+		"mipmap",
+		"octree",
+		"Octree",
 		"offsetted",
 		"perlin",
+		"RAYTRACING",
+		"ssbo",
+		"SSBO",
+		"ssbos",
+		"subpass",
+		"SUBPASS",
+		"Subpasses",
+		"swapchain",
+		"Swapchains",
+		"unnormalized",
+		"uvec",
 		"vertice",
 		"voxel",
 		"voxels"
 	],
-	"cmake.configureOnOpen": true
+	"cmake.configureOnOpen": true,
+	"cSpell.language": "en,fr"
 }

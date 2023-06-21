@@ -8,8 +8,8 @@ namespace mav {
     class Lines : public Drawable {
 
         public:
-            Lines(Shader* shaderPtr, const Camera* cameraPtr) : Drawable(true, 6, {{3}, {3}}, shaderPtr), camera(cameraPtr), lastUpdatePosition_(0) {}
-
+            Lines(const Camera* cameraPtr) : Drawable(), camera(cameraPtr), lastUpdatePosition_(0) {}
+            //{{3}, {3}}
             void generateVertices() {}
 
             void generateVertices(glm::vec3 const& point) {
@@ -71,36 +71,20 @@ namespace mav {
                 indices_.clear();
                 lastUpdatePosition_ = 0;
             }
-
-            void draw(){
-
-                glBindVertexArray(vao_.get());
-                
-                //SET LE SHADER
-                shader_->use();
             
-                glm::mat4 model = glm::mat4(1.0f);
-                shader_->setMat4("model", model);
-                shader_->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
-
-                ////TOUT LES NEED
-                shader_->use();
-
-                //Calculate camera
-                glm::mat4 view(camera->GetViewMatrix());
-
-                shader_->setMat4("view", view);
-
-                //Position de la cam
-                shader_->setVec3("viewPos", camera->Position);
-
-                shader_->setMat4("projection", camera->Projection);
-
-
-                glDrawElements(GL_LINES, (int)indices_.size(), GL_UNSIGNED_INT, 0);
-
+			std::vector<uint32_t> getVertexAttributesSizes() const override {
+                return {3, 3};
             }
 
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override {
+                //Binding 0
+                ViewProjectionObject vp{};
+                vp.view = camera->GetViewMatrix();
+                vp.projection = camera->Projection;
+                vp.projection[1][1] *= -1;
+
+                shader->updateUniform(0, currentFrame, &vp, sizeof(vp));
+            }
 
         private:
             const Camera* camera;

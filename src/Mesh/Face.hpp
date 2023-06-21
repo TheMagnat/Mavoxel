@@ -2,7 +2,7 @@
 
 #include <Mesh/Mesh.hpp>
 
-#include <GLObject/Shader.hpp>
+#include <VulkanWrapper/Shader.hpp>
 #include <Environment/Environment.hpp>
 #include <GLObject/GLObject.hpp>
 
@@ -18,12 +18,13 @@ namespace mav {
 
 		public:
 
-			Face(Shader* shaderPtr, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+			Face(Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
 			void generateVertices() override;
 			void generateVertices(std::array<glm::vec3, 4> const& points);
 
-			void draw();
+			std::vector<uint32_t> getVertexAttributesSizes() const override;
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
 
     };
 

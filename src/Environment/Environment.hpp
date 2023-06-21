@@ -3,6 +3,8 @@
 #include <Mesh/Mesh.hpp>
 #include <GLObject/Camera.hpp>
 
+#include <Collision/CollisionInformations.hpp>
+
 namespace mav {
 
     class Mesh;
@@ -12,6 +14,8 @@ namespace mav {
         const Mesh* sun;
         const Camera* camera;
         float totalElapsedTime = 0.0f;
+
+        const CollisionInformations* collisionInformations = nullptr;
 
     };
 

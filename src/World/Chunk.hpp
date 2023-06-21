@@ -6,6 +6,8 @@
 #include <World/Generator.hpp>
 #include <GLObject/Drawable.hpp>
 
+#include <Octree/SparseVoxelOctree.hpp>
+
 #include <GLObject/GLObject.hpp>
 
 #include <vector>
@@ -19,11 +21,34 @@
 
 #endif
 
+
 namespace mav {
 
 	struct VoxelMatrix {
 		std::vector<SimpleVoxel> data;
 		VoxelMap voxelIndices;
+
+		#ifdef RAY_CAST
+		std::vector<uint8_t> voxelMatrix;
+
+		void fillMatrix(VoxelMap const& matrix) {
+
+			size_t chunkSize = matrix.size();
+
+			voxelMatrix.clear();
+            voxelMatrix.reserve(chunkSize * chunkSize * chunkSize);
+
+			for (size_t z = 0; z < chunkSize; ++z) {
+				for (size_t y = 0; y < chunkSize; ++y) {
+					for (size_t x = 0; x < chunkSize; ++x) {
+						voxelMatrix.push_back( matrix[x][y][z] );
+					}
+				}
+			}
+
+		}
+
+		#endif
 
 		void initializeIndices(size_t size) {
 
@@ -51,10 +76,11 @@ namespace mav {
 		static std::array<uint8_t, 6> faceToInverseFace;
 
 		public:
-			Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
+			Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
 
 			void generateVoxels();
 			void generateVertices();
+			void graphicUpdate();
 
 			std::array<float, 4> generateAmbientOcclusion(SimpleVoxel const& voxel, uint8_t faceIndex) const;
 
@@ -132,13 +158,25 @@ namespace mav {
 			*/
 			Chunk* getChunk(glm::ivec3& voxelChunkPosition) const;
 
-			//OpenGL
-			void draw();
+			glm::ivec3 getPosition() const;
+
+			//Vulkan
+			void draw(VkCommandBuffer commandBuffer);
+			void debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+
+			std::vector<uint32_t> getVertexAttributesSizes() const override;
+
+			void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
 
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
 			int state;
-			
+		//TODO: private
 		public:
+
+			//Voxels informations
+			SparseVoxelOctree svo_; //SVO must be initialized first to then get it's len
+			VoxelMatrix voxels_;
+
 			int posX_;
 			int posY_;
 			int posZ_;
@@ -150,13 +188,11 @@ namespace mav {
 
 			AABB collisionBox_;
 
-			//Voxels informations
-			VoxelMatrix voxels_;
+
 
 			//Reference to the world
 			World* world_;
 			const VoxelMapGenerator * voxelMapGenerator_;
-
 
 			#ifndef NDEBUG
 				DebugVoxel chunkSides;

@@ -2,7 +2,6 @@
 
 #include <Mesh/Voxel.hpp>
 
-#include <GLObject/Shader.hpp>
 #include <Environment/Environment.hpp>
 #include <GLObject/GLObject.hpp>
 
@@ -17,7 +16,9 @@ namespace mav {
 
 		public:
 
-			LightVoxel(Shader* shaderPtr, Environment* environment, Material material, size_t size = 10);
+			LightVoxel(Environment* environment, Material material, size_t size = 10);
+
+      void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
 
     };
 

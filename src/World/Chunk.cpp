@@ -1,12 +1,16 @@
 
 #include <World/Chunk.hpp>
-#include <Core/Global.hpp>
+#include <GLObject/BufferTemplates.hpp>
 
 #include <iostream>
 
 #ifdef TIME
-	//Help/debug
-	#include <Helper/Benchmark/Profiler.hpp>
+//Help/debug
+#include <Helper/Benchmark/Profiler.hpp>
+#endif
+
+#ifndef NDEBUG
+#include <Core/DebugGlobal.hpp>
 #endif
 
 namespace {
@@ -42,23 +46,26 @@ namespace mav{
 	};
 
 	
-	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t size, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
-		: Drawable(true, 10, {{3}, {3}, {2}, {1}, {1}}, world->shader), state(0), posX_(posX), posY_(posY), posZ_(posZ),
-		size_((int)size), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
+	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
+		: Drawable(), state(0), posX_(posX), posY_(posY), posZ_(posZ),
+		size_((int)svo_.getLen()), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
 		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
 		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
+		svo_(octreeDepth),
 		world_(world), voxelMapGenerator_(voxelMapGenerator)
 #ifndef NDEBUG
-		, chunkSides(&Global::debugShader, world->environment, {
+		, chunkSides(world->environment, {
 			{0.1f, 0.1f, 0.1f},
 			{0.5f, 0.5f, 0.5f},
 			{1.0f, 1.0f, 1.0f}
 		}, size_*voxelSize, centerWorldPosition_ )
 #endif
+
 		{
 
 			#ifndef NDEBUG
-				chunkSides.initialize(true);
+				chunkSides.initialize();
+				chunkSides.initialize();
     		#endif
 
 		}
@@ -78,6 +85,10 @@ namespace mav{
 		
 		voxels_.initializeIndices(size_);
 
+		#ifdef RAY_CAST
+		voxels_.fillMatrix(voxelMap);
+		#endif
+
 		// Calculate the coordinates of each points
 		for (size_t x = 0; x < size_; ++x) {
 			for (size_t y = 0; y < size_; ++y) {
@@ -92,6 +103,7 @@ namespace mav{
 
 					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
 					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), glm::ivec3(x, y, z), voxelMap[x][y][z]);
+					svo_.set(glm::uvec3(x, y, z), voxelMap[x][y][z]);
 
 					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
@@ -232,6 +244,7 @@ namespace mav{
 		#endif
 
 		voxels_.voxelIndices[position.x][position.y][position.z] = -1;
+		svo_.set(position, 0);
 
 		// Move the last voxel at the place of the old voxel to prevent moving all the indexes
 		// and put the correct index in the indexes map for the moved voxel
@@ -252,7 +265,7 @@ namespace mav{
 			if (sideVoxel) {
 				sideVoxel->setFaceState(faceToInverseFace[faceIndex], true);
 			}
-			//We force to regenerate even if it was not edited to regenrate AO
+			//We force to regenerate even if it was not edited to regenerate AO
 			if (sideChunk) world_->needToRegenerateChunks.insert(sideChunk);
 
 		}
@@ -261,6 +274,10 @@ namespace mav{
 		world_->needToRegenerateChunks.insert(this);
 
 		return true;
+	}
+
+	glm::ivec3 Chunk::getPosition() const {
+		return glm::ivec3(posX_, posY_, posZ_);
 	}
 
 	Chunk* Chunk::getChunk(glm::ivec3& voxelChunkPosition) const {
@@ -296,7 +313,7 @@ namespace mav{
 
 		Chunk* affectedChunk = this;
 
-		//In this case, we need to insert it in the neibor chunk
+		//In this case, we need to insert it in the neighbor chunk
 		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) {
 			affectedChunk = getChunk(position);
 		}
@@ -318,6 +335,7 @@ namespace mav{
 
 		voxels_.voxelIndices[x][y][z] = voxels_.data.size();
 		voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), position, newVoxelId);
+		svo_.set(position, newVoxelId);
 
 		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 		for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
@@ -328,7 +346,7 @@ namespace mav{
 				sideVoxel->setFaceState(Chunk::faceToInverseFace[faceIndex], false);
 			}
 
-			// If the voxel is not from the current chunk, notify that we need to regenrate for AO
+			// If the voxel is not from the current chunk, notify that we need to regenerate for AO
 			if (sideChunk) world_->needToRegenerateChunks.insert(sideChunk);
 		}
 
@@ -369,13 +387,13 @@ namespace mav{
 		foundVoxels.resize(8);
 		for(uint8_t i = 0; i < 8; ++i) {
 			
-			glm::ivec3 neibhborChunkPosition = voxelChunkPosition + positionToLookUp[faceIndex][i];
-			int foundVoxel = findVoxel(neibhborChunkPosition);
+			glm::ivec3 neighborChunkPosition = voxelChunkPosition + positionToLookUp[faceIndex][i];
+			int foundVoxel = findVoxel(neighborChunkPosition);
 			if (foundVoxel == 2) {
 
-				const Chunk * neihborChunk = getChunk(neibhborChunkPosition);
-				if (neihborChunk) {
-					foundVoxel = neihborChunk->findVoxel(neibhborChunkPosition);
+				const Chunk * neighborChunk = getChunk(neighborChunkPosition);
+				if (neighborChunk) {
+					foundVoxel = neighborChunk->findVoxel(neighborChunkPosition);
 				}
 				else {
 					foundVoxel = voxelMapGenerator_->isIn(
@@ -458,81 +476,76 @@ namespace mav{
 
 	}
 
-	void Chunk::draw(){
-
-		if (indicesSize_ == 0) return;
-
-		//Verify if chunks is inside camera frustum
-		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
+	void Chunk::graphicUpdate() {
+		Drawable::graphicUpdate();
+		
+		#ifdef RAY_CAST
+		svo_.updateBuffer();
+		#endif
+	}
+	
+	void Chunk::debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
 
 		#ifndef NDEBUG
+
+			bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
+
 			//We always want to draw the debug chunk sides so we do it before the checks
 			if (isVisible) chunkSides.setColor(glm::vec3(1.0f));
 			else chunkSides.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
 			
-			chunkSides.draw();
+			chunkSides.updateShader(DebugGlobal::debugShader.get(), currentFrame);
+			chunkSides.draw(commandBuffer);
+
 		#endif
 
+	}
+
+
+	void Chunk::draw(VkCommandBuffer commandBuffer) {
+
+		if (indices_.empty()) return;
+
+		//Verify if chunks is inside camera frustum
+		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
 		if (!isVisible) return;
 
-		glBindVertexArray(vao_.get());
-		
+		vertexData_.bind(commandBuffer);
+		vertexData_.draw(commandBuffer);
 
-		//SET LE SHADER
-		world_->shader->use();
-    
-		glm::mat4 model = glm::mat4(1.0f);
-        //TODO: ADD CHUNK TRANSLATION
-		//model = model * translationMatrix_;
-        
-		//model = glm::rotate(model, 45.0f, glm::vec3(0.0f, 1.0f, 1.0f));
-		//model = model * rotationMat_;
-		//TODO: Size ?
-		//model = glm::scale(model, glm::vec3(voxelSize_));
+	}
 
+	std::vector<uint32_t> Chunk::getVertexAttributesSizes() const {
+		return {3, 3, 2, 1, 1};
+	}
 
-		world_->shader->setMat4("model", model);
-		world_->shader->setMat3("modelNormal", glm::mat3(glm::transpose(glm::inverse(model))));
+	void Chunk::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
 
-		////TOUT LES NEED
-		world_->shader->use();
-
-		/*
-		world_->shader->setVec3("material.ambient", material.ambient);
-		world_->shader->setVec3("material.diffuse", material.diffuse);
-		world_->shader->setVec3("material.specular", material.specular);
-		world_->shader->setFloat("material.shininess", material.shininess);
-		*/
-
-		world_->shader->setVec3("light.ambient",  world_->environment->sun->material.ambient);
-		world_->shader->setVec3("light.diffuse",  world_->environment->sun->material.diffuse); // assombri un peu la lumière pour correspondre à la scène
-		world_->shader->setVec3("light.specular", world_->environment->sun->material.specular);
-
-		world_->shader->setVec3("light.position", world_->environment->sun->getPosition());
-
-		// world_->shader->setFloat("light.constant",  1.0f);
-		// world_->shader->setFloat("light.linear",    0.09f);
-		// world_->shader->setFloat("light.quadratic", 0.032f);
+		//Binding 0
+		ModelViewProjectionObject mvp{};
+		mvp.model = glm::mat4(1.0f);
+		mvp.view = world_->environment->camera->GetViewMatrix();
+		mvp.projection = world_->environment->camera->Projection;
+		mvp.projection[1][1] *= -1;
 
 
-		//world_->shader->setVec3("light.position", glm::vec3(0, 50, 100));
+		mvp.modelNormal = glm::transpose(glm::inverse(mvp.model));
+		// mvp.modelNormal = glm::mat3(1.0f);
+		// glm::mat3(glm::transpose(glm::inverse(model))
 
-		world_->shader->setFloat("time", world_->environment->totalElapsedTime);
+		//Binding 1
+		glm::vec3 viewPos = world_->environment->camera->Position;
 
-		//Calcule camera
+		//Binding 2
+		LightObject light{};
+		light.position = world_->environment->sun->getPosition();
+		light.ambient = world_->environment->sun->material.ambient;
+		light.diffuse = world_->environment->sun->material.diffuse;
+		light.specular = world_->environment->sun->material.specular;
 
-		glm::mat4 view(world_->environment->camera->GetViewMatrix());
-		//glm::mat4 view(glm::lookAt(cameraPtr_->Position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-
-		world_->shader->setMat4("view", view);
-
-		//Position de la cam
-		world_->shader->setVec3("viewPos", world_->environment->camera->Position);
-
-		world_->shader->setMat4("projection", world_->environment->camera->Projection);
-
-
-		glDrawElements(GL_TRIANGLES, (int)indicesSize_, GL_UNSIGNED_INT, 0);
+		shader->updateUniform(0, currentFrame, &mvp, sizeof(mvp));
+		shader->updateUniform(1, currentFrame, &viewPos, sizeof(viewPos));
+		shader->updateUniform(2, currentFrame, &light, sizeof(light));
 
 	}
 

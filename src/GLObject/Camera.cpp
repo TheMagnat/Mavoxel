@@ -12,7 +12,8 @@ Camera::Camera(glm::vec3 const& position, glm::vec3 const& up, float yaw, float 
     updateCameraVectors();
 
     //Default perspective
-    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.001f, 200.0f);
+    VkExtent2D const& extent = mav::Global::vulkanWrapper->getExtent();
+    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 2000.0f);
     updateFrustum();
 }
 
@@ -24,7 +25,8 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
     updateCameraVectors();
 
     //Default perspective
-    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)mav::Global::width / (float)mav::Global::height, 0.001f, 200.0f);
+    VkExtent2D const& extent = mav::Global::vulkanWrapper->getExtent();
+    setPerspectiveProjectionMatrix(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 2000.0f);
     updateFrustum();
 }
 
@@ -72,7 +74,7 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float velocity, float de
     updateFrustum();
 }
 
-void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch){
+void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch){
     xoffset *= MouseSensitivity;
     yoffset *= MouseSensitivity;
 
