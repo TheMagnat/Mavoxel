@@ -35,7 +35,7 @@
 //TODO: Set la render distance ici, et set en global aussi ? pour pouvoir setup la perspective partout en même temps, et utiliser la perspective de la caméra partout.
 #define SVO_DEPTH 7 //size_t
 #define CHUNK_SIZE (uint32_t)std::pow(2, SVO_DEPTH) //uint32_t
-#define VOXEL_SIZE 1.0f //float
+#define VOXEL_SIZE 0.5f //float
 #define RENDER_DISTANCE (CHUNK_SIZE * VOXEL_SIZE) * 4
 
 //Player variables

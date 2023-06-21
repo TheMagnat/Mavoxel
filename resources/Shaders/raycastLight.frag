@@ -35,10 +35,10 @@ bool inShadow (vec3 startPosition, vec3 offset, vec3 lightDir, float lightDist) 
 
 ivec4 edges( in vec3 vos, in vec3 nor, in vec3 dir )
 {
-	vec3 v1 = vos + (nor * voxelSize) + (dir.yzx * voxelSize);
-	vec3 v2 = vos + (nor * voxelSize) - (dir.yzx * voxelSize);
-	vec3 v3 = vos + (nor * voxelSize) + (dir.zxy * voxelSize);
-	vec3 v4 = vos + (nor * voxelSize) - (dir.zxy * voxelSize);
+	vec3 v1 = vos + nor + dir.yzx;
+	vec3 v2 = vos + nor - dir.yzx;
+	vec3 v3 = vos + nor + dir.zxy;
+	vec3 v4 = vos + nor - dir.zxy;
 
 	ivec4 res = ivec4(0);
 	if( octreeGetWorld(v1).voxel != 0 ) res.x = 1;
@@ -51,10 +51,10 @@ ivec4 edges( in vec3 vos, in vec3 nor, in vec3 dir )
 
 ivec4 corners( in vec3 vos, in vec3 nor, in vec3 dir )
 {
-	vec3 v1 = vos + (nor * voxelSize) + (dir.yzx * voxelSize) + (dir.zxy * voxelSize);
-	vec3 v2 = vos + (nor * voxelSize) - (dir.yzx * voxelSize) + (dir.zxy * voxelSize);
-	vec3 v3 = vos + (nor * voxelSize) - (dir.yzx * voxelSize) - (dir.zxy * voxelSize);
-	vec3 v4 = vos + (nor * voxelSize) + (dir.yzx * voxelSize) - (dir.zxy * voxelSize);
+	vec3 v1 = vos + nor + dir.yzx + dir.zxy;
+	vec3 v2 = vos + nor - dir.yzx + dir.zxy;
+	vec3 v3 = vos + nor - dir.yzx - dir.zxy;
+	vec3 v4 = vos + nor + dir.yzx - dir.zxy;
 
 	ivec4 res = ivec4(0);
 	if( octreeGetWorld(v1).voxel != 0 ) res.x = 1;
@@ -66,20 +66,16 @@ ivec4 corners( in vec3 vos, in vec3 nor, in vec3 dir )
 }
 
 //Note: UV are like the texture position of the hitted voxel face
-vec2 computeHitUV (vec3 hitPos, vec3 hitDir, vec3 hitVoxelChunkPos) {
-    vec3 uvw = (hitPos - (hitVoxelChunkPos + 0.5)) / voxelSize;
+vec2 computeHitUV(vec3 hitPos, vec3 hitDir, vec3 hitVoxelChunkPos) {
+    vec3 uvw = (hitPos - (hitVoxelChunkPos + voxelSize * 0.5)) / voxelSize;
     return vec2( dot(hitDir.yzx, uvw), dot(hitDir.zxy, uvw) ) + 0.5;
 }
 
 //TODO: verify impact on performance of AO
-float computeAO (vec3 norm, vec3 hitDir, vec3 hitVoxelChunkPos, vec2 uv) {
-    
-    vec3 hitDirSized = hitDir * voxelSize;
-    vec3 normSized = norm * voxelSize;
+float computeAO(vec3 norm, vec3 hitDir, vec3 hitVoxelChunkPos, vec2 uv) {
 
     ivec4 ed = edges( hitVoxelChunkPos, norm, hitDir );
     ivec4 co = corners( hitVoxelChunkPos, norm, hitDir );
-
 
     float occ = 0.0; 
     vec4 allCorners = vec4(0.0);
@@ -143,7 +139,7 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
         vec2 uv = computeHitUV (rayCastResult.hitPosition, hitDir, rayCastResult.voxelWorldPosition);
                 
         // Ambient occlusion
-        float AO = computeAO(rayCastResult.normal, hitDir, rayCastResult.voxelWorldPosition, uv);
+        float AO = computeAO(rayCastResult.normal, hitDir, rayCastResult.voxelWorldPosition / voxelSize, uv);
 
 
         //Calculate shadow ray
