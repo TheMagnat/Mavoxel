@@ -3,8 +3,7 @@
 #include <Mesh/Simple/Quad.hpp>
 #include <VulkanWrapper/Shader.hpp>
 
-//TODO: set them in CMAKE
-#define RAYTRACING_CHUNK_RANGE 2
+//RAYTRACING_CHUNK_RANGE is set in the CMAKE
 #define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
 #define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
 
@@ -46,7 +45,7 @@ namespace mav {
                     //TODO: better
                     rci.voxelCursorPosition = ( glm::vec3(environment_->collisionInformations->voxelLocalPosition) + (glm::vec3(environment_->collisionInformations->chunkPosition) * std::pow(2, svoDepth_)) - (float)(std::pow(2, svoDepth_) / 2.0) ) * world_->getVoxelSize();
                     rci.faceCursorNormal = environment_->collisionInformations->normal;
-                }   
+                }
                 else {
                     rci.voxelCursorPosition = glm::vec3(0.0f);
                     rci.faceCursorNormal = glm::vec3(0.0f);

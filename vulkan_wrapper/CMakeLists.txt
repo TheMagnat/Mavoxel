@@ -3,8 +3,6 @@
 file(GLOB_RECURSE CppSources ${CMAKE_SOURCE_DIR}/vulkan_wrapper/*.cpp)
 set(CppHeaders "${CMAKE_SOURCE_DIR}/vulkan_wrapper")
 
-message("MSVC Detected : ${CppSources}") 
-
 ## Create new library target
 add_library(VulkanWrapper ${CppSources})
 

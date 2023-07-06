@@ -7,6 +7,12 @@ project(
     LANGUAGES CXX
 )
 
+#Set project global property
+set(svoDepth 7)
+set(depthToLen "float[MAX_DEPTH](64, 32, 16, 8, 4, 2, 1)")
+set(raytracingChunkRange 2) #The number of chunk along each axis in each direction (total in each axis is then 1 + raytracingChunkRange * 2)
+
+#C++ property
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -18,7 +24,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 if ( MSVC )
 
     message("MSVC Detected : ${MSVC}") 
-
 
     #TODO: Faire plusieurs conf en fonction du système
     set(LIB_PATH "C:/Libraries/Bin")
@@ -42,8 +47,6 @@ endif ( MSVC )
 link_directories(${LIB_PATH})
 include_directories(${LIB_HEADERS_PATH} ${VULKAN_HEADERS_PATH})
 
-
-message("Mavoxel Arch: ${CMAKE_SYSTEM_PROCESSOR}") 
 
 option(MAIN_NOISE "Build noise main" OFF)
 

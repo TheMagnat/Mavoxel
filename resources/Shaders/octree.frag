@@ -11,14 +11,10 @@ layout (set = 0, binding = 1) uniform WorldOctreeInformations {
     float voxelSize;
 };
 
-//Octree info (need uniforms...)
-//TODO: do this in makefile
-#define MAX_DEPTH 7
-const float depthToLen_[MAX_DEPTH] = float[MAX_DEPTH](64, 32, 16, 8, 4, 2, 1);
 
+//Octree info (need uniforms...)
 #define ZERO_TO_ROUND 1000000.0
 
-#define RAYTRACING_CHUNK_RANGE 2
 #define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
 #define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
 
@@ -129,7 +125,7 @@ octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 di
             return octreeRayCastResult(8, traveledDistance, voxelAndDepth.voxel, vec3(0), vec3(0)); 
         }
 
-        float leafSize = depthToLen_[voxelAndDepth.depth];
+        float leafSize = DEPTH_TO_LEN[voxelAndDepth.depth];
 
         //Required time to exit the full voxel along each axis.
         traveledAndIndex = getShortestTraveledDistanceAndIndex(position, direction, directionSign, leafSize);             

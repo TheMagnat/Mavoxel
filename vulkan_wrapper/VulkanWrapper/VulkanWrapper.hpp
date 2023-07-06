@@ -26,6 +26,7 @@
 #include <VulkanWrapper/Texture3D.hpp>
 
 #include <unordered_set>
+#include <chrono>
 
 namespace vuw {
 
@@ -48,6 +49,17 @@ namespace vuw {
 
                 //Here we know the fence is signaled so the pipeline finished used the possible buffer we may want to delete, so we notify the DeadBufferHandler
                 deadBufferHandler_.notifyFrameFinished(currentFrame_);
+
+                // const double targetFrameRate = 140.0;
+                // const double targetFrameTimeMs = 1000.0 / targetFrameRate;
+
+                // auto currentTime_ = std::chrono::high_resolution_clock::now();
+                // auto elapsedTime = std::chrono::duration<double, std::milli>(currentTime_ - lastAcquireTime_).count();
+                // if (elapsedTime < targetFrameTimeMs) {
+                //     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<long>(targetFrameTimeMs - elapsedTime)));
+                // }
+
+                // lastAcquireTime_ = currentTime_;
 
                 VkResult result = vkAcquireNextImageKHR(device_.get(), swapChain_.get(), UINT64_MAX, syncObjs_.imageAvailableSemaphores[currentFrame_], VK_NULL_HANDLE, &currentDrawingTargetImageIndex_);
 
@@ -309,6 +321,8 @@ namespace vuw {
             //Save
             std::unordered_set<GraphicsPipeline*> savedPipelines_;
 
+            //Framerate calculation
+            std::chrono::time_point<std::chrono::high_resolution_clock> lastAcquireTime_;
 
     };
 

@@ -47,32 +47,58 @@ target_compile_features(app PRIVATE cxx_std_20)
 
 ##Shaders
 
-#We get all shader files
-file(GLOB_RECURSE shaders RELATIVE ${CMAKE_SOURCE_DIR}/resources ${CMAKE_SOURCE_DIR}/resources/*spv)
+#Manually selected shaders
+#Note: dependencies of a shader must be added using the ":" symbol to separate them
+set(shadersToCompile
+    simple_voxel.vert simple_voxel.frag
+    basic_color.vert select_color.frag
+    sun_color.frag
+    only_color.vert only_color.frag
+    only_color_uni.vert only_color_uni.frag
+    only_texPos.vert only_texPos.frag
+    ray_tracing.frag:raycastLight.frag:octree.frag:lightHelper.frag:materials.frag:octreeHelper.frag
+)
 
-#We create a custom command to generate all our shaders in the output dir
-add_custom_command(OUTPUT ${shaders} COMMAND)
+# Create the directory for shaders
+add_custom_target(CreateShaderDirectory
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:app>/Shaders
+    VERBATIM
+)
 
-#We specify that the name in the output is symbolic and we will not create a file exactly on this path
-set_source_files_properties(${shaders} PROPERTIES SYMBOLIC 1)
+# Create a custom target for compiling and copying shaders
+add_custom_target(ShadersTarget
+    COMMENT "[SHADER] Starting shaders compilation"
+    DEPENDS CreateShaderDirectory
+    VERBATIM
+)
 
+# Iterate over the shader files and add commands to compile each one
+foreach(shaderFiles ${shadersToCompile})
 
-foreach(shader IN LISTS shaders)
+    string(REPLACE ":" ";" shaderFilesList ${shaderFiles})
+    list (GET shaderFilesList 0 shaderFile)
+    list(TRANSFORM shaderFilesList PREPEND ${CMAKE_SOURCE_DIR}/resources/Shaders/)
 
-    #We add the copy for each shader
-    add_custom_command(OUTPUT ${shaders}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_SOURCE_DIR}/resources/${shader}
-            $<TARGET_FILE_DIR:app>/${shader}
-        DEPENDS ${CMAKE_SOURCE_DIR}/resources/${shader}
-        APPEND
+    set(shaderInPath  resources/Shaders/${shaderFile})
+    set(shaderOutPath Shaders/${shaderFile}.spv)
+    set(testShaderOutPath ${CMAKE_SOURCE_DIR}/build/App/Release/Shaders/${shaderFile}.spv)
+
+    # message("here: ${CMAKE_BINARY_DIR} / : ${CMAKE_MSVCIDE_RUN_PATH}")
+    add_custom_command(OUTPUT ${testShaderOutPath}
+        COMMAND glslangValidator -V ${CMAKE_SOURCE_DIR}/${shaderInPath} -gVS -o $<TARGET_FILE_DIR:app>/${shaderOutPath}
+        -DMAX_DEPTH=${svoDepth} -DDEPTH_TO_LEN=${depthToLen} -DRAYTRACING_CHUNK_RANGE=${raytracingChunkRange}
+        DEPENDS ${shaderFilesList}
+        COMMENT "[SHADER] ${shaderFile} -> ${shaderFile}.spv"
     )
+
+    # Add the custom command as a dependency of the Shaders target
+    add_custom_target(${shaderFile}Target DEPENDS ${testShaderOutPath})
+    add_dependencies(ShadersTarget ${shaderFile}Target)
 
 endforeach()
 
-#We create a custom target to then make the app depend of it
-add_custom_target(copyShaders ALL DEPENDS ${shaders})
-add_dependencies(app copyShaders)
+#Link the shaders with the app
+add_dependencies(app ShadersTarget)
 
 #Libs
 add_custom_command(TARGET app POST_BUILD
@@ -83,3 +109,5 @@ add_custom_command(TARGET app POST_BUILD
 ## Preprocessor macro
 target_compile_definitions(app PRIVATE TIME)
 target_compile_definitions(app PRIVATE RAY_CAST)
+target_compile_definitions(app PRIVATE SVO_DEPTH=${svoDepth})
+target_compile_definitions(app PRIVATE RAYTRACING_CHUNK_RANGE=${raytracingChunkRange})

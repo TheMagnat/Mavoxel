@@ -63,6 +63,12 @@ Material materials[] = Material[](
         vec3(0.7176f, 0.6901f, 0.6117f),
         vec3(0.1f, 0.1f, 0.1f),
         32.0f
+    ),
+    Material(
+        vec3(1.0f, 0.0f, 0.0f),
+        vec3(1.0f, 0.0f, 0.0f),
+        vec3(0.1f, 0.1f, 0.1f),
+        32.0f
     )
 );
 

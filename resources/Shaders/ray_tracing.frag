@@ -12,7 +12,6 @@ layout (location = 0) in vec2 TexPos;
 #define RAY_DISTANCE 512
 
 
-
 vec3 getRayTarget() {
     vec2 uv = TexPos * 2 - 1.0;
     uv.x *= xRatio;

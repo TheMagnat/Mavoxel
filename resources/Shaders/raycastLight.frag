@@ -3,6 +3,120 @@
 #include "materials.frag"
 #include "lightHelper.frag"
 
+//DEBUG TO REMOVE
+
+struct RayAABBResult {
+    bool intersect;
+    float dist;
+};
+
+struct Box {
+    vec3 center;
+    vec3 radius;
+    vec3 invRadius;
+    mat3 rotation;
+};
+
+struct Ray {
+    vec3 origin;
+    vec3 direction;
+};
+
+RayAABBResult box(vec3 ray_origin, vec3 ray_dir, vec3 minpos, vec3 maxpos) {
+  vec3 inverse_dir = 1.0 / ray_dir;
+  vec3 tbot = inverse_dir * (minpos - ray_origin);
+  vec3 ttop = inverse_dir * (maxpos - ray_origin);
+  vec3 tmin = min(ttop, tbot);
+  vec3 tmax = max(ttop, tbot);
+  vec2 traverse = max(tmin.xx, tmin.yz);
+  float traverselow = max(traverse.x, traverse.y);
+  traverse = min(tmax.xx, tmax.yz);
+  float traversehi = min(traverse.x, traverse.y);
+  return RayAABBResult(traversehi > max(traverselow, 0.0), traverselow);
+}
+
+float maxComponent (vec3 v) {
+  return max (max (v.x, v.y), v.z);
+}
+
+// vec3 box.radius:       independent half-length along the X, Y, and Z axes
+// mat3 box.rotation:     box-to-world rotation (orthonormal 3x3 matrix) transformation
+// bool rayCanStartInBox: if true, assume the origin is never in a box. GLSL optimizes this at compile time
+// bool oriented:         if false, ignore box.rotation
+bool ourIntersectBoxCommon(Box box, Ray ray, out float distance, out vec3 normal, const bool rayCanStartInBox, const in bool oriented, in vec3 _invRayDirection) {
+
+    // Move to the box's reference frame. This is unavoidable and un-optimizable.
+    ray.origin = box.rotation * (ray.origin - box.center);
+    if (oriented) {
+        ray.direction = ray.direction * box.rotation;
+    }
+    
+    // This "rayCanStartInBox" branch is evaluated at compile time because `const` in GLSL
+    // means compile-time constant. The multiplication by 1.0 will likewise be compiled out
+    // when rayCanStartInBox = false.
+    float winding;
+    if (rayCanStartInBox) {
+        // Winding direction: -1 if the ray starts inside of the box (i.e., and is leaving), +1 if it is starting outside of the box
+        winding = (maxComponent(abs(ray.origin) * box.invRadius) < 1.0) ? -1.0 : 1.0;
+    } else {
+        winding = 1.0;
+    }
+
+    // We'll use the negated sign of the ray direction in several places, so precompute it.
+    // The sign() instruction is fast...but surprisingly not so fast that storing the result
+    // temporarily isn't an advantage.
+    vec3 sgn = -sign(ray.direction);
+
+	// Ray-plane intersection. For each pair of planes, choose the one that is front-facing
+    // to the ray and compute the distance to it.
+    vec3 distanceToPlane = box.radius * winding * sgn - ray.origin;
+    if (oriented) {
+        distanceToPlane /= ray.direction;
+    } else {
+        distanceToPlane *= _invRayDirection;
+    }
+
+    // Perform all three ray-box tests and cast to 0 or 1 on each axis. 
+    // Use a macro to eliminate the redundant code (no efficiency boost from doing so, of course!)
+    // Could be written with 
+#   define TEST(U, VW)\
+         /* Is there a hit on this axis in front of the origin? Use multiplication instead of && for a small speedup */\
+         (distanceToPlane.U >= 0.0) && \
+         /* Is that hit within the face of the box? */\
+         all(lessThan(abs(ray.origin.VW + ray.direction.VW * distanceToPlane.U), box.radius.VW))
+
+    bvec3 test = bvec3(TEST(x, yz), TEST(y, zx), TEST(z, xy));
+
+    // CMOV chain that guarantees exactly one element of sgn is preserved and that the value has the right sign
+    sgn = test.x ? vec3(sgn.x, 0.0, 0.0) : (test.y ? vec3(0.0, sgn.y, 0.0) : vec3(0.0, 0.0, test.z ? sgn.z : 0.0));    
+#   undef TEST
+        
+    // At most one element of sgn is non-zero now. That element carries the negative sign of the 
+    // ray direction as well. Notice that we were able to drop storage of the test vector from registers,
+    // because it will never be used again.
+
+    // Mask the distance by the non-zero axis
+    // Dot product is faster than this CMOV chain, but doesn't work when distanceToPlane contains nans or infs. 
+    //
+    distance = (sgn.x != 0.0) ? distanceToPlane.x : ((sgn.y != 0.0) ? distanceToPlane.y : distanceToPlane.z);
+
+    // Normal must face back along the ray. If you need
+    // to know whether we're entering or leaving the box, 
+    // then just look at the value of winding. If you need
+    // texture coordinates, then use box.invDirection * hitPoint.
+    
+    if (oriented) {
+        normal = box.rotation * sgn;
+    } else {
+        normal = sgn;
+    }
+    
+    return (sgn.x != 0) || (sgn.y != 0) || (sgn.z != 0);
+}
+
+
+//DEBUG END
+
 //Structures definition
 struct Camera {
     vec3 position;
@@ -112,7 +226,8 @@ float computeAO(vec3 norm, vec3 hitDir, vec3 hitVoxelChunkPos, vec2 uv) {
 vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
     
     //Parameter background color
-    vec3 color = vec3(0.5294, 0.8078, 0.9216);
+    vec3 color = vec3(0.5294, 0.8078, 0.9216); //Sky
+    // vec3 color = vec3(0.0, 0.0, 0.0); //Black
 
     //TODO: add distance as parameter of the Shader
     WorldRayCastResult rayCastResult = worldCastRay( position, direction, maxDistance );
@@ -128,7 +243,19 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
     //     rayCastResult = worldCastRay( rayCastResult.hitPosition, newDir, maxDistance );
     // }
 
-    if (rayCastResult.voxel != 0) {
+    //TODO: move this to a loop of sun, and select the goo ray casting algorithm
+    Ray rayTest = Ray(position, direction);
+    Box testBox = Box(sun.position, vec3(0.5), -vec3(0.5), mat3(1.0));
+
+    float distRez = 0;
+    vec3 sunNormal = vec3(0.0);
+    // bool toucheeed = ourIntersectBoxCommon(testBox, rayTest, distRez, norr, false, false, 1.0/direction);
+    RayAABBResult sunRayResult =  box(position, direction, sun.position - 0.25, sun.position + 0.25);
+
+    if (sunRayResult.intersect && (rayCastResult.voxel == 0 || sunRayResult.dist < rayCastResult.dist)) {
+        color = vec3(1.0);
+    }
+    else if (rayCastResult.voxel != 0) {
 
         
         //Hit position informations
@@ -203,11 +330,16 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
         // color = material.ambient * AO;
 
 
+        // if (illuminated == 0.0) {
+        //     color = vec3(0.0);
+        // }
+
         if (rayCastResult.voxelWorldPosition == voxelCursorPosition && rayCastResult.normal == faceCursorNormal) {
             if ( distFromEdge >= 0.925 + cos(scaledTime)*0.035 ) {
                 color = vec3(1.0);
             }
         }
+
     }
     
     return color;
