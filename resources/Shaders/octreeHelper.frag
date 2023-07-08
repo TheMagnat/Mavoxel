@@ -16,6 +16,24 @@ LocalPositionResult getChunkLocalPosition(vec3 position, uint chunkSize) {
     return LocalPositionResult( chunkPosition, localPosition );
 }
 
+/**
+ * This function will add an offset to the currentLocalPosition parameter if its localPosition is on the side of a chunk
+ * (which mean between two chunk) and the direction is going toward the other chunk. This help preventing trying to access
+ * to a negative position on the first position along the direction.
+ */
+void shiftOnLimitChunk(inout LocalPositionResult currentLocalPosition, in vec3 directionSign) {
+    
+    const vec3 maxLenVec = vec3(maxLen);
+    const vec3 zeroVec = vec3(0.0);
+
+    bvec3 isGreaterThanMax = bvec3(uvec3(greaterThanEqual(currentLocalPosition.localPosition, maxLenVec)) * uvec3(greaterThan(directionSign, vec3(0))));
+    bvec3 isLessThanMax = bvec3(uvec3(lessThanEqual(currentLocalPosition.localPosition, zeroVec)) * uvec3(lessThan(directionSign, vec3(0))));
+
+    currentLocalPosition.localPosition = currentLocalPosition.localPosition * (uvec3(not(isGreaterThanMax)) * uvec3(not(isLessThanMax))) + maxLenVec * vec3(isLessThanMax);
+    currentLocalPosition.chunkPosition += ivec3(isGreaterThanMax) * ivec3(1) + ivec3(isLessThanMax) * ivec3(-1);
+
+}
+
 ivec3 getIntPosition(in vec3 position, in vec3 directionSign) {
 
     return ivec3( directionSign * floor(directionSign * position) - vec3( lessThan(directionSign, vec3(0)) ) );
@@ -31,7 +49,6 @@ vec3 computeDistanceToSide(in vec3 position, in vec3 direction, in vec3 directio
     return distTotal;
 
 }
-
 
 
 float getShortestTraveledDistance(in vec3 position, in vec3 direction, in vec3 directionSign, float leafSize) {

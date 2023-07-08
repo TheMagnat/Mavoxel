@@ -1,9 +1,9 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_nonuniform_qualifier : require
 
-#include "octreeHelper.frag"
+//Global information used by Octree algorithm and Octree helper algorithms
+const ivec2 codeToOffset[6] = ivec2[6]( ivec2(0, 1), ivec2(0, -1), ivec2(1, 1), ivec2(1, -1), ivec2(2, 1), ivec2(2, -1) );
 
-//TODO: Add uniform with world informations
 layout (set = 0, binding = 1) uniform WorldOctreeInformations {
     ivec3 centerChunkPosition;
     int maxDepth;
@@ -11,8 +11,10 @@ layout (set = 0, binding = 1) uniform WorldOctreeInformations {
     float voxelSize;
 };
 
+#include "octreeHelper.frag"
 
-//Octree info (need uniforms...)
+
+//Usefull constants
 #define ZERO_TO_ROUND 1000000.0
 
 #define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
@@ -188,6 +190,9 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     vec3 directionSign = step(0.0, direction) * 2.0 - 1.0;
 
     LocalPositionResult localPositionResult = getChunkLocalPosition(position, maxLen);
+    
+    //To ensure that we do not start on the limit of a chunk tower the direction vector
+    shiftOnLimitChunk(localPositionResult, directionSign);
 
     //Store result between iterations
     octreeRayCastResult rayCastRes;
@@ -253,38 +258,7 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
         }
         else {
             
-            //TODO: le mettre en global constante
-            ivec2 codeToOffset[6] = ivec2[6]( ivec2(0, 1), ivec2(0, -1), ivec2(1, 1), ivec2(1, -1), ivec2(2, 1), ivec2(2, -1) );
-            /*
-            // if (TexPos.x < 0.5) {
-
-            vec3 beforeMove = localPositionResult.localPosition;
-            //DEBUG/TEST
-            int totalMod = 0;
-            for (int i = 0; i < 3; ++i) {
-
-                int limitIndex = 0;
-                if (localPositionResult.localPosition[i] >= maxLen && directionSign[i] > 0){
-                    limitIndex = i*2;
-                }
-                else if (localPositionResult.localPosition[i] <= 0 && directionSign[i] < 0) {
-                    limitIndex = i*2 + 1;
-                }
-                else {
-                    continue;
-                }
-
-                ivec2 newChunkOffset = codeToOffset[limitIndex];
-                localPositionResult.localPosition[newChunkOffset[0]] = ( (-newChunkOffset[1] + 1) / 2 ) * float(maxLen); //This calcul will transform 1 to 0 and -1 to 1
-                localPositionResult.chunkPosition[newChunkOffset[0]] += newChunkOffset[1];
-                localPositionResult.worldPositionOffset[newChunkOffset[0]] -= newChunkOffset[1] * float(maxLen);
-
-                totalMod++;
-
-            }
-
-            // }
-            */
+                //Note: We could call shiftOnLimitChunk here instead of using the return
                 //TODO: Maybe the problem of ANGLE is here
                 ivec2 newChunkOffset = codeToOffset[rayCastRes.returnCode - 2];
                 localPositionResult.localPosition[newChunkOffset[0]] = ( (-newChunkOffset[1] + 1) / 2 ) * float(maxLen); //This calcul will transform 1 to 0 and -1 to 1
