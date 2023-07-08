@@ -96,11 +96,10 @@ struct octreeRayCastResult {
     int returnCode;
     float traveledDistance;
     int voxel;
-    vec3 normal;
     vec3 hitPosition;
 };
 
-octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 direction, float maxDistance) {
+octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 direction, float maxDistance, inout vec3 normal) {
 
     //Positive or negative direction
     vec3 directionSign = step(0.0, direction) * 2.0 - 1.0;
@@ -114,17 +113,18 @@ octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 di
     shortestResult traveledAndIndex;
     
     voxelAndDepth = octreeGet(ssboIndex, voxelPosition);
-    // if (voxelAndDepth.voxel != 0) {
-    //     voxelAndDepth = octreeGet(ssboIndex, voxelPosition);
-    // }
+    if (voxelAndDepth.voxel != 0) {
+        return octreeRayCastResult(0, traveledDistance, voxelAndDepth.voxel, voxelPosition);
+    }
 
  
     int totalLoop = 0;
     while(voxelAndDepth.voxel == 0) {
         
+        //TODO: Remove ?
         ++totalLoop;
         if (totalLoop > 100){
-            return octreeRayCastResult(8, traveledDistance, voxelAndDepth.voxel, vec3(0), vec3(0)); 
+            return octreeRayCastResult(8, traveledDistance, voxelAndDepth.voxel, vec3(0)); 
         }
 
         float leafSize = DEPTH_TO_LEN[voxelAndDepth.depth];
@@ -145,17 +145,21 @@ octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 di
         voxelPosition = getIntPosition(position, directionSign);
 
         if (traveledDistance > maxDistance) {
-            return octreeRayCastResult(1, traveledDistance, 0, vec3(0, 0, 0), vec3(0));
+            return octreeRayCastResult(1, traveledDistance, 0, vec3(0));
         }
 
         //Test if we went out of bound
         //Note: 2: x >= len, 3: x < 0, 4: y >= len, 5: y < 0, 6: z >= len, 7: z < 0
         for (int i = 0; i < 3; ++i) {
             if (voxelPosition[i] >= int(maxLen)){
-                return octreeRayCastResult(2 + i*2, traveledDistance, 0, vec3(0, 0, 0), vec3(0));
+                normal = vec3(0.0);
+                normal[traveledAndIndex.index] = -directionSign[traveledAndIndex.index];
+                return octreeRayCastResult(2 + i*2, traveledDistance, 0, vec3(0));
             }
             if (voxelPosition[i] < 0) {
-                return octreeRayCastResult(2 + i*2 + 1, traveledDistance, 0, vec3(0, 0, 0), vec3(0));
+                normal = vec3(0.0);
+                normal[traveledAndIndex.index] = -directionSign[traveledAndIndex.index];
+                return octreeRayCastResult(2 + i*2 + 1, traveledDistance, 0, vec3(0));
             }
         }
 
@@ -163,13 +167,14 @@ octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 di
 
     }
 
-    //We only arrive here if found voxel is true
+    //We only arrive here if found voxel is true and we atleast did one loop
 
     //Compute normal
-    vec3 normal = vec3(0.0);
+    //TODO: Voir si c'est pas mieux de le mettre dans la boucle après le calcul de "traveledAndIndex" et retirer le return du premier ocreeGet (qui était là pour empêcher de mettre une mauvaise normal)
+    normal = vec3(0.0);
     normal[traveledAndIndex.index] = -directionSign[traveledAndIndex.index];
 
-    return octreeRayCastResult(0, traveledDistance, voxelAndDepth.voxel, normal, voxelPosition);
+    return octreeRayCastResult(0, traveledDistance, voxelAndDepth.voxel, voxelPosition);
 
 }
 
@@ -198,6 +203,9 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     octreeRayCastResult rayCastRes;
     rayCastRes.voxel = 0;
 
+    //Store normal between iterations in case of first voxel hitted to keep the correct normal
+    vec3 normal = vec3(0.0);
+
     //Loop here normaly...
     float totalTraveledDistance = 0.0f;
 
@@ -224,12 +232,13 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
 
         vec3 oldLocal = localPositionResult.localPosition;
         
-        if (ssboInformations[ssboIndex].empty == 1) {
+        if (ssboInformations[nonuniformEXT(ssboIndex)].empty == 1) {
             
             //TODO: changer le type pour mettre une majuscule
             shortestResult res = getShortestTraveledDistanceAndIndex(localPositionResult.localPosition, direction, directionSign, maxLen);
 
             vec3 positionOffset = direction * res.traveledDistance;
+            
             localPositionResult.localPosition += positionOffset;
             localPositionResult.localPosition = round(localPositionResult.localPosition * ZERO_TO_ROUND) / ZERO_TO_ROUND;
 
@@ -240,14 +249,14 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
             rayCastRes.traveledDistance = res.traveledDistance;
             rayCastRes.voxel = 0;
 
+            //Compute normal
+            normal = vec3(0.0);
+            normal[res.index] = -directionSign[res.index];
 
             //TODO: copier la partie !processable de castSVORay dans World.cpp
         }
         else {
-
-            rayCastRes = octreeCastRay(ssboIndex, localPositionResult.localPosition, direction, maxDistance - totalTraveledDistance);
-
-            // break;
+            rayCastRes = octreeCastRay(ssboIndex, localPositionResult.localPosition, direction, maxDistance - totalTraveledDistance, normal);
         }
 
         totalTraveledDistance += rayCastRes.traveledDistance;
@@ -264,7 +273,6 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
                 localPositionResult.localPosition[newChunkOffset[0]] = ( (-newChunkOffset[1] + 1) / 2 ) * float(maxLen); //This calcul will transform 1 to 0 and -1 to 1
                 localPositionResult.chunkPosition[newChunkOffset[0]] += newChunkOffset[1];
             
-
         }
         
     }
@@ -275,6 +283,6 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
 
     //Resultat marant
     //return WorldRayCastResult( rayCastRes.voxel, worldPosition * voxelSize, vec3(0), rayCastRes.normal, totalTraveledDistance * voxelSize );
-    return WorldRayCastResult( rayCastRes.voxel, worldPosition * voxelSize, voxelWorldPosition * voxelSize, rayCastRes.normal, totalTraveledDistance * voxelSize );
+    return WorldRayCastResult( rayCastRes.voxel, worldPosition * voxelSize, voxelWorldPosition * voxelSize, normal, totalTraveledDistance * voxelSize );
 
 }

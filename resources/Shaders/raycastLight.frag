@@ -250,7 +250,7 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
     float distRez = 0;
     vec3 sunNormal = vec3(0.0);
     // bool toucheeed = ourIntersectBoxCommon(testBox, rayTest, distRez, norr, false, false, 1.0/direction);
-    RayAABBResult sunRayResult =  box(position, direction, sun.position - 0.25, sun.position + 0.25);
+    RayAABBResult sunRayResult =  box(position, direction, sun.position - 5, sun.position + 5);
 
     if (sunRayResult.intersect && (rayCastResult.voxel == 0 || sunRayResult.dist < rayCastResult.dist)) {
         color = vec3(1.0);
