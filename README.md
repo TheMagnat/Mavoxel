@@ -11,13 +11,13 @@ You need to have [Cmake](https://cmake.org/) installed.
 
 To compile this project, you must install these libraries :
 
-- [GLFW](https://www.glfw.org/)
-
-- [Glad](https://glad.dav1d.de/)
+- [VMA](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
 
 - [GLM](https://glm.g-truc.net/)
 
 - [FastNoise2](https://github.com/Auburn/FastNoise2)
+
+You will also need the [Vulkan SDK](https://vulkan.lunarg.com/)
 
 ### Installing
 
@@ -43,7 +43,7 @@ You will find the generated static library in build/Mavoxel/{build type}.
 
 ## Run
 
-You can run the application generated in build/App/{build type}.
+You can run the application generated in build/App/{build type}/app.exe.
 
 
 ## Author
