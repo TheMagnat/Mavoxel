@@ -33,7 +33,7 @@ namespace mav {
 		public:
 			World(vuw::Shader* shaderPtrP, Environment* environmentP, size_t octreeDepth = 5, float voxelSize = 1.0f);
 
-			void initializePipeline();
+			void initializePipeline(bool filterPipeline = false);
 
 			std::vector<glm::vec3> getAroundChunks(glm::vec3 position, float distance, bool sorted) const;
 

@@ -56,6 +56,7 @@ set(shadersToCompile
     only_color.vert only_color.frag
     only_color_uni.vert only_color_uni.frag
     only_texPos.vert only_texPos.frag
+    filter.frag
     ray_tracing.frag:raycastLight.frag:octree.frag:lightHelper.frag:materials.frag:octreeHelper.frag
 )
 

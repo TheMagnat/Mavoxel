@@ -159,7 +159,7 @@ namespace vuw {
 
             void createDescriptorSetLayout() override {
 
-                std::vector<VkDescriptorSetLayoutBinding> layoutBindings(nbUniforms_ + textures_.size());
+                std::vector<VkDescriptorSetLayoutBinding> layoutBindings(nbUniforms_ + textureInformations_.size());
 
                 // Set the uniforms layout bindings
                 for (size_t i = 0; i < nbUniforms_; ++i) {
@@ -174,12 +174,28 @@ namespace vuw {
 
                 }
 
-                // Set the texture layout bindings
-                for (size_t i = 0; i < textures_.size(); ++i) {
-                    
-                    size_t currentIndex = nbUniforms_ + i;
+                // Set the SSBO layout bindings
+                for (size_t i = 0; i < SSBOInformations_.size(); ++i) {
 
-                    Texture::TextureInformations const& currentTextureInformations = textures_[i].getInformations();
+                    size_t currentIndex = uniformBufferWrappers_.size() + i;
+
+                    SSBOInformation const& currentSSBOInformations = SSBOInformations_[i];
+                    
+                    layoutBindings[currentIndex].binding = currentSSBOInformations.binding;
+                    layoutBindings[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                    layoutBindings[currentIndex].descriptorCount = currentSSBOInformations.count;
+                    layoutBindings[currentIndex].pImmutableSamplers = nullptr;
+
+                    // Precise in which shader we will use the SSBO
+                    layoutBindings[currentIndex].stageFlags = currentSSBOInformations.flags;
+                }
+
+                // Set the texture layout bindings
+                for (size_t i = 0; i < textureInformations_.size(); ++i) {
+                    
+                    size_t currentIndex = uniformBufferWrappers_.size() + SSBOInformations_.size() + i;
+
+                    Texture::TextureInformations const& currentTextureInformations = textureInformations_[i].informations;
 
                     layoutBindings[currentIndex].binding = currentTextureInformations.binding;
                     layoutBindings[currentIndex].descriptorCount = 1;
@@ -212,10 +228,16 @@ namespace vuw {
                     poolSizes.back().descriptorCount = static_cast<uint32_t>(nbUniforms_ * nbFrames_);
                 }
 
-                if (!textures_.empty()) {
+                if (!SSBOInformations_.empty()) {
+                    poolSizes.emplace_back();
+                    poolSizes.back().type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                    poolSizes.back().descriptorCount = static_cast<uint32_t>(nbSsbos_ * nbFrames_);
+                }
+
+                if (!textureInformations_.empty()) {
                     poolSizes.emplace_back();
                     poolSizes.back().type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                    poolSizes.back().descriptorCount = static_cast<uint32_t>(textures_.size() * nbFrames_);
+                    poolSizes.back().descriptorCount = static_cast<uint32_t>(textureInformations_.size() * nbFrames_);
                 }
                 
 
@@ -256,9 +278,9 @@ namespace vuw {
                 for (size_t frameIndex = 0; frameIndex < nbFrames_; frameIndex++) {
 
                     std::vector<VkDescriptorBufferInfo> buffersInfos(nbUniforms_);
-                    std::vector<VkDescriptorImageInfo> imagesInfos(textures_.size());
+                    std::vector<VkDescriptorImageInfo> imagesInfos(textureInformations_.size());
 
-                    std::vector<VkWriteDescriptorSet> writeDescriptors(nbUniforms_ + textures_.size());
+                    std::vector<VkWriteDescriptorSet> writeDescriptors(nbUniforms_ + textureInformations_.size());
                     
                     // Uniform descriptors
                     for (size_t uniformIndex = 0; uniformIndex < nbUniforms_; uniformIndex++) {
@@ -284,19 +306,19 @@ namespace vuw {
                     }
 
                     // Texture descriptors
-                    for (size_t textureIndex = 0; textureIndex < textures_.size(); ++textureIndex) {
+                    for (size_t textureIndex = 0; textureIndex < textureInformations_.size(); ++textureIndex) {
                         
                         size_t currentIndex = nbUniforms_ + textureIndex;
 
-                        Texture const& currentTexture = textures_[textureIndex];
+                        const Texture* currentTexture = textureInformations_[textureIndex].texturePtr;
 
                         imagesInfos[textureIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                        imagesInfos[textureIndex].imageView = currentTexture.getImageView();
-                        imagesInfos[textureIndex].sampler = currentTexture.getSampler();
+                        imagesInfos[textureIndex].imageView = currentTexture->getImageView();
+                        imagesInfos[textureIndex].sampler = currentTexture->getSampler();
 
                         writeDescriptors[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                         writeDescriptors[currentIndex].dstSet = multiDescriptorSets_[objectIndex][frameIndex];
-                        writeDescriptors[currentIndex].dstBinding = currentTexture.getInformations().binding;
+                        writeDescriptors[currentIndex].dstBinding = currentTexture->getInformations().binding;
                         writeDescriptors[currentIndex].dstArrayElement = 0;
 
                         writeDescriptors[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

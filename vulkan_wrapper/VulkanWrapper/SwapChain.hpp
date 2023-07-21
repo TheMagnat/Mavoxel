@@ -23,11 +23,20 @@ namespace vuw {
 
     class SwapChain {
 
-
         public:
-            SwapChain(GLFWwindow* window, Surface const& surface, Device const& device, bool depthCheck = false) : devicePtr_(device.get()), allocatorPtr_(device.getAllocator()), depthCheck_(depthCheck) {
+
+            //Without anti-aliasing
+            SwapChain(GLFWwindow* window, Surface const& surface, Device const& device, bool depthCheck = false) : devicePtr_(device.get()), allocatorPtr_(device.getAllocator()), depthCheck_(depthCheck), antiAliasing_(false) {
                 initializeSwapChain(window, surface, device);
                 initializeImageViews();
+                if (depthCheck_) initializeDepthResources(device);
+            };
+
+            //With anti-aliasing
+            SwapChain(GLFWwindow* window, Surface const& surface, Device const& device, VkSampleCountFlagBits msaaSamples, bool depthCheck = false) : devicePtr_(device.get()), allocatorPtr_(device.getAllocator()), depthCheck_(depthCheck), antiAliasing_(true), msaaSamples_(msaaSamples) {                
+                initializeSwapChain(window, surface, device);
+                initializeImageViews();
+                if (antiAliasing_) initializeColorResources(device);
                 if (depthCheck_) initializeDepthResources(device);
             };
 
@@ -53,11 +62,14 @@ namespace vuw {
 
                 vkDestroySwapchainKHR(devicePtr_, swapChain_, nullptr);
 
+                if (antiAliasing_) {
+                    vkDestroyImageView(devicePtr_, colorImageView_, nullptr);
+                    vmaDestroyImage(allocatorPtr_, colorImage_, colorImageAllocation_);
+                }
+
                 if (depthCheck_) {
                     vkDestroyImageView(devicePtr_, depthImageView_, nullptr);
                     vmaDestroyImage(allocatorPtr_, depthImage_, depthImageAllocation_);
-                    // vkDestroyImage(devicePtr_, depthImage_, nullptr);
-                    // vkFreeMemory(devicePtr_, depthImageAllocation_, nullptr);
                 }
 
             }
@@ -148,6 +160,14 @@ namespace vuw {
 
             }
 
+            void initializeColorResources(Device const& device) {
+
+                Buffer::createImage(device.getAllocator(), swapChainExtent_.width, swapChainExtent_.height, swapChainImageFormat_, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, colorImage_, colorImageAllocation_, msaaSamples_);
+                
+                colorImageView_ = Image::createImageView(devicePtr_, colorImage_, swapChainImageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
+
+            }
+
             void initializeDepthResources(Device const& device) {
 
                 depthFormat_ = Getter::findDepthFormat(device.getPhysical());
@@ -185,6 +205,18 @@ namespace vuw {
                 return swapChain_;
             }
 
+            VkSampleCountFlagBits getAntiAliasingSample() const {
+                return msaaSamples_;
+            }
+
+            bool isDepthCheck() const {
+                return depthCheck_;
+            }
+            
+            bool isAntiAliasing() const {
+                return antiAliasing_;
+            }
+
         private:
 
             //Save
@@ -207,8 +239,15 @@ namespace vuw {
             VmaAllocation depthImageAllocation_;
             VkImageView depthImageView_;
 
+            //Antialiasing
+            VkSampleCountFlagBits msaaSamples_;
+            VkImage colorImage_;
+            VmaAllocation colorImageAllocation_;
+            VkImageView colorImageView_;
+
             //Variable
             bool depthCheck_;
+            bool antiAliasing_;
 
     };
 

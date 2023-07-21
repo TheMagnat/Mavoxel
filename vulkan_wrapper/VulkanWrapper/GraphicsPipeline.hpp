@@ -10,6 +10,8 @@
 #include <VulkanWrapper/Shader.hpp>
 #include <VulkanWrapper/Helper/ShaderHelper.hpp>
 
+#include <memory>
+
 
 namespace vuw {
 
@@ -19,9 +21,14 @@ namespace vuw {
 
             GraphicsPipeline() {};
 
-            GraphicsPipeline(Device const& device, vuw::Shader const& shader, VkExtent2D const& swapChainExtent, RenderPass const& renderPass, std::vector<uint32_t> const& vertexAttributesSize, bool depthCheck = false, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-                : devicePtr_(device.get()), shaderPtr_(&shader), vertexAttributesSize_(vertexAttributesSize), depthCheck_(depthCheck), topology_(topology) {
-                initialize(swapChainExtent, renderPass);
+            GraphicsPipeline(Device const& device, vuw::Shader const& shader, const VkExtent2D* extent, const RenderPass* renderPass, std::vector<uint32_t> const& vertexAttributesSize, bool depthCheck = false, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                : devicePtr_(device.get()), renderPass_(renderPass), extent_(extent), shaderPtr_(&shader), vertexAttributesSize_(vertexAttributesSize), depthCheck_(depthCheck), antiAliasing_(false), topology_(topology), msaaSamples_(VK_SAMPLE_COUNT_1_BIT) {                
+                initialize();
+            }
+
+            GraphicsPipeline(Device const& device, vuw::Shader const& shader, const VkExtent2D* extent, const RenderPass* renderPass, std::vector<uint32_t> const& vertexAttributesSize, VkSampleCountFlagBits msaaSamples, bool depthCheck = false, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                : devicePtr_(device.get()), renderPass_(renderPass), extent_(extent), shaderPtr_(&shader), vertexAttributesSize_(vertexAttributesSize), depthCheck_(depthCheck), antiAliasing_(false), topology_(topology), msaaSamples_(msaaSamples) {                
+                initialize();
             }
 
             ~GraphicsPipeline() {
@@ -32,7 +39,7 @@ namespace vuw {
                 if (graphicsPipeline_) vkDestroyPipeline(devicePtr_, graphicsPipeline_, nullptr);
             }
 
-            GraphicsPipeline(GraphicsPipeline&& movedPipeline) : devicePtr_(std::move(movedPipeline.devicePtr_)), graphicsPipeline_(std::move(movedPipeline.graphicsPipeline_)) {
+            GraphicsPipeline(GraphicsPipeline&& movedPipeline) : devicePtr_(std::move(movedPipeline.devicePtr_)), renderPass_(std::move(movedPipeline.renderPass_)), extent_(std::move(movedPipeline.extent_)), graphicsPipeline_(std::move(movedPipeline.graphicsPipeline_)), msaaSamples_(std::move(movedPipeline.msaaSamples_)) {
                 movedPipeline.graphicsPipeline_ = nullptr;
             }
 
@@ -41,7 +48,9 @@ namespace vuw {
                 if (graphicsPipeline_) vkDestroyPipeline(devicePtr_, graphicsPipeline_, nullptr);
 
                 devicePtr_ = std::move(movedPipeline.devicePtr_);
-                
+                renderPass_ = std::move(movedPipeline.renderPass_);
+                extent_ = std::move(movedPipeline.extent_);
+
                 shaderPtr_ = std::move(movedPipeline.shaderPtr_);
                 vertexAttributesSize_ = std::move(movedPipeline.vertexAttributesSize_);
 
@@ -52,13 +61,15 @@ namespace vuw {
                 graphicsPipeline_ = std::move(movedPipeline.graphicsPipeline_);
                 movedPipeline.graphicsPipeline_ = nullptr;
 
+                msaaSamples_ = std::move(movedPipeline.msaaSamples_);
+
                 return *this;
             }
 
             GraphicsPipeline(const GraphicsPipeline&) = delete;
             GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
 
-            void initialize(VkExtent2D const& swapChainExtent, RenderPass const& renderPass) {
+            void initialize() {
                 
                 std::vector<char> vertShaderCode = ShaderHelper::readFile(shaderPtr_->getVertexFilename());
                 std::vector<char> fragShaderCode = ShaderHelper::readFile(shaderPtr_->getFragmentFilename());
@@ -114,21 +125,21 @@ namespace vuw {
                 VkViewport viewport{};
                 viewport.x = 0.0f;
                 viewport.y = 0.0f;
-                viewport.width = (float) swapChainExtent.width;
-                viewport.height = (float) swapChainExtent.height;
+                viewport.width = (float) extent_->width;
+                viewport.height = (float) extent_->height;
                 viewport.minDepth = 0.0f;
                 viewport.maxDepth = 1.0f;
 
                 // Mask filter, only the pixels within will be drawn
                 VkRect2D scissor{};
                 scissor.offset = {0, 0};
-                scissor.extent = swapChainExtent;
+                scissor.extent = *extent_;
 
                 // Merging viewport and scissor to create one unique viewport
                 VkPipelineViewportStateCreateInfo viewportState{};
                 viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
                 viewportState.viewportCount = 1;
-                viewportState.pViewports = &viewport;
+                // viewportState.pViewports = &viewport;
                 viewportState.scissorCount = 1;
                 viewportState.pScissors = &scissor;
 
@@ -161,11 +172,12 @@ namespace vuw {
 
                 /// Multi-sampling (It allow anti-aliasing)
 
+
                 // Deactivated :
                 VkPipelineMultisampleStateCreateInfo multisampling{};
                 multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
                 multisampling.sampleShadingEnable = VK_FALSE;
-                multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+                multisampling.rasterizationSamples = msaaSamples_;
                 multisampling.minSampleShading = 1.0f; // Optional
                 multisampling.pSampleMask = nullptr; // Optional
                 multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
@@ -259,7 +271,7 @@ namespace vuw {
 
                 pipelineInfo.layout = shaderPtr_->getPipelineLayout();
 
-                pipelineInfo.renderPass = renderPass.get();
+                pipelineInfo.renderPass = renderPass_->get();
                 pipelineInfo.subpass = 0;
 
                 pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
@@ -285,15 +297,21 @@ namespace vuw {
 
         private:
             VkDevice devicePtr_;
+            const RenderPass* renderPass_;
+            const VkExtent2D* extent_;
 
             //Parameter saved
-            const vuw::Shader* shaderPtr_;
+            const Shader* shaderPtr_;
             std::vector<uint32_t> vertexAttributesSize_;
             
             bool depthCheck_;
+            bool antiAliasing_;
             VkPrimitiveTopology topology_;
 
             VkPipeline graphicsPipeline_ = VK_NULL_HANDLE;
+
+            //For antialiasing if activated
+            VkSampleCountFlagBits msaaSamples_;
 
     };
 

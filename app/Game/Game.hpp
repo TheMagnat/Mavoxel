@@ -16,6 +16,7 @@
 #include <Mesh/Lines.hpp>
 
 #include <RayCasting/RayCastingRenderer.hpp>
+#include <Filter/FilterRenderer.hpp>
 
 #include <glm/gtx/scalar_multiplication.hpp>
 
@@ -67,6 +68,7 @@ class Game {
             whiteShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/sun_color.frag.spv")),
             colorShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_color.vert.spv", "Shaders/only_color.frag.spv")),
             rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/ray_tracing.frag.spv")),
+            filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/filter.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
@@ -85,7 +87,11 @@ class Game {
 
             //Ray casting
             RCRenderer(&world, &environment, SVO_DEPTH),
-            RCRendererWrapper(&rayCastingShader, &RCRenderer)
+            RCRendererWrapper(&rayCastingShader, &RCRenderer),
+
+            //Filter
+            filterRenderer(&mav::Global::vulkanWrapper->getFilterRenderer().getTextures()),
+            filterRendererWrapper(&filterShader, &filterRenderer)
 
         {
 
@@ -138,21 +144,32 @@ class Game {
             
             rayCastingShader.generateBindingsAndSets();
 
-            // Init objects
-            world.initializePipeline();
+            //Filters
+            vuw::SceneRenderer const& filterSceneRenderer = mav::Global::vulkanWrapper->getFilterRenderer();
+            filterShader.addTexture({
+                vuw::TextureShaderInformation{filterSceneRenderer.getTextures().front().getInformations(), &filterSceneRenderer.getTextures().front()},
+            });
 
-            selectionFaceWrapper.initializePipeline();
+            filterShader.generateBindingsAndSets();
+
+            // Init objects
+            world.initializePipeline(true);
+
+            selectionFaceWrapper.initializePipeline(true);
             
-            sunWrapper.initializePipeline();
+            sunWrapper.initializePipeline(true);
             sunWrapper.initializeVertices();
 
             //Note: Lines use line primitive topology type.
-            linesWrapper.initializePipeline(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+            linesWrapper.initializePipeline(true, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
             
             //Ray casting
-            RCRendererWrapper.initializePipeline();
+            RCRendererWrapper.initializePipeline(true);
             RCRendererWrapper.initializeVertices();
 
+            //Filter
+            filterRendererWrapper.initializePipeline(false);
+            filterRendererWrapper.initializeVertices();
 
 
             player.setGravity(&gravity);
@@ -173,10 +190,6 @@ class Game {
             // selectionFace.initialize();
             // lines.initialize();
 
-            sun.initialize();
-
-            RCRenderer.initialize();
-
             //Sun
             //sun.setPosition(0, 200, 0);
 
@@ -185,7 +198,7 @@ class Game {
         void initChunks() {
 
             if (SOLO_CHUNK) {
-                //world.createChunk(1, 0, 0, &generator);
+                // world.createChunk(0, 0, -1, &generator);
                 // world.createChunk(1, 0, 1, &generator);
                 // world.createChunk(0, 0, -1, &generator);
                 // world.createChunk(0, 0, 1, &generator);
@@ -430,17 +443,21 @@ class Game {
             // sun.setPosition(player.getCamera()->Position + player.getCamera()->Front * 50); // Front of player
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
-            // sun.setPosition(cos(totalElapsedTime_/5.0f) * 400.f, sin(totalElapsedTime_/5.0f) * 400.f, 0.0f); // Simulate a sun rotation
+            // sun.setPosition(cos(totalElapsedTime_/25.0f) * 300.f, sin(totalElapsedTime_/25.0f) * 300.f, 100.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
             //Drawing phase
-            uint32_t currentFrame = mav::Global::vulkanWrapper->getCurrentFrame();
-
-            VkCommandBuffer currentCommandBuffer = mav::Global::vulkanWrapper->beginRecordingDraw();
+            uint32_t currentFrame = mav::Global::vulkanWrapper->getCurrentFrame(); //First get the frame index
+            VkCommandBuffer currentCommandBuffer = mav::Global::vulkanWrapper->beginRecordingDraw(); //Then get the command buffer
             if (!currentCommandBuffer) {
                 std::cout << "Can't acquire new image to start recording a draw." << std::endl;
                 return;
             }
+
+            vuw::SceneRenderer const& filterSceneRenderer = mav::Global::vulkanWrapper->getFilterRenderer();
+
+            //Start scene rendering into a texture
+            filterSceneRenderer.beginRecordingCommandBuffer(currentCommandBuffer, currentFrame);
 
             //Can be here or before "beginRecordingDraw"
             // updateUniformBuffer(currentFrame, timeFromStart);
@@ -493,6 +510,20 @@ class Game {
 
             }
 
+            //End scene rendering into a texture
+            filterSceneRenderer.endRecordingCommandBuffer(currentCommandBuffer);
+
+            //Start rendering final scene
+            mav::Global::vulkanWrapper->beginRecordingCommandBuffer(currentCommandBuffer);
+            
+            //TODO: use the filled texture as an input of a shader to use lower resolution scaled on full screen
+            
+            filterRendererWrapper.draw(currentCommandBuffer, currentFrame);
+
+            //End rendering final scene
+            mav::Global::vulkanWrapper->endRecordingCommandBuffer(currentCommandBuffer);
+
+            //End the global rendering processus
             mav::Global::vulkanWrapper->endRecordingDraw();
 
             // std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
@@ -513,6 +544,9 @@ class Game {
 
         //Ray-Casting
         vuw::Shader rayCastingShader;
+
+        //Filter
+        vuw::Shader filterShader;
 
 
         float totalElapsedTime_;
@@ -544,6 +578,10 @@ class Game {
         mav::RayCastingRenderer RCRenderer;
         mav::DrawableSingle RCRendererWrapper;
         bool rayCasting = true;
+
+        //Filter
+        mav::FilterRenderer filterRenderer;
+        mav::DrawableSingle filterRendererWrapper;
 
         //Debug / Benchmark
         size_t frameCount = 0;

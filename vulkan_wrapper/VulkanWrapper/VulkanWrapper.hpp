@@ -12,6 +12,7 @@
 #include <VulkanWrapper/SynchronisationObjects.hpp>
 #include <VulkanWrapper/DeadBufferHandler.hpp>
 #include <VulkanWrapper/SSBO.hpp>
+#include <VulkanWrapper/SceneRenderer.hpp>
 
 
 //Debug
@@ -35,7 +36,8 @@ namespace vuw {
         public:
             VulkanWrapper(GLFWwindow* window, uint16_t framesInFlight, bool depthCheck = false, bool validationDebugLayerActivated = true)
                 : framesInFlight_(framesInFlight), depthCheck_(depthCheck), window_(window), instance_(validationDebugLayerActivated), debugMessenger_(instance_, validationDebugLayerActivated), surface_(window_, instance_), device_(instance_, surface_, validationDebugLayerActivated), swapChain_(window, surface_, device_, depthCheck_),
-                renderPass_(device_, swapChain_, depthCheck_), commandPool_(surface_, device_), commandBuffers_(framesInFlight_, device_, commandPool_), syncObjs_(framesInFlight, device_), deadBufferHandler_(framesInFlight, &device_, &syncObjs_)
+                renderPass_(device_, swapChain_, depthCheck_), commandPool_(surface_, device_), commandBuffers_(framesInFlight_, device_, commandPool_), syncObjs_(framesInFlight, device_), deadBufferHandler_(framesInFlight, &device_, &syncObjs_),
+                filterRenderer_(device_, commandPool_.get(), framesInFlight, false)
             {
                 swapChain_.initializeFramebuffers(renderPass_);
             }
@@ -82,7 +84,17 @@ namespace vuw {
 
                 //We now reset and start recording the command buffer
                 vkResetCommandBuffer(commandBuffer, 0);
-                beginRecordingCommandBuffer(commandBuffer);
+                // beginRecordingCommandBuffer(commandBuffer);
+
+                //Initialize command buffer
+                VkCommandBufferBeginInfo beginInfo{};
+                beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                beginInfo.flags = 0; // Optional
+                beginInfo.pInheritanceInfo = nullptr; // Optional
+
+                if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+                    throw std::runtime_error("failed to begin recording command buffer!");
+                }
 
                 return commandBuffer;
 
@@ -93,7 +105,9 @@ namespace vuw {
                 //Current command buffer
                 VkCommandBuffer commandBuffer = commandBuffers_.get()[currentFrame_];
 
-                endRecordingCommandBuffer(commandBuffer);
+                if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+                    throw std::runtime_error("failed to record command buffer !");
+                }
 
                 VkSubmitInfo submitInfo{};
                 submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -145,15 +159,6 @@ namespace vuw {
             
             void beginRecordingCommandBuffer(VkCommandBuffer commandBuffer) {
                 
-                VkCommandBufferBeginInfo beginInfo{};
-                beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-                beginInfo.flags = 0; // Optional
-                beginInfo.pInheritanceInfo = nullptr; // Optional
-
-                if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-                    throw std::runtime_error("failed to begin recording command buffer!");
-                }
-
                 VkRenderPassBeginInfo renderPassInfo{};
                 renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
                 renderPassInfo.renderPass = renderPass_.get();
@@ -190,10 +195,6 @@ namespace vuw {
 
             void endRecordingCommandBuffer(VkCommandBuffer commandBuffer) {
                 vkCmdEndRenderPass(commandBuffer);
-
-                if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-                    throw std::runtime_error("failed to record command buffer !");
-                }
             }
 
             VkExtent2D const& getExtent() const {
@@ -214,7 +215,15 @@ namespace vuw {
             }
 
             GraphicsPipeline generateGraphicsPipeline(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
-                return GraphicsPipeline(device_, shader, swapChain_.getExtent(), renderPass_, vertexAttributesSize, depthCheck_, topology);
+                return GraphicsPipeline(device_, shader, &swapChain_.getExtent(), &renderPass_, vertexAttributesSize, depthCheck_, topology);
+            }
+
+            GraphicsPipeline generateGraphicsPipelineForFilter(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
+                return GraphicsPipeline(device_, shader, &filterRenderer_.getExtent(), &filterRenderer_.getRenderpass(), vertexAttributesSize, depthCheck_, topology);
+            }
+
+            GraphicsPipeline generateGraphicsPipelineAntialiasing(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkSampleCountFlagBits msaaSamples, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
+                return GraphicsPipeline(device_, shader, &swapChain_.getExtent(), &renderPass_, vertexAttributesSize, msaaSamples, depthCheck_, topology);
             }
 
             SSBO generateSSBO() {
@@ -282,10 +291,14 @@ namespace vuw {
                 for (GraphicsPipeline* savedPipeline : savedPipelines_) {
 
                     savedPipeline->clean();
-                    savedPipeline->initialize(swapChain_.getExtent(), renderPass_);
+                    savedPipeline->initialize();
 
                 }
 
+            }
+
+            SceneRenderer const& getFilterRenderer() const {
+                return filterRenderer_;
             }
 
         private:
@@ -308,7 +321,6 @@ namespace vuw {
             Device device_;
 
             SwapChain swapChain_;
-
             RenderPass renderPass_;
 
             CommandPool commandPool_;
@@ -324,6 +336,8 @@ namespace vuw {
             //Framerate calculation
             std::chrono::time_point<std::chrono::high_resolution_clock> lastAcquireTime_;
 
+            //TODO: a améliorer
+            SceneRenderer filterRenderer_;
     };
 
 }

@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <World/World.hpp>
 #include <Mesh/Simple/Quad.hpp>
 #include <VulkanWrapper/Shader.hpp>
@@ -13,7 +15,7 @@ namespace mav {
 
         public:
             RayCastingRenderer(World* world, Environment* environment, size_t svoDepth)
-                : svoDepth_(svoDepth), world_(world), environment_(environment), Quad(environment_) {
+                : svoDepth_(svoDepth), world_(world), environment_(environment) {
 
 
             }

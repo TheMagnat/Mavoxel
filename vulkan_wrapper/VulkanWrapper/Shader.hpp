@@ -14,6 +14,7 @@
 #include <optional>
 #include <vector>
 #include <array>
+#include <list>
 
 namespace vuw {
 
@@ -33,6 +34,11 @@ namespace vuw {
         VkShaderStageFlags flags;
         uint32_t count; //If more than 1, it's an array
         std::vector<const SSBO*> ssbosPtr;
+    };
+
+    struct TextureShaderInformation {
+        Texture::TextureInformations informations;
+        const Texture* texturePtr;
     };
 
     struct PushConstantInformations {
@@ -140,7 +146,8 @@ namespace vuw {
                 SSBOInformations_ = std::move(toMove.SSBOInformations_);
                 nbSsbos_ = std::move(toMove.nbSsbos_);
 
-                textures_ = std::move(toMove.textures_);
+                textureInformations_ = std::move(toMove.textureInformations_);
+                texturesStorage_ = std::move(toMove.texturesStorage_);
 
             }
 
@@ -180,22 +187,38 @@ namespace vuw {
                 nbSsbos_ += information.count;
             }
 
+            //To generate and add a texture
             void addTexture(VkCommandPool commandPool, VkQueue queue, std::vector<uint8_t> const& texture, Texture::TextureInformations const& textureInformations) {
-
-                textures_.emplace_back(
+                
+                //Here we generate and store the texture
+                texturesStorage_.emplace_back(
                     device_, commandPool, queue,
                     texture, textureInformations
                 );
                 
+                //Then we add the informations on the texture
+                textureInformations_.push_back( TextureShaderInformation{textureInformations, &texturesStorage_.back()} );
+
             }
 
+            //To store the ownership of an existing texture
             void addTexture(Texture&& texture) {
-                textures_.emplace_back(std::move(texture));
+                texturesStorage_.emplace_back(std::move(texture));
+
+                //Then we add the informations on the texture
+                textureInformations_.push_back( TextureShaderInformation{texturesStorage_.back().getInformations(), &texturesStorage_.back()} );
             }
+
+            //To store an existing texture without taking the ownership
+            void addTexture(TextureShaderInformation const& informations) {
+                //Then we add the informations on the texture
+                textureInformations_.push_back( informations );
+            }
+
 
             void addTexture3D(VkCommandPool commandPool, VkQueue queue, std::vector<uint8_t> const& texture, Texture::TextureInformations const& textureInformations) {
 
-                textures_.emplace_back(Texture3D(
+                texturesStorage_.emplace_back(Texture3D(
                     device_, commandPool, queue,
                     texture, textureInformations
                 ));
@@ -230,7 +253,7 @@ namespace vuw {
             //CPU
             virtual void createDescriptorSetLayout() {
 
-                std::vector<VkDescriptorSetLayoutBinding> layoutBindings(uniformBufferWrappers_.size() + textures_.size() + SSBOInformations_.size());
+                std::vector<VkDescriptorSetLayoutBinding> layoutBindings(uniformBufferWrappers_.size() + textureInformations_.size() + SSBOInformations_.size());
 
                 // Set the uniforms layout bindings
                 for (size_t i = 0; i < uniformBufferWrappers_.size(); ++i) {
@@ -262,11 +285,11 @@ namespace vuw {
                 }
 
                 // Set the texture layout bindings
-                for (size_t i = 0; i < textures_.size(); ++i) {
+                for (size_t i = 0; i < textureInformations_.size(); ++i) {
                     
                     size_t currentIndex = uniformBufferWrappers_.size() + SSBOInformations_.size() + i;
 
-                    Texture::TextureInformations const& currentTextureInformations = textures_[i].getInformations();
+                    Texture::TextureInformations const& currentTextureInformations = textureInformations_[i].informations;
 
                     layoutBindings[currentIndex].binding = currentTextureInformations.binding;
                     layoutBindings[currentIndex].descriptorCount = 1;
@@ -314,7 +337,7 @@ namespace vuw {
             void createDescriptorPool() {
 
                 std::vector<VkDescriptorPoolSize> poolSizes;
-                if (!uniformBufferWrappers_.empty()) {
+                if (nbUniforms_ > 0) {
                     poolSizes.emplace_back();
                     poolSizes.back().type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     poolSizes.back().descriptorCount = static_cast<uint32_t>(nbUniforms_ * nbFrames_);
@@ -326,10 +349,10 @@ namespace vuw {
                     poolSizes.back().descriptorCount = static_cast<uint32_t>(nbSsbos_ * nbFrames_);
                 }
 
-                if (!textures_.empty()) {
+                if (!textureInformations_.empty()) {
                     poolSizes.emplace_back();
                     poolSizes.back().type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                    poolSizes.back().descriptorCount = static_cast<uint32_t>(textures_.size() * nbFrames_);
+                    poolSizes.back().descriptorCount = static_cast<uint32_t>(textureInformations_.size() * nbFrames_);
                 }
                 
 
@@ -370,9 +393,9 @@ namespace vuw {
 
                 std::vector<std::vector<VkDescriptorBufferInfo>> buffersInfos(uniformBufferWrappers_.size());
                 std::vector<std::vector<VkDescriptorBufferInfo>> ssbosInfos(SSBOInformations_.size());
-                std::vector<VkDescriptorImageInfo> imagesInfos(textures_.size());
+                std::vector<VkDescriptorImageInfo> imagesInfos(textureInformations_.size());
 
-                std::vector<VkWriteDescriptorSet> writeDescriptors(uniformBufferWrappers_.size() + SSBOInformations_.size() + textures_.size());
+                std::vector<VkWriteDescriptorSet> writeDescriptors(uniformBufferWrappers_.size() + SSBOInformations_.size() + textureInformations_.size());
                 
                 // Uniform descriptors
                 for (size_t uniformIndex = 0; uniformIndex < uniformBufferWrappers_.size(); uniformIndex++) {
@@ -443,19 +466,19 @@ namespace vuw {
                 }
 
                 // Texture descriptors
-                for (size_t textureIndex = 0; textureIndex < textures_.size(); ++textureIndex) {
+                for (size_t textureIndex = 0; textureIndex < textureInformations_.size(); ++textureIndex) {
                     
                     size_t currentIndex = uniformBufferWrappers_.size() + SSBOInformations_.size() + textureIndex;
 
-                    Texture const& currentTexture = textures_[textureIndex];
+                    const Texture* currentTexture = textureInformations_[textureIndex].texturePtr;
 
                     imagesInfos[textureIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                    imagesInfos[textureIndex].imageView = currentTexture.getImageView();
-                    imagesInfos[textureIndex].sampler = currentTexture.getSampler();
+                    imagesInfos[textureIndex].imageView = currentTexture->getImageView();
+                    imagesInfos[textureIndex].sampler = currentTexture->getSampler();
 
                     writeDescriptors[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                     writeDescriptors[currentIndex].dstSet = descriptorSets_[frameIndex];
-                    writeDescriptors[currentIndex].dstBinding = currentTexture.getInformations().binding;
+                    writeDescriptors[currentIndex].dstBinding = currentTexture->getInformations().binding;
                     writeDescriptors[currentIndex].dstArrayElement = 0;
 
                     writeDescriptors[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -480,6 +503,12 @@ namespace vuw {
             void updateSSBO(size_t ssboIndex, size_t ssboArrayIndex, const SSBO* ssboPtr) {
 
                 SSBOInformations_[ssboIndex].ssbosPtr[ssboArrayIndex] = ssboPtr;
+
+            }
+
+            void updateTexture(size_t textureIndex, const Texture* texturePtr) {
+
+                textureInformations_[textureIndex].texturePtr = texturePtr;
 
             }
             
@@ -545,7 +574,8 @@ namespace vuw {
             size_t nbSsbos_ = 0;
 
             //Texture memory
-            std::vector<Texture> textures_;
+            std::vector<TextureShaderInformation> textureInformations_;
+            std::list<Texture> texturesStorage_;
 
     };
 

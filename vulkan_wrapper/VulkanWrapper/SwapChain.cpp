@@ -8,12 +8,14 @@ namespace vuw {
 
         swapChainFramebuffers_.resize(swapChainImageViews_.size());
 
-        std::vector<VkImageView> attachments(1 + depthCheck_);
+        std::vector<VkImageView> attachments(1 + depthCheck_ + antiAliasing_);
         if (depthCheck_) attachments[1] = depthImageView_;
+        if (antiAliasing_) attachments[0] = colorImageView_;
 
         for (size_t i = 0; i < swapChainImageViews_.size(); i++) {
-
-            attachments[0] = swapChainImageViews_[i];
+            
+            if (antiAliasing_) attachments.back() = swapChainImageViews_[i];
+            else attachments[0] = swapChainImageViews_[i];            
 
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

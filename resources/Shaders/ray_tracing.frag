@@ -9,7 +9,7 @@ layout (location = 0) in vec2 TexPos;
 #include "raycastLight.frag"
 
 //PRAMS
-#define RAY_DISTANCE 512
+#define RAY_DISTANCE 384
 
 
 vec3 getRayTarget() {

@@ -5,6 +5,7 @@
 
 #include <VulkanWrapper/Device.hpp>
 #include <VulkanWrapper/SwapChain.hpp>
+#include <VulkanWrapper/Texture.hpp>
 
 #include <stdexcept>
 
@@ -21,6 +22,12 @@ namespace vuw {
                 initializeRenderPass(swapChain, depthCheck);
             };
 
+            RenderPass(Device const& device, bool depthCheck = false) : devicePtr_(device.get()) {
+                initializeRenderPass(depthCheck);
+            };
+
+            RenderPass(Device const& device) : devicePtr_(device.get()) {}
+
             ~RenderPass() {
                 clean();
             }
@@ -36,6 +43,7 @@ namespace vuw {
             RenderPass& operator=(const RenderPass&) = delete;
 
             void initializeRenderPass(SwapChain const& swapChain, bool depthCheck);
+            void initializeRenderPass(bool depthCheck, VkFormat depthFormat = VK_FORMAT_D32_SFLOAT);
 
             VkRenderPass get() const {
                 return renderPass_;

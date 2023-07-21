@@ -1,7 +1,10 @@
 #extension GL_GOOGLE_include_directive : require
+
 #include "octree.frag"
 #include "materials.frag"
 #include "lightHelper.frag"
+
+#define PI 3.1415926538
 
 //DEBUG TO REMOVE
 
@@ -223,10 +226,30 @@ float computeAO(vec3 norm, vec3 hitDir, vec3 hitVoxelChunkPos, vec2 uv) {
     return 1.0 - (vertical/3.0 * lateral/3.0) * 0.8; //TODO: rendre cette valeur parametrable
 }
 
+vec3 applyFog(vec3 color, vec3 fogColor, float colorDistance, float maxDistance) {
+
+    //Select the percentage of maximum distance at which the interpolation start. A value >= to 1.0 mean brutal fog
+    const float fogPercentStart = 0.7;
+    float fogStartDistance = fogPercentStart * maxDistance;
+
+    //Calculate fogFactor
+    float fogFactor = (colorDistance - fogStartDistance) / (maxDistance - fogStartDistance);
+    fogFactor = clamp(fogFactor, 0, 1);
+    
+    /// Select the good easing function
+    // Cosine interpolation
+    float alpha = (1.0 - cos(fogFactor * PI)) / 2.0;
+
+    return mix(color, fogColor, alpha);
+
+}
+
 vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
     
     //Parameter background color
-    vec3 color = vec3(0.5294, 0.8078, 0.9216); //Sky
+    const vec3 skyColor = vec3(0.5294, 0.8078, 0.9216); //Sky
+
+    vec3 color = skyColor;
     // vec3 color = vec3(0.0, 0.0, 0.0); //Black
 
     //TODO: add distance as parameter of the Shader
@@ -285,40 +308,10 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
 
         Material material = materials[rayCastResult.voxel];
 
-        //Put selection under shadow
-        // if (rayCastResult.voxelWorldPosition == voxelCursorPosition && rayCastResult.normal == faceCursorNormal) {
-        //     if ( distFromEdge >= 0.925 + cos(scaledTime)*0.035 ) {
-        //         material.ambient = vec3(0.1);
-        //         material.diffuse = vec3(1.0);
-        //         material.specular = vec3(1.0);
-        //         material.shininess = 32.0;
-
-        //         light.ambient = vec3(0.1);
-        //         light.diffuse = vec3(1.0);
-        //         light.specular = vec3(1.0);
-        //         light.shininess = 32.0;
-        //     }
-        // }
-
         // Classic Phong Lighting
         vec3 ambient = computeAmbient(material);
         vec3 diffuse = computeDiffuse(material, rayCastResult.normal, lightDir);
         vec3 specular = computeSpecular(material, normalize(position - rayCastResult.hitPosition), rayCastResult.normal, lightDir);
-        
-
-        float shade = dot(rayCastResult.normal, lightDir);
-        
-        // float shadow = 0.7;
-        // float lightValue = (1.0 + shadow * (illuminated * max(shade, 0.0) - 1.0)) * (1.0 - max(-shade, 0.0));
-
-
-        //float testt = distance(uv, hitVoxelChunkPos);
-        //float testt = length(rayCastResult.hitPosition);
-        
-
-        //TODO: add back AO
-        // color = (ambient + diffuse + specular);// * AO;
-
         
         //With shadow
         vec3 constantColor = ambient;
@@ -339,6 +332,9 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
                 color = vec3(1.0);
             }
         }
+
+        //We apply fog on the found color
+        color = applyFog(color, skyColor, rayCastResult.dist, maxDistance);
 
     }
     

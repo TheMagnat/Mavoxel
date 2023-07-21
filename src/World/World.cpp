@@ -32,8 +32,8 @@ namespace mav {
 			allChunk_.reserve(10000);
 		}
 
-	void World::initializePipeline() {
-		DrawableContainer::initializePipeline({3, 3, 2, 1, 1});
+	void World::initializePipeline(bool filterPipeline) {
+		DrawableContainer::initializePipeline({3, 3, 2, 1, 1}, filterPipeline);
 		
 		#ifndef NDEBUG
 			debugSideContainer_.initializePipeline({3}, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);

@@ -24,7 +24,7 @@ you can use a totally different main file.
 #include <Octree/SparseVoxelOctree.hpp>
 
 const uint16_t MAX_FRAMES_IN_FLIGHT = 2;
-const bool DEPTH_CHECK = true;
+const bool DEPTH_CHECK = false;
 const bool VALIDATION_LAYER = true;
 
 const uint32_t WIDTH = 1920;

@@ -24,8 +24,8 @@ namespace mav {
              * To initialize the graphic pipeline.
              * It must be called before doing any bind/draw
             */
-            void initializePipeline(std::vector<uint32_t> const& vertexAttributesSizes, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
-                graphicsPipeline_ = Global::vulkanWrapper->generateGraphicsPipeline(*shader_, vertexAttributesSizes, topology);
+            void initializePipeline(std::vector<uint32_t> const& vertexAttributesSizes, bool filterPipeline = false, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
+                graphicsPipeline_ = filterPipeline ? Global::vulkanWrapper->generateGraphicsPipelineForFilter(*shader_, vertexAttributesSizes, topology) : Global::vulkanWrapper->generateGraphicsPipeline(*shader_, vertexAttributesSizes, topology);
                 Global::vulkanWrapper->saveGraphicPipeline(&graphicsPipeline_);
             }
 

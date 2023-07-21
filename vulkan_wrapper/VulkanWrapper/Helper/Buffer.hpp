@@ -13,7 +13,7 @@ class Buffer {
 
     public:
 
-        static void createImage(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VmaAllocationCreateFlags flags, VkImage& image, VmaAllocation& imageAllocation) {
+        static void createImage(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VmaAllocationCreateFlags flags, VkImage& image, VmaAllocation& imageAllocation, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT) {
             
             VkImageCreateInfo imageCreateInfo{};
             imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -35,7 +35,7 @@ class Buffer {
 
             imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-            imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+            imageCreateInfo.samples = numSamples;
             imageCreateInfo.flags = 0; // Optional
 
             // if (vkCreateImage(device, &imageCreateInfo, nullptr, &image) != VK_SUCCESS) {

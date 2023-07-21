@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <GLObject/Drawable.hpp>
 // #include <Core/Global.hpp>
 
@@ -10,10 +12,6 @@ namespace mav {
     class Quad : public Drawable {
 
         public:
-
-            Quad(Environment* environment)
-                : environment_(environment) {}
-
             
             std::vector<uint32_t> getVertexAttributesSizes() const override {
                 return {{3}, {2}};
@@ -46,11 +44,6 @@ namespace mav {
                 };
 
             }
-
-
-        protected:
-            //Environment
-            Environment* environment_;
 
     };
 

@@ -10,8 +10,12 @@ namespace mav {
         public:
             DrawableSingle(vuw::Shader* shader, Drawable* drawableItem) : DrawableContainer(shader), drawableItem_(drawableItem) {}
 
-            void initializePipeline(VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
-                DrawableContainer::initializePipeline(drawableItem_->getVertexAttributesSizes(), topology);
+            void initializePipeline(bool filterPipeline = false, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
+                DrawableContainer::initializePipeline(drawableItem_->getVertexAttributesSizes(), filterPipeline, topology);
+            }
+
+            void initializePipelineAntialiasing(VkSampleCountFlagBits msaaSamples, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
+                DrawableContainer::initializePipelineAntialiasing(drawableItem_->getVertexAttributesSizes(), msaaSamples, topology);
             }
 
             void initializeVertices() {

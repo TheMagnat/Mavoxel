@@ -10,7 +10,7 @@ project(
 #Set project global property
 set(svoDepth 7)
 set(depthToLen "float[MAX_DEPTH](64, 32, 16, 8, 4, 2, 1)")
-set(raytracingChunkRange 2) #The number of chunk along each axis in each direction (total in each axis is then 1 + raytracingChunkRange * 2)
+set(raytracingChunkRange 4) #The number of chunk along each axis in each direction (total in each axis is then 1 + raytracingChunkRange * 2)
 
 #C++ property
 set(CMAKE_CXX_STANDARD 20)

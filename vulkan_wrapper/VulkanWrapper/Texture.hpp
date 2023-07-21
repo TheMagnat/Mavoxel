@@ -25,19 +25,39 @@ namespace vuw {
                 VkShaderStageFlags flags;
             };
 
-            Texture(const Device* device, size_t dataSize, TextureInformations const& textureInformations)
-                : device_(device), size_(dataSize), textureInformations_(textureInformations) {}
+            Texture(const Device* device, size_t dataSize, TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB)
+                : device_(device), size_(dataSize), textureInformations_(textureInformations), imageFormat_(imageFormat) {}
 
+            //Create with data
             Texture(const Device* device, VkCommandPool commandPool, VkQueue queue,
-                std::vector<uint8_t> const& data, TextureInformations const& textureInformations)
-                : device_(device), size_(data.size()), textureInformations_(textureInformations) {
+                std::vector<uint8_t> const& data, TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB)
+                : device_(device), size_(data.size()), textureInformations_(textureInformations), imageFormat_(imageFormat) {
                 
                 createTextureBuffers(commandPool, queue, data);
-                textureImageView_= Image::createImageView(device_->get(), textureImage_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+                textureImageView_= Image::createImageView(device_->get(), textureImage_, imageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
+                createTextureSampler();
+
+            }
+
+            //Create without data
+            Texture(const Device* device, VkCommandPool commandPool, VkQueue queue, TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB)
+                : device_(device), size_(textureInformations.width * textureInformations.height * textureInformations.depth), textureInformations_(textureInformations), imageFormat_(imageFormat) {
+                
+                createInputTextureBuffers(commandPool, queue);
+                textureImageView_= Image::createImageView(device_->get(), textureImage_, imageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
                 createTextureSampler();
 
             }
             
+            //Create without data for antialiasing
+            Texture(const Device* device, VkCommandPool commandPool, VkQueue queue, TextureInformations const& textureInformations, VkSampleCountFlagBits msaaSamples, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB)
+                : device_(device), size_(textureInformations.width * textureInformations.height * textureInformations.depth), textureInformations_(textureInformations), imageFormat_(imageFormat) {
+                
+                createAntialiasingTextureBuffers(commandPool, queue, msaaSamples);
+                textureImageView_= Image::createImageView(device_->get(), textureImage_, imageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
+                createTextureSampler();
+
+            }
 
             Texture(Texture&& movedTexture) :
                 size_(std::move(movedTexture.size_)),
@@ -88,18 +108,37 @@ namespace vuw {
 
                 memcpy(bufferAllocInfo.pMappedData, data.data(), static_cast<size_t>(size_));
         
-                Buffer::createImage(device_->getAllocator(), textureInformations_.width, textureInformations_.height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0, textureImage_, textureImageAllocation_); 
+                Buffer::createImage(device_->getAllocator(), textureInformations_.width, textureInformations_.height, imageFormat_, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0, textureImage_, textureImageAllocation_); 
 
                 // Change the organisation of the image to optimize the data reception
-                Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, imageFormat_, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
                 // Copy the buffer into the image
                 Buffer::copyToImage(device_->get(), commandPool, queue, stagingBuffer, textureImage_, textureInformations_.width, textureInformations_.height);
 
                 // Then change again the organisation of the image after the copy to optimize the read in the shader
-                Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, imageFormat_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
                 vmaDestroyBuffer(device_->getAllocator(), stagingBuffer, stagingBufferAllocation);
+            }
+
+            virtual void createInputTextureBuffers(VkCommandPool commandPool, VkQueue queue) {
+                
+                //TODO: rendre VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT paramétrable
+                Buffer::createImage(device_->getAllocator(), textureInformations_.width, textureInformations_.height, imageFormat_, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, textureImage_, textureImageAllocation_); 
+
+                // // Change the organisation of the image to optimize the data reception
+                // Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, imageFormat_, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+            }
+
+            virtual void createAntialiasingTextureBuffers(VkCommandPool commandPool, VkQueue queue, VkSampleCountFlagBits msaaSamples) {
+
+                Buffer::createImage(device_->getAllocator(), textureInformations_.width, textureInformations_.height, imageFormat_, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0, textureImage_, textureImageAllocation_, msaaSamples); 
+
+                // // Change the organisation of the image to optimize the data reception
+                // Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, imageFormat_, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
             }
 
             virtual void createTextureSampler() {
@@ -162,6 +201,7 @@ namespace vuw {
             VkImageView textureImageView_;
             VkSampler textureSampler_;
 
+            VkFormat imageFormat_;
     };
 
 }
