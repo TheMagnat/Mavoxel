@@ -278,8 +278,8 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     }
 
     //We can recalculate it like this !
-    vec3 worldPosition = localPositionResult.localPosition + (localPositionResult.chunkPosition * maxLen) - maxLen / 2;
-    vec3 voxelWorldPosition = rayCastRes.hitPosition + (localPositionResult.chunkPosition * maxLen) - maxLen / 2;
+    vec3 worldPosition = localPositionResult.localPosition + (localPositionResult.chunkPosition * maxLen);
+    vec3 voxelWorldPosition = rayCastRes.hitPosition + (localPositionResult.chunkPosition * maxLen);
 
     //Resultat marant
     //return WorldRayCastResult( rayCastRes.voxel, worldPosition * voxelSize, vec3(0), rayCastRes.normal, totalTraveledDistance * voxelSize );

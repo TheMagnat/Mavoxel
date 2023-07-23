@@ -18,7 +18,6 @@ namespace vuw {
         public:
 
             struct TextureInformations {
-                uint32_t binding;
                 uint32_t width;
                 uint32_t height;
                 uint32_t depth; //Note : should be 1 if not used
@@ -148,9 +147,9 @@ namespace vuw {
                 samplerInfo.magFilter = VK_FILTER_LINEAR;
                 samplerInfo.minFilter = VK_FILTER_LINEAR;
 
-                samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-                samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-                samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+                samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+                samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
 
                 samplerInfo.anisotropyEnable = VK_TRUE;
                 samplerInfo.maxAnisotropy = 16.0f;

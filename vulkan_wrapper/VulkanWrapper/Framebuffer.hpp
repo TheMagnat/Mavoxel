@@ -19,12 +19,12 @@ namespace vuw {
 
 
         public:
-            Framebuffer(Device const& device, RenderPass const& renderPass, const Texture* imageTexture) : devicePtr_(device.get()) {
-                initialize(renderPass, imageTexture, nullptr);
+            Framebuffer(Device const& device, RenderPass const& renderPass, const Texture* imageTexture, const Texture* depthTexture = nullptr) : devicePtr_(device.get()) {
+                initialize(renderPass, imageTexture, depthTexture);
             }
 
-            Framebuffer(Device const& device, RenderPass const& renderPass, const Texture* imageTexture, const Texture* depthTexture) : devicePtr_(device.get()) {
-                initialize(renderPass, imageTexture, depthTexture);
+            Framebuffer(Device const& device, RenderPass const& renderPass, std::vector<const Texture*> const& colorTextures, const Texture* depthTexture = nullptr) : devicePtr_(device.get()) {
+                initialize(renderPass, colorTextures, depthTexture);
             }
 
             Framebuffer(Framebuffer&& movedFramebuffer) :
@@ -55,12 +55,43 @@ namespace vuw {
                 Texture::TextureInformations const& textureInformations = imageTexture->getInformations();
                 
                 //If depth texture is present, create two attachments...
-                std::vector<VkImageView> attachments(1 + depthTexture != nullptr);
+                std::vector<VkImageView> attachments(1 + (depthTexture != nullptr));
 
                 //...and fill it
                 if (depthTexture) attachments[1] = depthTexture->getImageView();
 
                 attachments[0] = imageTexture->getImageView();
+
+                VkFramebufferCreateInfo framebufferInfo{};
+                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferInfo.renderPass = renderPass.get();
+                framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+                framebufferInfo.pAttachments = attachments.data();
+                framebufferInfo.width = textureInformations.width;
+                framebufferInfo.height = textureInformations.height;
+                framebufferInfo.layers = 1;
+
+                if (vkCreateFramebuffer(devicePtr_, &framebufferInfo, nullptr, &framebuffer_) != VK_SUCCESS) {
+                    throw std::runtime_error("Failed to create framebuffer !");
+                }
+
+            }
+
+            //Here we assume that all color textures have the same informations
+            void initialize(RenderPass const& renderPass, std::vector<const Texture*> const& colorTextures, const Texture* depthTexture = nullptr) {
+                
+                //To get the size of the texture
+                Texture::TextureInformations const& textureInformations = colorTextures.front()->getInformations();
+                
+                //If depth texture is present, create one more attachment...
+                std::vector<VkImageView> attachments(colorTextures.size() + (depthTexture != nullptr));
+
+                //...and fill it
+                if (depthTexture) attachments.back() = depthTexture->getImageView();
+
+                for (size_t i = 0; i < colorTextures.size(); ++i) {
+                    attachments[i] = colorTextures[i]->getImageView();
+                }
 
                 VkFramebufferCreateInfo framebufferInfo{};
                 framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

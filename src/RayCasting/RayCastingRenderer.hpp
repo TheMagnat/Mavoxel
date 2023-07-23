@@ -36,6 +36,9 @@ namespace mav {
                 rci.camera.up = environment_->camera->Up;
                 rci.camera.right = environment_->camera->Right;
 
+                rci.projection = environment_->camera->Projection;
+                rci.view = environment_->camera->GetViewMatrix();
+
                 //Sun informations
                 rci.sun.position = environment_->sun->getPosition();
 
@@ -45,7 +48,7 @@ namespace mav {
                 if (environment_->collisionInformations) {
                     
                     //TODO: better
-                    rci.voxelCursorPosition = ( glm::vec3(environment_->collisionInformations->voxelLocalPosition) + (glm::vec3(environment_->collisionInformations->chunkPosition) * std::pow(2, svoDepth_)) - (float)(std::pow(2, svoDepth_) / 2.0) ) * world_->getVoxelSize();
+                    rci.voxelCursorPosition = ( glm::vec3(environment_->collisionInformations->voxelLocalPosition) + (glm::vec3(environment_->collisionInformations->chunkPosition) * std::pow(2, svoDepth_)) ) * world_->getVoxelSize();
                     rci.faceCursorNormal = environment_->collisionInformations->normal;
                 }
                 else {

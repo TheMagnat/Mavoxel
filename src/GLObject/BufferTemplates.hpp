@@ -46,6 +46,8 @@ struct CameraObject {
 struct RayCastInformations {
     alignas(16) float xRatio;
     alignas(16) CameraObject camera;
+    alignas(16) glm::mat4 projection;
+    alignas(16) glm::mat4 view;
     alignas(16) SunObject sun;
     alignas(16) float time;
     alignas(16) glm::vec3 voxelCursorPosition;
@@ -57,4 +59,10 @@ struct WorldOctreeInformations {
     int depth;
     int len;
     float voxelSize;
+};
+
+
+
+struct TestInformations {
+    glm::vec2 sunScreenPos;
 };

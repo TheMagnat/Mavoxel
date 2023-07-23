@@ -191,7 +191,12 @@ namespace mav {
             // velocity = collisionVelocity / elapsedTime;
         
             //camera_.ProcessKeyboard(collisionVelocity);
+
+            //Good collision
             boundingBox_.center += collisionVelocity;
+
+            //No collision
+            // boundingBox_.center += velocity * elapsedTime;
 
             #ifndef NDEBUG
                 entityBox.setPosition(boundingBox_.center);

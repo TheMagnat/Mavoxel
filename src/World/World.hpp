@@ -28,12 +28,10 @@ namespace mav {
 	class Chunk;
 	struct CollisionFace;
 
-	class World : public DrawableContainer {
+	class World {
 
 		public:
-			World(vuw::Shader* shaderPtrP, Environment* environmentP, size_t octreeDepth = 5, float voxelSize = 1.0f);
-
-			void initializePipeline(bool filterPipeline = false);
+			World(size_t octreeDepth = 5, float voxelSize = 1.0f);
 
 			std::vector<glm::vec3> getAroundChunks(glm::vec3 position, float distance, bool sorted) const;
 
@@ -60,7 +58,7 @@ namespace mav {
 			 * @return Return a pair containing pointer to the found voxel and a pointer to the corresponding chunk if found,
 			 * or a pair of nullptr if not.
 			 */
-			std::pair<SimpleVoxel*, Chunk*> getVoxel(float x, float y, float z) const;
+			std::tuple<int32_t, Chunk*, glm::uvec3> getVoxel(float x, float y, float z) const;
 
 			/**
 			 * @brief Cast a ray in the world to find the face encountered.
@@ -115,9 +113,6 @@ namespace mav {
 			//Chunk that need to have their vertices regenerated
 			std::set<Chunk*> needToRegenerateChunks;
 
-			#ifndef NDEBUG
-			DrawableMultiContainer debugSideContainer_;
-			#endif
 	};
 
 }

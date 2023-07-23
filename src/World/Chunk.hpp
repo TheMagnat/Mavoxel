@@ -24,53 +24,9 @@
 
 namespace mav {
 
-	struct VoxelMatrix {
-		std::vector<SimpleVoxel> data;
-		VoxelMap voxelIndices;
-
-		#ifdef RAY_CAST
-		std::vector<uint8_t> voxelMatrix;
-
-		void fillMatrix(VoxelMap const& matrix) {
-
-			size_t chunkSize = matrix.size();
-
-			voxelMatrix.clear();
-            voxelMatrix.reserve(chunkSize * chunkSize * chunkSize);
-
-			for (size_t z = 0; z < chunkSize; ++z) {
-				for (size_t y = 0; y < chunkSize; ++y) {
-					for (size_t x = 0; x < chunkSize; ++x) {
-						voxelMatrix.push_back( matrix[x][y][z] );
-					}
-				}
-			}
-
-		}
-
-		#endif
-
-		void initializeIndices(size_t size) {
-
-			voxelIndices.resize(size);
-			for (size_t x = 0; x < size; ++x) {
-
-				voxelIndices[x].resize(size);
-				for (size_t y = 0; y < size; ++y) {
-
-					voxelIndices[x][y].resize(size, -1);
-				}
-			}
-		
-		}
-
-	};
-
-
-
 	class World;
 	
-	class Chunk : public Drawable {
+	class Chunk {
 
 		static std::array<std::pair<int, int>, 6> faceToNeighborOffset;
 		static std::array<uint8_t, 6> faceToInverseFace;
@@ -79,7 +35,6 @@ namespace mav {
 			Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
 
 			void generateVoxels();
-			void generateVertices();
 			void graphicUpdate();
 
 			std::array<float, 4> generateAmbientOcclusion(SimpleVoxel const& voxel, uint8_t faceIndex) const;
@@ -105,15 +60,16 @@ namespace mav {
 			 * @param x 
 			 * @param y 
 			 * @param z 
+			 * TODO: refaire description
 			 * @return SimpleVoxel* A Pointer to the requested voxel. nullptr will be returned if the position is empty.
 			 */
-			SimpleVoxel* unsafeGetVoxel(int x, int y, int z);
+			int32_t unsafeGetVoxel(int x, int y, int z);
 
 			/**
 			 * Return -2 if position is out of bound, -1 if the position is empty
 			 * or the index of the voxel at the given position.
 			*/
-			int findAndGetVoxelIndex(glm::ivec3 const& position);
+			int32_t findAndGetVoxelIndex(glm::ivec3 const& position);
 
 			/**
 			 * @brief Delete a voxel at the given position.
@@ -150,7 +106,7 @@ namespace mav {
 			 * Return a pair containing a pointer to the side voxel of the position if it exist or nullptr otherwise
 			 * and a pointer to the side chunk if the voxel is not in the current chunk, or nullptr otherwise.
 			*/
-			std::pair<SimpleVoxel*, Chunk*> getSideVoxel(glm::ivec3 position, uint8_t side);
+			std::pair<int32_t, Chunk*> getSideVoxel(glm::ivec3 position, uint8_t side);
 
 			/**
 			 * Get the real chunk from the given voxel chunk position.
@@ -164,10 +120,6 @@ namespace mav {
 			void draw(VkCommandBuffer commandBuffer);
 			void debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame);
 
-			std::vector<uint32_t> getVertexAttributesSizes() const override;
-
-			void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
-
 			//Current GL state of the chunk. 0 mean data not ready, 1 mean data ready but VAO not up-to-date, 2 mean data and VAO ready.
 			int state;
 		//TODO: private
@@ -175,7 +127,6 @@ namespace mav {
 
 			//Voxels informations
 			SparseVoxelOctree svo_; //SVO must be initialized first to then get it's len
-			VoxelMatrix voxels_;
 
 			int posX_;
 			int posY_;
@@ -183,20 +134,14 @@ namespace mav {
 
 			int size_; //Note: we store size as an int because size_t could cause problem with negativity
 			float voxelSize_;
-			float positionOffsets_;
 			glm::vec3 centerWorldPosition_;
 
 			AABB collisionBox_;
-
-
 
 			//Reference to the world
 			World* world_;
 			const VoxelMapGenerator * voxelMapGenerator_;
 
-			#ifndef NDEBUG
-				DebugVoxel chunkSides;
-    		#endif
 	};
 
 }

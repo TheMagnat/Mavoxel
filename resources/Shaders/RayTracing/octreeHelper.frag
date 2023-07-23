@@ -7,8 +7,6 @@ struct LocalPositionResult {
 
 //Return the chunk coordinates and it's corresponding local position of the given position
 LocalPositionResult getChunkLocalPosition(vec3 position, uint chunkSize) {
-
-    position += chunkSize / 2.0;
     
     ivec3 chunkPosition = ivec3(floor(position / chunkSize));
     vec3 localPosition = mod(position, chunkSize);

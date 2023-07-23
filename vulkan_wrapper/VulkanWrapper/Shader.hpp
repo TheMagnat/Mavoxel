@@ -38,6 +38,7 @@ namespace vuw {
 
     struct TextureShaderInformation {
         Texture::TextureInformations informations;
+        uint32_t binding;
         const Texture* texturePtr;
     };
 
@@ -195,9 +196,9 @@ namespace vuw {
                     device_, commandPool, queue,
                     texture, textureInformations
                 );
-                
+                //TODO: passer le binding en paramètre plutôt...
                 //Then we add the informations on the texture
-                textureInformations_.push_back( TextureShaderInformation{textureInformations, &texturesStorage_.back()} );
+                textureInformations_.push_back( TextureShaderInformation{textureInformations, (uint32_t)textureInformations_.size(), &texturesStorage_.back()} );
 
             }
 
@@ -206,7 +207,7 @@ namespace vuw {
                 texturesStorage_.emplace_back(std::move(texture));
 
                 //Then we add the informations on the texture
-                textureInformations_.push_back( TextureShaderInformation{texturesStorage_.back().getInformations(), &texturesStorage_.back()} );
+                textureInformations_.push_back( TextureShaderInformation{texturesStorage_.back().getInformations(), (uint32_t)textureInformations_.size(), &texturesStorage_.back()} );
             }
 
             //To store an existing texture without taking the ownership
@@ -291,7 +292,7 @@ namespace vuw {
 
                     Texture::TextureInformations const& currentTextureInformations = textureInformations_[i].informations;
 
-                    layoutBindings[currentIndex].binding = currentTextureInformations.binding;
+                    layoutBindings[currentIndex].binding = textureInformations_[i].binding;
                     layoutBindings[currentIndex].descriptorCount = 1;
                     layoutBindings[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     layoutBindings[currentIndex].pImmutableSamplers = nullptr;
@@ -478,7 +479,7 @@ namespace vuw {
 
                     writeDescriptors[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                     writeDescriptors[currentIndex].dstSet = descriptorSets_[frameIndex];
-                    writeDescriptors[currentIndex].dstBinding = currentTexture->getInformations().binding;
+                    writeDescriptors[currentIndex].dstBinding = textureInformations_[textureIndex].binding;
                     writeDescriptors[currentIndex].dstArrayElement = 0;
 
                     writeDescriptors[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

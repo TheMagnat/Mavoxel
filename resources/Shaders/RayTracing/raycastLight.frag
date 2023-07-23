@@ -137,6 +137,8 @@ struct Sun {
 layout (set = 0, binding = 0) uniform RayCastInformations {
     float xRatio;
     Camera camera;
+    mat4 projection;
+    mat4 view;
     Sun sun;
     float time;
     vec3 voxelCursorPosition;
@@ -244,13 +246,18 @@ vec3 applyFog(vec3 color, vec3 fogColor, float colorDistance, float maxDistance)
 
 }
 
-vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
+struct RayCastingResult {
+    vec3 color;
+    vec3 lightColor;
+};
+
+RayCastingResult castRay(vec3 position, vec3 direction, float maxDistance) {
     
     //Parameter background color
     const vec3 skyColor = vec3(0.5294, 0.8078, 0.9216); //Sky
+    
 
-    vec3 color = skyColor;
-    // vec3 color = vec3(0.0, 0.0, 0.0); //Black
+    RayCastingResult result = RayCastingResult(skyColor, skyColor);
 
     //TODO: add distance as parameter of the Shader
     WorldRayCastResult rayCastResult = worldCastRay( position, direction, maxDistance );
@@ -276,10 +283,13 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
     RayAABBResult sunRayResult =  box(position, direction, sun.position - 5, sun.position + 5);
 
     if (sunRayResult.intersect && (rayCastResult.voxel == 0 || sunRayResult.dist < rayCastResult.dist)) {
-        color = vec3(1.0);
+        result.color = vec3(1.0);
+        result.lightColor = vec3(1.0);
     }
     else if (rayCastResult.voxel != 0) {
-
+        
+        //TODO: Pour le moment un voxel = pas de light color, peut être modifier ce comportement
+        result.lightColor = vec3(0.0);
         
         //Hit position informations
         //TODO: better hitdir ?
@@ -318,7 +328,7 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
         vec3 illuminatedColor = (diffuse + specular);
 
         //TODO: Find the perfect color picking
-        color = (constantColor + illuminatedColor * illuminated) * AO;
+        result.color = (constantColor + illuminatedColor * illuminated) * AO;
         // color = (ambient + light.diffuse * illuminated * material.diffuse + specular) * AO;
         // color = material.ambient * AO;
 
@@ -329,14 +339,14 @@ vec3 castRay(vec3 position, vec3 direction, float maxDistance) {
 
         if (rayCastResult.voxelWorldPosition == voxelCursorPosition && rayCastResult.normal == faceCursorNormal) {
             if ( distFromEdge >= 0.925 + cos(scaledTime)*0.035 ) {
-                color = vec3(1.0);
+                result.color = vec3(1.0);
             }
         }
 
         //We apply fog on the found color
-        color = applyFog(color, skyColor, rayCastResult.dist, maxDistance);
+        result.color = applyFog(result.color, skyColor, rayCastResult.dist, maxDistance);
 
     }
     
-    return color;
+    return result;
 }

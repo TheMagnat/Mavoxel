@@ -40,10 +40,6 @@ int main(int argc, char const *argv[]){
 
     //Mandatory : Fill global values (for release and debug)
     mav::Global::vulkanWrapper = &vulkanWrapper;
-    #ifndef NDEBUG
-    mav::DebugGlobal::debugShader = std::make_unique<vuw::MultiShader>(mav::Global::vulkanWrapper->generateMultiShader("Shaders/only_color_uni.vert.spv", "Shaders/only_color_uni.frag.spv"));
-    #endif
-
 
     Game game(&gameWindow);
     game.initChunks();
@@ -69,11 +65,6 @@ int main(int argc, char const *argv[]){
 
 	gameWindow.startLoop();
     vulkanWrapper.waitIdle();
-
-    //If debug, we need to free first
-    #ifndef NDEBUG
-    mav::DebugGlobal::debugShader->clean();
-    #endif
 
 	return 0;
 }

@@ -187,15 +187,18 @@ namespace vuw {
 
                 // One per framebuffer
                 // Deactivated :
-                VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-                colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-                colorBlendAttachment.blendEnable = VK_FALSE;
-                colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-                colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-                colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-                colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-                colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-                colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+                std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments( renderPass_->getNbColors() );
+
+                for (size_t i = 0; i < renderPass_->getNbColors(); ++i) {
+                    colorBlendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+                    colorBlendAttachments[i].blendEnable = VK_FALSE;
+                    colorBlendAttachments[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+                    colorBlendAttachments[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+                    colorBlendAttachments[i].colorBlendOp = VK_BLEND_OP_ADD; // Optional
+                    colorBlendAttachments[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+                    colorBlendAttachments[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+                    colorBlendAttachments[i].alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+                }
 
                 // Global color blend settings
                 VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -203,8 +206,8 @@ namespace vuw {
                 colorBlending.logicOpEnable = VK_FALSE;
                 colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
 
-                colorBlending.attachmentCount = 1;
-                colorBlending.pAttachments = &colorBlendAttachment;
+                colorBlending.attachmentCount = renderPass_->getNbColors();
+                colorBlending.pAttachments = colorBlendAttachments.data();
 
                 colorBlending.blendConstants[0] = 0.0f; // Optional
                 colorBlending.blendConstants[1] = 0.0f; // Optional

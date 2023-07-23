@@ -63,70 +63,30 @@ class Game {
 
         Game(const vuw::Window* window) : window_(window),
             //Shaders
-            chunkShader(mav::Global::vulkanWrapper->generateShader("Shaders/simple_voxel.vert.spv", "Shaders/simple_voxel.frag.spv")),
-            selectVoxelShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/select_color.frag.spv")),
-            whiteShader(mav::Global::vulkanWrapper->generateShader("Shaders/basic_color.vert.spv", "Shaders/sun_color.frag.spv")),
-            colorShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_color.vert.spv", "Shaders/only_color.frag.spv")),
-            rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/ray_tracing.frag.spv")),
+            rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/RayTracing/ray_tracing.frag.spv")),
             filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/filter.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), VOXEL_SIZE), generator(0, CHUNK_SIZE, VOXEL_SIZE), gravity(9.81),
-            world(&chunkShader, &environment, SVO_DEPTH, VOXEL_SIZE),
-
-            ////Single objects
-            //Objects
-            selectionFace(&environment, grassMaterial, VOXEL_SIZE),
+            world(SVO_DEPTH, VOXEL_SIZE),
+            
             sun(&environment, sunMaterial, 1),
-            lines(player.getCamera()),
-
-            //Wrappers
-            selectionFaceWrapper(&selectVoxelShader, &selectionFace),
-            sunWrapper(&whiteShader, &sun),
-            linesWrapper(&colorShader, &lines),
 
             //Ray casting
             RCRenderer(&world, &environment, SVO_DEPTH),
             RCRendererWrapper(&rayCastingShader, &RCRenderer),
 
             //Filter
-            filterRenderer(&mav::Global::vulkanWrapper->getFilterRenderer().getTextures()),
+            filterRenderer(&environment, &mav::Global::vulkanWrapper->getFilterRenderer().getTextures(), &mav::Global::vulkanWrapper->getFilterRenderer().getLightTextures()),
             filterRendererWrapper(&filterShader, &filterRenderer)
 
         {
 
             //Init shaders
             #ifndef NDEBUG
-                mav::DebugGlobal::debugShader->addUniformBufferObjects({
-                    {0, sizeof(ModelViewProjectionObjectNoNormal), VK_SHADER_STAGE_VERTEX_BIT},
-                    {1, sizeof(glm::vec3), VK_SHADER_STAGE_FRAGMENT_BIT}
-                });
-                mav::DebugGlobal::debugShader->generateBindingsAndSets();
+
             
             #endif
-
-            chunkShader.addUniformBufferObjects({
-                {0, sizeof(ModelViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT},
-                {1, sizeof(glm::vec3), VK_SHADER_STAGE_FRAGMENT_BIT},
-                {2, sizeof(LightObject), VK_SHADER_STAGE_FRAGMENT_BIT}
-            });
-            chunkShader.generateBindingsAndSets();
-
-            selectVoxelShader.addUniformBufferObjects({
-                {0, sizeof(ModelViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT},
-                {1, sizeof(float), VK_SHADER_STAGE_FRAGMENT_BIT}
-            });
-            selectVoxelShader.generateBindingsAndSets();
-
-            whiteShader.addUniformBufferObjects({
-                {0, sizeof(ModelViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT}
-            });
-            whiteShader.generateBindingsAndSets();
-
-            colorShader.addUniformBufferObjects({
-                {0, sizeof(ViewProjectionObject), VK_SHADER_STAGE_VERTEX_BIT}
-            });
-            colorShader.generateBindingsAndSets();
 
             //Ray Casting
             rayCastingShader.addUniformBufferObjects({
@@ -147,22 +107,17 @@ class Game {
             //Filters
             vuw::SceneRenderer const& filterSceneRenderer = mav::Global::vulkanWrapper->getFilterRenderer();
             filterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderer.getTextures().front().getInformations(), &filterSceneRenderer.getTextures().front()},
+                vuw::TextureShaderInformation{filterSceneRenderer.getTextures().front().getInformations(), 0, &filterSceneRenderer.getTextures().front()},
+            });
+            filterShader.addTexture({
+                vuw::TextureShaderInformation{filterSceneRenderer.getLightTextures().front().getInformations(), 1, &filterSceneRenderer.getLightTextures().front()},
+            });
+            filterShader.addUniformBufferObjects({
+                {2, sizeof(TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
             });
 
             filterShader.generateBindingsAndSets();
 
-            // Init objects
-            world.initializePipeline(true);
-
-            selectionFaceWrapper.initializePipeline(true);
-            
-            sunWrapper.initializePipeline(true);
-            sunWrapper.initializeVertices();
-
-            //Note: Lines use line primitive topology type.
-            linesWrapper.initializePipeline(true, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-            
             //Ray casting
             RCRendererWrapper.initializePipeline(true);
             RCRendererWrapper.initializeVertices();
@@ -198,12 +153,12 @@ class Game {
         void initChunks() {
 
             if (SOLO_CHUNK) {
-                // world.createChunk(0, 0, -1, &generator);
+                world.createChunk(0, -1, -1, &generator);
+                world.createChunk(0, 0, -1, &generator);
                 // world.createChunk(1, 0, 1, &generator);
                 // world.createChunk(0, 0, -1, &generator);
                 // world.createChunk(0, 0, 1, &generator);
                 // world.createChunk(2, 0, 0, &generator);
-                world.createChunk(0, 0, 0, &generator);
 
                 //DEBUG RAY-CAST
                 // rayCastingShader.addUniformBufferObjects({
@@ -239,11 +194,10 @@ class Game {
 			            Profiler profiler("Click on mouse delete");
 		            #endif
 
-                    currentlyLookingFace->chunk->deleteVoxel(currentlyLookingFace->voxel->getChunkPosition());
+                    currentlyLookingFace->chunk->deleteVoxel(currentlyLookingFace->position);
 
                     //Threader les generateVertices
                     for (mav::Chunk* chunkPtr : world.needToRegenerateChunks) {
-                        chunkPtr->generateVertices();
                         chunkPtr->graphicUpdate();
                     }
 
@@ -260,13 +214,12 @@ class Game {
 			            Profiler profiler("Click on mouse add");
 		            #endif
 
-                    glm::ivec3 newVoxelPositionToChunk = currentlyLookingFace->voxel->getChunkPosition();
+                    glm::ivec3 newVoxelPositionToChunk = currentlyLookingFace->position;
                     newVoxelPositionToChunk += currentlyLookingFace->normal;
 
                     currentlyLookingFace->chunk->addVoxel(newVoxelPositionToChunk, 4);
 
                     for (mav::Chunk* chunkPtr : world.needToRegenerateChunks) {
-                        chunkPtr->generateVertices();
                         chunkPtr->graphicUpdate();
                     }
 
@@ -297,6 +250,17 @@ class Game {
             if(key == GLFW_KEY_TAB && action == GLFW_PRESS) {
                 std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
                 std::cout << "FPS: " << (1.0f/(totalElapsedTime_/(float)frameCount)) << std::endl;
+
+                glm::vec4 viewPosition = environment.camera->GetViewMatrix() * glm::vec4(environment.sun->getPosition(), 1.0);
+                glm::vec4 ndcPosition = environment.camera->Projection * viewPosition;
+
+                glm::vec2 screenPosition;
+                glm::vec2 viewportSize(1920, 1080);
+
+                screenPosition.x = (ndcPosition.x / ndcPosition.w + 1.0) * 0.5;
+                screenPosition.y = (1.0 - ndcPosition.y / ndcPosition.w) * 0.5;
+
+                std::cout << "Screen pos = x: " << screenPosition.x << " y: " << screenPosition.y << " zView: " << viewPosition.z << std::endl;
             }
 
             if (key == GLFW_KEY_L && action == GLFW_PRESS) {
@@ -315,7 +279,7 @@ class Game {
             }
 
             if(key == GLFW_KEY_T && action == GLFW_PRESS) {
-                rayCasting = 1 - rayCasting;
+
             }
 
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
@@ -350,22 +314,6 @@ class Game {
                     camera->maintainFrustum = false;
 
                     //Frustum
-
-                    //Show camera frustum on screen
-                    lines.clear();
-
-                    //Add the camera axis lines
-                    lines.addLine(std::make_pair(camera->Position, camera->Position + camera->Front * 10), glm::vec3(0.0f, 0.0f, 1.0f));
-                    lines.addLine(std::make_pair(camera->Position, camera->Position + camera->Up * 10), glm::vec3(0.0f, 1.0f, 0.0f));
-                    lines.addLine(std::make_pair(camera->Position, camera->Position + camera->Right * 10), glm::vec3(1.0f, 0.0f, 0.0f));
-                    
-                    //Generate frustum points and lines and then add them to the lines
-                    std::array<glm::vec3, 8> frustumPoints = getFrustumPoints(camera->Projection * camera->GetViewMatrix());
-                    for (std::pair<glm::vec3, glm::vec3> const& line : pointsToLines(frustumPoints)) {
-                        lines.addLine(line, black);
-                    }
-
-                    lines.graphicUpdate();
 
                     //Put back true projection
                     camera->Projection = std::move(projectionSave);
@@ -443,7 +391,7 @@ class Game {
             // sun.setPosition(player.getCamera()->Position + player.getCamera()->Front * 50); // Front of player
             // sun.setPosition(0.f, 0.f, 0.0f); // Center position
             // sun.setPosition(cos(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.x, sin(tempoTotalTime/5.0f) * 400.f + player.getCamera()->Position.y, 0.0f + player.getCamera()->Position.z); // Simulate a sun rotation around you
-            // sun.setPosition(cos(totalElapsedTime_/25.0f) * 300.f, sin(totalElapsedTime_/25.0f) * 300.f, 100.0f); // Simulate a sun rotation
+            // sun.setPosition(cos(totalElapsedTime_/25.0f) * 400.f, sin(totalElapsedTime_/25.0f) * 400.f, 100.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
             //Drawing phase
@@ -476,10 +424,8 @@ class Game {
             // currentlyLookingFaceTwo = world.castSVORay(player.getCamera()->Position, player.getCamera()->Front);
             if ( currentlyLookingFace ) {
 
-                // glm::vec3 collisionFaceWorldPosition = glm::vec3(currentlyLookingFace->voxel->getChunkPosition()) + (glm::vec3(currentlyLookingFace->chunk->getPosition()) * std::pow(2, SVO_DEPTH)) - (float)(std::pow(2, SVO_DEPTH) / 2.0);
-
                 collisionInformations = mav::CollisionInformations {
-                    currentlyLookingFace->voxel->getChunkPosition(),
+                    currentlyLookingFace->position,
                     currentlyLookingFace->chunk->getPosition(),
                     currentlyLookingFace->normal 
                 };
@@ -490,34 +436,15 @@ class Game {
                 environment.collisionInformations = nullptr;
             }
 
-            if (rayCasting) {
-                RCRendererWrapper.draw(currentCommandBuffer, currentFrame);
-            }
-            else {
-
-                world.drawAll(currentCommandBuffer, currentFrame);
-
-                sunWrapper.draw(currentCommandBuffer, currentFrame);
-                linesWrapper.draw(currentCommandBuffer, currentFrame);
-                // player.draw();
-
-                if ( currentlyLookingFace ) {
-                    float offsetValue = 0.0001f + 0.02f * std::log(glm::distance(player.getCamera()->Position, currentlyLookingFace->points[0])/10.0f + 1);
-                    selectionFace.generateVertices(currentlyLookingFace->getOffsettedPoints( offsetValue ));
-                    selectionFace.graphicUpdate();
-                    selectionFaceWrapper.draw(currentCommandBuffer, currentFrame);
-                }
-
-            }
+            RCRendererWrapper.draw(currentCommandBuffer, currentFrame);
 
             //End scene rendering into a texture
             filterSceneRenderer.endRecordingCommandBuffer(currentCommandBuffer);
 
             //Start rendering final scene
             mav::Global::vulkanWrapper->beginRecordingCommandBuffer(currentCommandBuffer);
-            
-            //TODO: use the filled texture as an input of a shader to use lower resolution scaled on full screen
-            
+
+            //This will draw on a texture            
             filterRendererWrapper.draw(currentCommandBuffer, currentFrame);
 
             //End rendering final scene
@@ -535,19 +462,12 @@ class Game {
 
         const vuw::Window* window_;
 
-        //Shaders
-        // mav::Shader chunkShader;
-        vuw::Shader chunkShader;
-        vuw::Shader selectVoxelShader;
-        vuw::Shader whiteShader;
-        vuw::Shader colorShader;
-
+        ////Shaders
         //Ray-Casting
         vuw::Shader rayCastingShader;
 
         //Filter
         vuw::Shader filterShader;
-
 
         float totalElapsedTime_;
 
@@ -556,20 +476,13 @@ class Game {
         //mav::Camera camera;
         mav::Environment environment;
         ClassicVoxelMapGenerator generator;
-
+        
         //Physics
         mav::Gravity gravity;
 
         mav::World world;
 
-        mav::Face selectionFace;
-        mav::DrawableSingle selectionFaceWrapper;
-
         mav::LightVoxel sun;
-        mav::DrawableSingle sunWrapper;
-        
-        mav::Lines lines;
-        mav::DrawableSingle linesWrapper;
 
         std::optional<mav::CollisionFace> currentlyLookingFace;
         mav::CollisionInformations collisionInformations;
@@ -577,7 +490,6 @@ class Game {
         //Ray Casting
         mav::RayCastingRenderer RCRenderer;
         mav::DrawableSingle RCRendererWrapper;
-        bool rayCasting = true;
 
         //Filter
         mav::FilterRenderer filterRenderer;

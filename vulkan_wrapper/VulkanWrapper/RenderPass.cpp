@@ -115,51 +115,56 @@ namespace vuw {
     //For output in texture
     void RenderPass::initializeRenderPass(bool depthCheck, VkFormat depthFormat) {
 
-        std::vector<VkAttachmentDescription> attachments(1 + depthCheck);
+        std::vector<VkAttachmentDescription> attachments(nbColors_ + depthCheck);
         
-        // Color attachment description
-        attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
-        attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+        VkSubpassDescription subpass{};
+        std::vector<VkAttachmentReference> colorAttachments(nbColors_);
 
-        attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        for (size_t i = 0; i < nbColors_; ++i) {
 
-        attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            // Color attachment description
+            attachments[i].format = VK_FORMAT_R8G8B8A8_UNORM;
+            attachments[i].samples = VK_SAMPLE_COUNT_1_BIT;
 
-        attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //Here the end layout will be an input for another shader
+            attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+            attachments[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachments[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+            attachments[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            attachments[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //Here the end layout will be an input for another shader
+
+            colorAttachments[i].attachment = i;
+            colorAttachments[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        }
 
         // Subpasses
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.colorAttachmentCount = static_cast<uint32_t>( colorAttachments.size() );
+        subpass.pColorAttachments = colorAttachments.data();
         
         // Depth initialization to prevent scope destruction
         VkAttachmentReference depthAttachmentRef{};
         if (depthCheck) {
             // Depth attachment description
-            attachments[1].format = depthFormat;
-            attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+            attachments.back().format = depthFormat;
+            attachments.back().samples = VK_SAMPLE_COUNT_1_BIT;
 
-            attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-            attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-            attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            attachments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            depthAttachmentRef.attachment = 1;
+            depthAttachmentRef.attachment = attachments.size() - 1;
             depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            //Add depth attachment ref to subpass
+            //Add depth attachment ref to subpasses
             subpass.pDepthStencilAttachment = &depthAttachmentRef;
         }
 
@@ -183,7 +188,6 @@ namespace vuw {
         renderPassInfo.pSubpasses = &subpass;
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
-
 
         if (vkCreateRenderPass(devicePtr_, &renderPassInfo, nullptr, &renderPass_) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create render pass !");

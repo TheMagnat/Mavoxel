@@ -47,28 +47,14 @@ namespace mav{
 
 	
 	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
-		: Drawable(), state(0), posX_(posX), posY_(posY), posZ_(posZ),
-		size_((int)svo_.getLen()), voxelSize_(voxelSize), positionOffsets_( -((float)(size_ - 1) / 2.0f) * voxelSize ),
+		: state(0), posX_(posX), posY_(posY), posZ_(posZ),
+		size_((int)svo_.getLen()), voxelSize_(voxelSize),
 		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
 		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
 		svo_(octreeDepth),
 		world_(world), voxelMapGenerator_(voxelMapGenerator)
-#ifndef NDEBUG
-		, chunkSides(world->environment, {
-			{0.1f, 0.1f, 0.1f},
-			{0.5f, 0.5f, 0.5f},
-			{1.0f, 1.0f, 1.0f}
-		}, size_*voxelSize, centerWorldPosition_ )
-#endif
 
-		{
-
-			#ifndef NDEBUG
-				chunkSides.initialize();
-				chunkSides.initialize();
-    		#endif
-
-		}
+		{}
 
 
 	void Chunk::generateVoxels() {
@@ -79,15 +65,7 @@ namespace mav{
 
 		// Move voxelMap and prepare indices size
 		VoxelData voxelData = voxelMapGenerator_->generate(posX_, posY_, posZ_);
-		
 		VoxelMap const& voxelMap = voxelData.map;
-		voxels_.data.reserve(voxelData.count);
-		
-		voxels_.initializeIndices(size_);
-
-		#ifdef RAY_CAST
-		voxels_.fillMatrix(voxelMap);
-		#endif
 
 		// Calculate the coordinates of each points
 		for (size_t x = 0; x < size_; ++x) {
@@ -96,43 +74,7 @@ namespace mav{
 					
 					if( voxelMap[x][y][z] == 0 ) continue;
 
-					// Position in the chunk + Offset to center the chunk + position in the world
-					float xPos = (x * voxelSize_) + positionOffsets_ + (posX_ * size_ * voxelSize_);
-					float yPos = (y * voxelSize_) + positionOffsets_ + (posY_ * size_ * voxelSize_);
-					float zPos = (z * voxelSize_) + positionOffsets_ + (posZ_ * size_ * voxelSize_);
-
-					voxels_.voxelIndices[x][y][z] = voxels_.data.size();
-					voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), glm::ivec3(x, y, z), voxelMap[x][y][z]);
 					svo_.set(glm::uvec3(x, y, z), voxelMap[x][y][z]);
-
-					//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-					for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
-
-						//TODO: On a observé un gain de temps au passage de glm::vec3 à utiliser des entiers direct. Chercher des endroits où on peut optimiser pareil
-						int foundVoxel = findVoxel(
-								x + (Chunk::faceToNeighborOffset[faceIndex].first == 0) * Chunk::faceToNeighborOffset[faceIndex].second,
-								y + (Chunk::faceToNeighborOffset[faceIndex].first == 1) * Chunk::faceToNeighborOffset[faceIndex].second,
-								z + (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second,
-								voxelMap
-						);
-						// If the positions are out of bound, test with the voxelTester function
-						
-						//TODO: Rendre ça paramétrable
-						if (true) {
-							if (foundVoxel == 2) {
-								foundVoxel = voxelMapGenerator_->isIn(
-									xPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 0) * Chunk::faceToNeighborOffset[faceIndex].second,
-									yPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 1) * Chunk::faceToNeighborOffset[faceIndex].second,
-									zPos + voxelSize_ * (Chunk::faceToNeighborOffset[faceIndex].first == 2) * Chunk::faceToNeighborOffset[faceIndex].second
-								);
-							}
-						}
-
-						if(foundVoxel == 1) {
-							voxels_.data.back().setFaceState(faceIndex, false);							
-						}
-
-					}
 
 				}
 			}
@@ -159,37 +101,29 @@ namespace mav{
 
 		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return 2;
 
-		return voxels_.voxelIndices[position.x][position.y][position.z] != -1;
+		return svo_.get(position).first != 0;
 	}
 
 	int Chunk::findVoxel(int x, int y, int z) const {
 
 		if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_) return 2;
 
-		return voxels_.voxelIndices[x][y][z] != -1;
+		return svo_.get(glm::uvec3(x, y, z)).first != 0;
 	}
 
-	SimpleVoxel* Chunk::unsafeGetVoxel(int x, int y, int z) {
+	int32_t Chunk::unsafeGetVoxel(int x, int y, int z) {
 
-		// if (x < 0 || y < 0 || z < 0 || x >= size_ || y >= size_ || z >= size_) {
-		//  	return nullptr;
-		// }
-
-		int index = voxels_.voxelIndices[x][y][z];
-		if(index != -1) return &voxels_.data[ index ];
-
-		return nullptr;
+		return svo_.get(glm::uvec3(x, y, z)).first;
 
 	}
 
-	int Chunk::findAndGetVoxelIndex(glm::ivec3 const& position) {
-		if (position.x < 0 || position.y < 0 || position.z < 0
-			|| position.x >= size_ || position.y >= size_ || position.z >= size_) return -2;
+	int32_t Chunk::findAndGetVoxelIndex(glm::ivec3 const& position) {
+		if (position.x < 0 || position.y < 0 || position.z < 0 || position.x >= size_ || position.y >= size_ || position.z >= size_) return -2;
 
-		return voxels_.voxelIndices[position.x][position.y][position.z];
+		return svo_.get(position).first;
 	}
 
-	std::pair<SimpleVoxel*, Chunk*> Chunk::getSideVoxel(glm::ivec3 voxelPosition, uint8_t side) {
+	std::pair<int32_t, Chunk*> Chunk::getSideVoxel(glm::ivec3 voxelPosition, uint8_t side) {
 
 		#ifdef TIME
 			Profiler profiler("Get side voxel");
@@ -201,9 +135,10 @@ namespace mav{
 				voxelPosition.z + (Chunk::faceToNeighborOffset[side].first == 2) * Chunk::faceToNeighborOffset[side].second
 		};
 
-		int sideVoxelIndex = findAndGetVoxelIndex(neighborPosition);
+		//Verify if voxel is in current chunk or another chunk
+		int32_t sideVoxelIndex = findAndGetVoxelIndex(neighborPosition);
 		if (sideVoxelIndex >= 0) {
-			return {&voxels_.data[sideVoxelIndex], nullptr};
+			return {sideVoxelIndex, nullptr};
 		}
 		else if (sideVoxelIndex == -2) {
 
@@ -215,60 +150,32 @@ namespace mav{
 
 			if (sideChunk == nullptr) {
 				//Special case, the position is not in the current chunk but the side voxel does not exist
-				return {nullptr, nullptr};
+				return {-1, nullptr};
 			}
 
 			neighborPosition[Chunk::faceToNeighborOffset[side].first] -= size_ * Chunk::faceToNeighborOffset[side].second;
-			int sideChunkVoxelIndex = sideChunk->findAndGetVoxelIndex(neighborPosition);
+			int32_t sideChunkVoxelIndex = sideChunk->findAndGetVoxelIndex(neighborPosition);
 
 			if (sideChunkVoxelIndex >= 0) {
-				return {&sideChunk->voxels_.data[sideChunkVoxelIndex], sideChunk};
+				return {sideChunkVoxelIndex, sideChunk};
 			}
 			else {
-				return {nullptr, sideChunk};
+				return {-1, sideChunk};
 			}
 
 		}
 
 		//Here, the position is in the current chunk but the voxel is empty
-		return {nullptr, nullptr};
+		return {-1, nullptr};
 	}
 
 	bool Chunk::deleteVoxel(glm::ivec3 position) {
-
-		int voxelIndex = voxels_.voxelIndices[position.x][position.y][position.z];
-		if (voxelIndex == -1) return false;
 
 		#ifdef TIME
 			Profiler profiler("Delete voxel");
 		#endif
 
-		voxels_.voxelIndices[position.x][position.y][position.z] = -1;
 		svo_.set(position, 0);
-
-		// Move the last voxel at the place of the old voxel to prevent moving all the indexes
-		// and put the correct index in the indexes map for the moved voxel
-		// (only if it was not already the last voxel)
-		if (voxelIndex != voxels_.data.size() - 1) {
-			voxels_.data[voxelIndex] = std::move(voxels_.data.back());
-
-			glm::ivec3 const& movedChunkPosition = voxels_.data[voxelIndex].getChunkPosition();
-			voxels_.voxelIndices[movedChunkPosition.x][movedChunkPosition.y][movedChunkPosition.z] = voxelIndex;
-		}
-		
-		voxels_.data.pop_back();
-
-		//And correct neighbors face state
-		for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
-
-			auto [sideVoxel, sideChunk] = getSideVoxel(position, faceIndex);
-			if (sideVoxel) {
-				sideVoxel->setFaceState(faceToInverseFace[faceIndex], true);
-			}
-			//We force to regenerate even if it was not edited to regenerate AO
-			if (sideChunk) world_->needToRegenerateChunks.insert(sideChunk);
-
-		}
 
 		//We notify that we need to regenerate this chunk
 		world_->needToRegenerateChunks.insert(this);
@@ -324,229 +231,17 @@ namespace mav{
 
 	void Chunk::unsafeAddVoxel(glm::ivec3 position, int newVoxelId) {
 
-		size_t x = position.x;
-		size_t y = position.y;
-		size_t z = position.z;
-
-		// Position in the chunk + Offset to center the chunk + position in the world
-		float xPos = (x * voxelSize_) + positionOffsets_ + (posX_ * size_ * voxelSize_);
-		float yPos = (y * voxelSize_) + positionOffsets_ + (posY_ * size_ * voxelSize_);
-		float zPos = (z * voxelSize_) + positionOffsets_ + (posZ_ * size_ * voxelSize_);
-
-		voxels_.voxelIndices[x][y][z] = voxels_.data.size();
-		voxels_.data.emplace_back(glm::vec3(xPos, yPos, zPos), position, newVoxelId);
 		svo_.set(position, newVoxelId);
-
-		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-		for (uint8_t faceIndex = 0; faceIndex < Chunk::faceToNeighborOffset.size(); ++faceIndex) {
-
-			auto [sideVoxel, sideChunk] = getSideVoxel(position, faceIndex);
-			if (sideVoxel) {
-				voxels_.data.back().setFaceState(faceIndex, false);
-				sideVoxel->setFaceState(Chunk::faceToInverseFace[faceIndex], false);
-			}
-
-			// If the voxel is not from the current chunk, notify that we need to regenerate for AO
-			if (sideChunk) world_->needToRegenerateChunks.insert(sideChunk);
-		}
 
 		//Notify that we need to regenerate this chunk
 		world_->needToRegenerateChunks.insert(this);
 
 	}
 
-	std::array<float, 4> Chunk::generateAmbientOcclusion(SimpleVoxel const& voxel, uint8_t faceIndex) const {
-		
-		#ifdef TIME
-			Profiler profiler("AO");
-		#endif
-
-		static const std::array<float, 4> AOcurve { 0.25f, 0.6f, 0.8f, 1.0f };
-
-		//Faces order
-		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-		static const std::vector<std::vector<glm::ivec3>> positionToLookUp {
-			//bottom
-			{ {-1, -1, 0}, {-1, -1, 1}, {0, -1, 1}, {1, -1, 1}, {1, -1, 0}, {1, -1, -1}, {0, -1, -1}, {-1, -1, -1} },
-			//front
-			{ {-1, 0, 1}, {-1, 1, 1}, {0, 1, 1}, {1, 1, 1}, {1, 0, 1}, {1, -1, 1}, {0, -1, 1}, {-1, -1, 1} },
-			//right
-			{ {1, 0, 1}, {1, 1, 1}, {1, 1, 0}, {1, 1, -1}, {1, 0, -1}, {1, -1, -1}, {1, -1, 0}, {1, -1, 1} },
-			//back
-			{ {1, 0, -1}, {1, 1, -1}, {0, 1, -1}, {-1, 1, -1}, {-1, 0, -1}, {-1, -1, -1}, {0, -1, -1}, {1, -1, -1} },
-			//left
-			{ {-1, 0, -1}, {-1, 1, -1}, {-1, 1, 0}, {-1, 1, 1}, {-1, 0, 1}, {-1, -1, 1}, {-1, -1, 0}, {-1, -1, -1} },
-			//top
-			{ {-1, 1, 0}, {-1, 1, -1}, {0, 1, -1}, {1, 1, -1}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}, {-1, 1, 1} }
-		};
-
-		glm::ivec3 const& voxelChunkPosition = voxel.getChunkPosition();
-		glm::vec3 const& voxelWorldPosition = voxel.getPosition();
-
-		std::vector<bool> foundVoxels;
-		foundVoxels.resize(8);
-		for(uint8_t i = 0; i < 8; ++i) {
-			
-			glm::ivec3 neighborChunkPosition = voxelChunkPosition + positionToLookUp[faceIndex][i];
-			int foundVoxel = findVoxel(neighborChunkPosition);
-			if (foundVoxel == 2) {
-
-				const Chunk * neighborChunk = getChunk(neighborChunkPosition);
-				if (neighborChunk) {
-					foundVoxel = neighborChunk->findVoxel(neighborChunkPosition);
-				}
-				else {
-					foundVoxel = voxelMapGenerator_->isIn(
-						voxelWorldPosition.x + voxelSize_ * positionToLookUp[faceIndex][i].x,
-						voxelWorldPosition.y + voxelSize_ * positionToLookUp[faceIndex][i].y,
-						voxelWorldPosition.z + voxelSize_ * positionToLookUp[faceIndex][i].z
-					);
-				}
-			}
-			
-			if (foundVoxel == 1) foundVoxels[i] = true;
-			else foundVoxels[i] = false;
-			
-		}
-
-		//Vertices order
-		//top left, bottom left, bottom right, top right
-		return {
-			AOcurve[vertexAO(foundVoxels[0], foundVoxels[1], foundVoxels[2])],
-			AOcurve[vertexAO(foundVoxels[6], foundVoxels[7], foundVoxels[0])],
-			AOcurve[vertexAO(foundVoxels[4], foundVoxels[5], foundVoxels[6])],
-			AOcurve[vertexAO(foundVoxels[2], foundVoxels[3], foundVoxels[4])]
-		};
-
-	}
-
-	void Chunk::generateVertices() {
-
-		#ifdef TIME
-			Profiler profiler("Generate vertices");
-		#endif
-
-		// We first make sure that the vectors are empty
-		vertices_.clear();
-		indices_.clear();
-		
-		size_t insertedFaces = 0;
-		for (size_t i = 0; i < voxels_.data.size(); ++i) {
-			SimpleVoxel const& voxel = voxels_.data[i];
-
-			for (uint8_t faceIndex = 0; faceIndex < 6; ++faceIndex) {
-				
-				// Here the face is not shown
-				if (!voxel.getFaceState(faceIndex)) continue;
-
-				//Ambient occlusion
-				//TODO: benchmark le temps que prends cette nouvelle fonction en tout
-				std::array<float, 4> AO = generateAmbientOcclusion(voxel, faceIndex);
-
-				// glm::vec3 voxelPosition = voxel.getPosition();
-				// std::array<float, 4> AO = generateAmbientOcclusion(glm::ivec3(
-				// 	(voxelPosition.x - positionOffsets_ - (posX_ * size_ * voxelSize_)) / voxelSize_,
-				// 	(voxelPosition.y - positionOffsets_ - (posY_ * size_ * voxelSize_)) / voxelSize_,
-				// 	(voxelPosition.z - positionOffsets_ - (posZ_ * size_ * voxelSize_)) / voxelSize_), faceIndex
-				// );
-
-				std::vector<float> face = voxel.getFace(faceIndex, AO);
-
-				//We insert the face vertices...
-				vertices_.insert(vertices_.end(), std::make_move_iterator(face.begin()), std::make_move_iterator(face.end()));
-
-				//...And it's corresponding indices for the EBO
-				size_t currentIndexOffset = (insertedFaces++ * 4);
-
-				//We flip the vertices depending on the strongest diagonal to lower the effect of quad interpolation
-				if (AO[0] + AO[2] > AO[1] + AO[3]) {
-					for (uint8_t index : SimpleVoxel::flippedVerticesIndices) {
-						indices_.push_back(currentIndexOffset + index);
-					}
-				}
-				else {
-					for (uint8_t index : SimpleVoxel::verticesIndices) {
-						indices_.push_back(currentIndexOffset + index);
-					}
-				}
-
-			}
-
-		}
-
-	}
-
-	void Chunk::graphicUpdate() {
-		Drawable::graphicUpdate();
-		
+	void Chunk::graphicUpdate() {		
 		#ifdef RAY_CAST
 		svo_.updateBuffer();
 		#endif
 	}
 	
-	void Chunk::debugDraw(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
-
-		#ifndef NDEBUG
-
-			bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
-
-			//We always want to draw the debug chunk sides so we do it before the checks
-			if (isVisible) chunkSides.setColor(glm::vec3(1.0f));
-			else chunkSides.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
-			
-			chunkSides.updateShader(DebugGlobal::debugShader.get(), currentFrame);
-			chunkSides.draw(commandBuffer);
-
-		#endif
-
-	}
-
-
-	void Chunk::draw(VkCommandBuffer commandBuffer) {
-
-		if (indices_.empty()) return;
-
-		//Verify if chunks is inside camera frustum
-		bool isVisible = world_->environment->camera->frustum.collide(collisionBox_);
-		if (!isVisible) return;
-
-		vertexData_.bind(commandBuffer);
-		vertexData_.draw(commandBuffer);
-
-	}
-
-	std::vector<uint32_t> Chunk::getVertexAttributesSizes() const {
-		return {3, 3, 2, 1, 1};
-	}
-
-	void Chunk::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
-
-		//Binding 0
-		ModelViewProjectionObject mvp{};
-		mvp.model = glm::mat4(1.0f);
-		mvp.view = world_->environment->camera->GetViewMatrix();
-		mvp.projection = world_->environment->camera->Projection;
-		mvp.projection[1][1] *= -1;
-
-
-		mvp.modelNormal = glm::transpose(glm::inverse(mvp.model));
-		// mvp.modelNormal = glm::mat3(1.0f);
-		// glm::mat3(glm::transpose(glm::inverse(model))
-
-		//Binding 1
-		glm::vec3 viewPos = world_->environment->camera->Position;
-
-		//Binding 2
-		LightObject light{};
-		light.position = world_->environment->sun->getPosition();
-		light.ambient = world_->environment->sun->material.ambient;
-		light.diffuse = world_->environment->sun->material.diffuse;
-		light.specular = world_->environment->sun->material.specular;
-
-		shader->updateUniform(0, currentFrame, &mvp, sizeof(mvp));
-		shader->updateUniform(1, currentFrame, &viewPos, sizeof(viewPos));
-		shader->updateUniform(2, currentFrame, &light, sizeof(light));
-
-	}
-
 }

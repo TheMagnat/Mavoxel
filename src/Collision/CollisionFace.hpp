@@ -13,16 +13,13 @@ namespace mav {
 
     struct CollisionFace {
 
-        CollisionFace(SimpleVoxel* focusedVoxel, Chunk* parrentChunk, std::vector<float> const& vertices, float distanceP);
-
-        std::array<glm::vec3, 4> getOffsettedPoints(float offsetValue) const;
-
+        CollisionFace(int32_t voxelP, Chunk* parentChunk, glm::uvec3 const& positionP, glm::vec3 const& normalP, float distanceP);
 
         //Information about the voxel owning the face
-        SimpleVoxel* voxel;
+        int32_t voxel;
         Chunk* chunk;
 
-        std::array<glm::vec3, 4> points;
+        glm::uvec3 position;
         glm::vec3 normal;
 
         float distance;

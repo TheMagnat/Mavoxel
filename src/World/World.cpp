@@ -21,24 +21,13 @@
 
 namespace mav {
 
-	World::World(vuw::Shader* shaderPtrP, Environment* environmentP, size_t octreeDepth, float voxelSize)
+	World::World(size_t octreeDepth, float voxelSize)
 		//TODO: Rendre le nombre de thread paramétrable
-		: DrawableContainer(shaderPtrP), octreeDepth_(octreeDepth), chunkSize_(std::pow(2, octreeDepth)), voxelSize_(voxelSize), environment(environmentP), threadPool(8)
-		#ifndef NDEBUG
-		, debugSideContainer_(mav::DebugGlobal::debugShader.get())
-		#endif
+		: octreeDepth_(octreeDepth), chunkSize_(std::pow(2, octreeDepth)), voxelSize_(voxelSize), threadPool(8)
 		{
 			//TODO: Think of a better way to prevent having to put a mutex in getChunk... Maybe storing directly the unique_ptr in the map ?
 			allChunk_.reserve(10000);
 		}
-
-	void World::initializePipeline(bool filterPipeline) {
-		DrawableContainer::initializePipeline({3, 3, 2, 1, 1}, filterPipeline);
-		
-		#ifndef NDEBUG
-			debugSideContainer_.initializePipeline({3}, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-		#endif
-	}
 
 	void World::createChunk(int chunkPosX, int chunkPosY, int chunkPosZ, const VoxelMapGenerator * voxelMapGenerator){
 
@@ -49,10 +38,6 @@ namespace mav {
 
 		Chunk* currentChunkPtr = allChunk_.back().get();
 
-		#ifndef NDEBUG
-		mav::DebugGlobal::debugShader->addObject();
-		#endif
-
 		//TODO: faire un truc du rez ou changer la classe threadPool pour ne plus rien renvoyer
 		auto rez = threadPool.enqueue([this, currentChunkPtr, newChunkIndex](){
 			
@@ -61,7 +46,6 @@ namespace mav {
 			#endif
 
 			currentChunkPtr->generateVoxels();
-			currentChunkPtr->generateVertices();
 			currentChunkPtr->state = 1;
 
 			// Now thread safe operation
@@ -99,17 +83,12 @@ namespace mav {
 
 	Chunk* World::getChunkFromWorldPos(glm::vec3 position) {
 
-		//Calculate center position
-		float xSign = position.x < 0 ? -1 : 1;
-		float ySign = position.y < 0 ? -1 : 1;
-		float zSign = position.z < 0 ? -1 : 1;
-		
+		//Calculate center position		
 		float trueChunkSize = chunkSize_ * voxelSize_;
-		float halfChunkSize = trueChunkSize / 2.0f;
 
-		int xIndex = (position.x + halfChunkSize * xSign) / trueChunkSize;
-		int yIndex = (position.y + halfChunkSize * ySign) / trueChunkSize;
-		int zIndex = (position.z + halfChunkSize * zSign) / trueChunkSize;
+		int xIndex = floor(position.x / trueChunkSize);
+		int yIndex = floor(position.y / trueChunkSize);
+		int zIndex = floor(position.z / trueChunkSize);
 
 		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(xIndex, yIndex, zIndex));
 		if (chunkIt == chunkCoordToIndex_.end()) return nullptr;
@@ -122,13 +101,10 @@ namespace mav {
 
 	glm::ivec3 World::getChunkIndex(glm::vec3 position) const {
 		
-		//Calculate center position
-		glm::vec3 sign = glm::sign(position);
-		
+		//Calculate center position		
 		float trueChunkSize = chunkSize_ * voxelSize_;
-		float halfChunkSize = trueChunkSize / 2.0f;
 
-		glm::ivec3 ret = (position + halfChunkSize * sign) / trueChunkSize;
+		glm::ivec3 ret = glm::floor(position / trueChunkSize);
 
 		return ret;
 
@@ -144,11 +120,10 @@ namespace mav {
 		float zSign = position.z < 0 ? -1 : 1;
 		
 		float trueChunkSize = chunkSize_ * voxelSize_;
-		float halfChunkSize = trueChunkSize / 2.0f;
 
-		int xIndex = (position.x + halfChunkSize * xSign) / trueChunkSize;
-		int yIndex = (position.y + halfChunkSize * ySign) / trueChunkSize;
-		int zIndex = (position.z + halfChunkSize * zSign) / trueChunkSize;
+		int xIndex = std::floor(position.x / trueChunkSize);
+		int yIndex = std::floor(position.y / trueChunkSize);
+		int zIndex = std::floor(position.z / trueChunkSize);
 
 		//Calculate the number of chunk to render
 		int nb_chunk = distance / trueChunkSize;
@@ -202,75 +177,7 @@ namespace mav {
 		}
 	}
 
-	void World::drawAll(VkCommandBuffer currentCommandBuffer, uint32_t currentFrame){
-		
-		if (allChunk_.empty()) return;
-
-		allChunk_[0]->updateShader(shader_, currentFrame);
-		DrawableContainer::bind(currentCommandBuffer, currentFrame);
-
-		for(size_t i(0), maxSize(allChunk_.size()); i < maxSize; ++i){
-			
-			//TODO: Add camera vision logic to skip unecessary chunk draw
-
-			// If chunk not ready to be drawn, skip it
-			if (allChunk_[i]->state != 2) continue;
-
-			allChunk_[i]->draw(currentCommandBuffer);
-		}
-
-		//DEBUG
-		#ifndef NDEBUG
-			
-			for(size_t i(0), maxSize(allChunk_.size()); i < maxSize; ++i){
-			
-				//TODO: Add camera vision logic to skip unecessary chunk draw
-				debugSideContainer_.bind(currentCommandBuffer, i, currentFrame);
-
-				// If chunk not ready to be drawn, skip it
-				if (allChunk_[i]->state != 2) continue;
-
-				allChunk_[i]->debugDraw(currentCommandBuffer, currentFrame);
-			}
-
-		#endif
-	}
-
-	/*
-	void World::draw(glm::vec3 position, float renderDistance) {
-
-		static size_t count = 0;
-		static float totalTime = 0.0f;
-		
-		std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-					
-		for (glm::vec3 const& chunkPosition : getAroundChunks(position, renderDistance, false)) {
-
-			//Try finding the chunk
-			auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(chunkPosition.x, chunkPosition.y, chunkPosition.z));
-			if (chunkIt == chunkCoordToIndex_.end()) continue;
-
-			//Verify if it's finished
-			if (allChunk_[chunkIt->second]->state != 2) continue;
-
-			//And now draw it if it's visible
-			allChunk_[chunkIt->second]->draw();
-
-		}
-
-		std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<float> fsec = end - begin;
-
-		totalTime += fsec.count();
-		++count;
-
-		//std::cout << "Time difference (Frustum) = " << totalTime/(float)count << "s" << std::endl;
-
-
-	}
-	*/
-
-	std::pair<SimpleVoxel*, Chunk*> World::getVoxel(float x, float y, float z) const {
+	std::tuple<int32_t, Chunk*, glm::uvec3> World::getVoxel(float x, float y, float z) const {
 
 		float xSign = x < 0 ? -1 : 1;
 		float ySign = y < 0 ? -1 : 1;
@@ -279,26 +186,24 @@ namespace mav {
 		float trueChunkSize = chunkSize_ * voxelSize_;
 		//float chunkLen = trueChunkSize - voxelSize_;
 
-		float halfChunkSize = trueChunkSize / 2.0f;
-
-		int xIndex = (x + halfChunkSize * xSign) / trueChunkSize;
-		int yIndex = (y + halfChunkSize * ySign) / trueChunkSize;
-		int zIndex = (z + halfChunkSize * zSign) / trueChunkSize;
+		int xIndex = std::floor(x / trueChunkSize);
+		int yIndex = std::floor(y / trueChunkSize);
+		int zIndex = std::floor(z / trueChunkSize);
 
 		auto chunkIt = chunkCoordToIndex_.find(ChunkCoordinates(xIndex, yIndex, zIndex));
-		if (chunkIt == chunkCoordToIndex_.end()) return {nullptr, nullptr}; //The chunk does not exist
+		if (chunkIt == chunkCoordToIndex_.end()) return {0, nullptr, glm::uvec3(0)}; //The chunk does not exist
 
 		Chunk* chunkPtr = allChunk_[chunkIt->second].get();
 
-		if (chunkPtr->state != 2) return {nullptr, nullptr};
+		if (chunkPtr->state != 2) return {0, nullptr, glm::uvec3(0)};
 		//TODO: We could return something else to make the user understand the chunk does not exist and make it jump directly to the next chunk
 
 		//TODO: voir si ça marche avec des positions pas pile sur le cube
-		int internalX = ((x + halfChunkSize) - xIndex * trueChunkSize) / voxelSize_;
-		int internalY = ((y + halfChunkSize) - yIndex * trueChunkSize) / voxelSize_;
-		int internalZ = ((z + halfChunkSize) - zIndex * trueChunkSize) / voxelSize_;
+		int internalX = (x - xIndex * trueChunkSize) / voxelSize_;
+		int internalY = (y - yIndex * trueChunkSize) / voxelSize_;
+		int internalZ = (z - zIndex * trueChunkSize) / voxelSize_;
 
-		return {chunkPtr->unsafeGetVoxel(internalX, internalY, internalZ), chunkPtr};
+		return {chunkPtr->unsafeGetVoxel(internalX, internalY, internalZ), chunkPtr, glm::uvec3(internalX, internalY, internalZ)};
 
 	}
 
@@ -368,14 +273,15 @@ namespace mav {
 
 		//TODO: Maybe we could remove this or maybe bot
 		int movingSide = -1;
-		SimpleVoxel* foundVoxel = nullptr;
+		int32_t foundVoxel = 0;
 		Chunk* foundChunk = nullptr;
+		glm::uvec3 localFoundPosition(0.0f);
 		//const SimpleVoxel* foundVoxel = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));		
 
 		glm::vec3 traveledDistanceVector(0.0f);
 		float traveledDistance = 0.0f;
 
-		while(foundVoxel == nullptr) {
+		while(foundVoxel == 0) {
 
 			//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
 
@@ -436,7 +342,7 @@ namespace mav {
 			if (traveledDistance > maxDistance) break;
 
 			//We add half the voxel size to center it.
-			std::tie(foundVoxel, foundChunk) = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));
+			std::tie(foundVoxel, foundChunk, localFoundPosition) = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));
 
 		}
 
@@ -444,7 +350,8 @@ namespace mav {
 			//TODO: remove this shit
 			//if (movingSide == -1 ) return CollisionFace( foundVoxel->getFace(0), traveledDistance );
 
-			return CollisionFace( foundVoxel, foundChunk, foundVoxel->getFace(movingSide), traveledDistance );
+			return CollisionFace( foundVoxel, foundChunk, localFoundPosition, SimpleVoxel::getFaceNormal(movingSide), traveledDistance);
+
 		}
 
 		return {};
@@ -517,9 +424,9 @@ namespace mav {
 			//Found collision
 			if (returnCode == 0) {
 
-				SimpleVoxel* foundVoxel = chunkPtr->unsafeGetVoxel(collisionInformations->position.x, collisionInformations->position.y, collisionInformations->position.z);
+				int32_t foundVoxel = chunkPtr->unsafeGetVoxel(collisionInformations->position.x, collisionInformations->position.y, collisionInformations->position.z);
 
-				return CollisionFace(foundVoxel, chunkPtr, foundVoxel->getFace(collisionInformations->side), totalTraveledDistance * voxelSize_);
+				return CollisionFace(foundVoxel, chunkPtr, collisionInformations->position, SimpleVoxel::getFaceNormal(collisionInformations->side), totalTraveledDistance * voxelSize_);
 
 			}
 			else if (returnCode == 1) {

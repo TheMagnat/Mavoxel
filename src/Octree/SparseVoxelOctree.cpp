@@ -41,10 +41,6 @@ namespace mav {
 
     void SparseVoxelOctree::set(glm::uvec3 position, int32_t value) {
 
-        #ifdef TIME
-			Profiler profiler("SVO Set");
-		#endif
-
         //Store the data chunk position and the parent cell offset index
         std::vector<std::pair<size_t, uint8_t>> parentStack;
 

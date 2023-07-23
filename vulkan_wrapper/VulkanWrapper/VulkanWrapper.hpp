@@ -227,7 +227,7 @@ namespace vuw {
             }
 
             SSBO generateSSBO() {
-                return SSBO(&device_, commandPool_.get());
+                return SSBO(&device_, commandPool_.get(), &deadBufferHandler_);
             }
 
             VertexData generateVertexData() {

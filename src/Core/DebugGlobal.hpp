@@ -12,7 +12,6 @@ namespace mav {
 
 		public:
 			
-			static std::unique_ptr<vuw::MultiShader> debugShader;
 			static mav::Environment debugEnvironment;
 
 		
