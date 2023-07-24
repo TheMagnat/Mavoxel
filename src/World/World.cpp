@@ -174,6 +174,8 @@ namespace mav {
 			allChunk_[currentChunkIndex]->graphicUpdate();
 			allChunk_[currentChunkIndex]->state = 2;
 
+			std::cout << "Chunk (x:" << allChunk_[currentChunkIndex]->getPosition().x << " y:" << allChunk_[currentChunkIndex]->getPosition().y << " z:" << allChunk_[currentChunkIndex]->getPosition().z << "): finished" << std::endl;
+
 		}
 	}
 

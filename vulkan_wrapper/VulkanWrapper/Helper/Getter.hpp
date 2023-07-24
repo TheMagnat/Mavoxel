@@ -26,7 +26,7 @@ class Getter {
 
             //Add other extensions
             extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME); //Required by "VK_EXT_ROBUSTNESS_2_EXTENSION_NAME"
-            
+
             //For shader printf
             // extensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
             // extensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);

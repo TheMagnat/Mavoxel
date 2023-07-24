@@ -47,7 +47,7 @@ struct getResult {
     uint depth;
 };
 
-getResult octreeGet(int ssboIndex, uvec3 position) {
+getResult octreeGet(uint ssboIndex, uvec3 position) {
     
     uint currentIndex = 0;
     uint currentDepth = 0;
@@ -85,8 +85,13 @@ getResult octreeGetWorld(vec3 worldPosition) {
     LocalPositionResult localPositionResult = getChunkLocalPosition(worldPosition, maxLen);
 
     //Convert chunk position to ssbo index
-    ivec3 centeredChunkPosition = (localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET;
-    int ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
+    uvec3 centeredChunkPosition = uvec3((localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET);
+    
+    //Verify if we are out of the chunk range
+    if ( any( greaterThanEqual(centeredChunkPosition, uvec3(RAYTRACING_CHUNK_PER_AXIS)) ) )
+        return getResult( 0, 0 );
+    
+    uint ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
     
     return octreeGet(ssboIndex, uvec3(floor(localPositionResult.localPosition)));
 
@@ -99,7 +104,7 @@ struct octreeRayCastResult {
     vec3 hitPosition;
 };
 
-octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 direction, float maxDistance, inout vec3 normal) {
+octreeRayCastResult octreeCastRay(uint ssboIndex, inout vec3 position, in vec3 direction, float maxDistance, inout vec3 normal) {
 
     //Positive or negative direction
     vec3 directionSign = step(0.0, direction) * 2.0 - 1.0;
@@ -212,26 +217,19 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     int count = 0;
     while (totalTraveledDistance < maxDistance) {
         
-        ++count;
-        if (count > 100) {
-            return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        }
-        //TODO: Better ?
-        ivec3 centeredChunkPosition = (localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET;
+        // ++count;
+        // if (count > 100) {
+        //     return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
+        // }
 
-        if (centeredChunkPosition.x < 0) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.y < 0) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.z < 0) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
+        uvec3 centeredChunkPosition = uvec3((localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET);
 
-        if (centeredChunkPosition.x >= RAYTRACING_CHUNK_PER_AXIS) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.y >= RAYTRACING_CHUNK_PER_AXIS) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.z >= RAYTRACING_CHUNK_PER_AXIS) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
+        //Verify if we are out of the chunk range
+        if ( any( greaterThanEqual(centeredChunkPosition, uvec3(RAYTRACING_CHUNK_PER_AXIS)) ) )
+            return WorldRayCastResult( 0, vec3(0), vec3(0), vec3(0), 0 );
 
-        int ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
+        uint ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
         //Up to here
-
-        vec3 oldLocal = localPositionResult.localPosition;
-        
         if (ssboInformations[nonuniformEXT(ssboIndex)].empty == 1) {
             
             //TODO: changer le type pour mettre une majuscule

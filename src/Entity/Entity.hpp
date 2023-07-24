@@ -49,7 +49,10 @@ namespace mav {
             void update(float elapsedTime);
             bool update(float elapsedTime, World const& world);
             
-            void draw(VkCommandBuffer commandBuffer) const;
+            //TODO: in cpp
+            glm::vec3 getPosition() const {
+                return boundingBox_.center;
+            }
 
         public:
             glm::vec3 velocity;
@@ -72,13 +75,6 @@ namespace mav {
 
             //Physics
             const Gravity* gravity_;
-
-            //World data
-
-
-            #ifndef NDEBUG
-				DebugVoxel entityBox;
-    		#endif
 
     };
 

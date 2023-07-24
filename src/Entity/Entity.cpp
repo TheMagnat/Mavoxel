@@ -16,23 +16,7 @@ const static float dampingFactor = 0.5;
 namespace mav {
 
     //TODO: peut être avoir un bool qui vérifie qu'on peut utiliser front et right ?
-    Entity::Entity(AABB boundingBox) : velocity(0.0f), front_(nullptr), right_(nullptr), boundingBox_(boundingBox), gravity_(nullptr)
-    #ifndef NDEBUG
-        , entityBox(&DebugGlobal::debugEnvironment, {
-            {0.1f, 0.1f, 0.1f},
-            {0.5f, 0.5f, 0.5f},
-            {1.0f, 1.0f, 1.0f}
-        //TODO: rendre la taille du voxel de debug plus paramétrable (prendre un glm::vec3)
-        }, 0.5f * 0.95f, boundingBox_.center )
-    #endif
-    {
-
-        #ifndef NDEBUG
-            entityBox.initialize();
-            entityBox.setColor(glm::vec3(1.0f, 0.0f, 0.0f));
-        #endif
-
-    }
+    Entity::Entity(AABB boundingBox) : velocity(0.0f), front_(nullptr), right_(nullptr), boundingBox_(boundingBox), gravity_(nullptr) {}
 
     void Entity::setGravity(const Gravity* newGravity) {
         gravity_ = newGravity;
@@ -137,11 +121,6 @@ namespace mav {
 
     void Entity::update(float elapsedTime) {
         boundingBox_.center += velocity * elapsedTime;
-
-        #ifndef NDEBUG
-            entityBox.setPosition(boundingBox_.center);
-        #endif
-
     }
 
     bool Entity::update(float elapsedTime, World const& world) {
@@ -198,22 +177,12 @@ namespace mav {
             //No collision
             // boundingBox_.center += velocity * elapsedTime;
 
-            #ifndef NDEBUG
-                entityBox.setPosition(boundingBox_.center);
-            #endif
-
             positionUpdated = true;
 
         }
 
         return positionUpdated;
 
-    }
-    
-    void Entity::draw(VkCommandBuffer commandBuffer) const {
-        #ifndef NDEBUG
-            entityBox.draw(commandBuffer);
-        #endif
     }
 
 }

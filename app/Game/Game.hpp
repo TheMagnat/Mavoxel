@@ -154,11 +154,12 @@ class Game {
 
             if (SOLO_CHUNK) {
                 world.createChunk(0, -1, -1, &generator);
-                world.createChunk(0, 0, -1, &generator);
+                // world.createChunk(0, 0, -1, &generator);
                 // world.createChunk(1, 0, 1, &generator);
                 // world.createChunk(0, 0, -1, &generator);
                 // world.createChunk(0, 0, 1, &generator);
-                // world.createChunk(2, 0, 0, &generator);
+                
+                // world.createChunk(0, -1, -2, &generator);
 
                 //DEBUG RAY-CAST
                 // rayCastingShader.addUniformBufferObjects({
@@ -279,7 +280,7 @@ class Game {
             }
 
             if(key == GLFW_KEY_T && action == GLFW_PRESS) {
-
+                player.setState(glm::vec3(68.9194, -47.6997, -38.4928), -155.4, 14.6);
             }
 
             if(key == GLFW_KEY_E && action == GLFW_PRESS){
@@ -452,6 +453,18 @@ class Game {
 
             //End the global rendering processus
             mav::Global::vulkanWrapper->endRecordingDraw();
+
+            //Debug system, remove when we're sure that the game won't ever crash
+            if (!mav::Global::vulkanWrapper->ok) {
+                std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
+                std::cout << "Position = x: " << player.getPosition().x << " y: " << player.getPosition().y << " z: " << player.getPosition().z << std::endl;
+                
+                std::cout << "Camera: Front:  x: " << player.getCamera()->Front.x << " y: " << player.getCamera()->Front.y << " z: " << player.getCamera()->Front.z << std::endl;
+                std::cout << "Camera: Right:  x: " << player.getCamera()->Right.x << " y: " << player.getCamera()->Right.y << " z: " << player.getCamera()->Right.z << std::endl;
+                std::cout << "Camera: Up:  x: " << player.getCamera()->Up.x << " y: " << player.getCamera()->Up.y << " z: " << player.getCamera()->Up.z << std::endl;
+            
+                std::cout << "Camera: Yaw: " << player.getCamera()->Yaw << " Pitch: " << player.getCamera()->Pitch << std::endl;
+            }
 
             // std::cout << "Camera = x: " << player.getCamera()->Position.x << " y: " << player.getCamera()->Position.y << " z: " << player.getCamera()->Position.z << std::endl;
             // std::cout << "Position = x: " << player.position.x << " y: " << player.position.y << " z: " << player.position.z << std::endl;

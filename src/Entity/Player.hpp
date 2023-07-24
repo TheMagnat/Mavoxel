@@ -23,6 +23,22 @@ namespace mav {
 
                 void updateCamera(double xPos, double yPos);
 
+                //TODO: in cpp
+                //For debug purpose
+                void setState(glm::vec3 position, float yaw, float pitch) {
+                    
+                    boundingBox_.center = position;
+                    camera_.Position = boundingBox_.center;
+                    camera_.Position.y += voxelSize_ * 0.95 / 2.0f;
+
+                    camera_.Yaw = yaw;
+                    camera_.Pitch = pitch;
+
+                    camera_.updateCameraVectors();
+                    camera_.updateFrustum();
+
+                }
+
             private:
                 //Camera logic
                 Camera camera_;

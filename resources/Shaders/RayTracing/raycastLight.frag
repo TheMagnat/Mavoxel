@@ -332,6 +332,8 @@ RayCastingResult castRay(vec3 position, vec3 direction, float maxDistance) {
         // color = (ambient + light.diffuse * illuminated * material.diffuse + specular) * AO;
         // color = material.ambient * AO;
 
+        // Could be a cool idea
+        // result.lightColor = illuminatedColor * illuminated * AO;
 
         // if (illuminated == 0.0) {
         //     color = vec3(0.0);

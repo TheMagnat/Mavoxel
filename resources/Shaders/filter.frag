@@ -35,6 +35,7 @@ vec3 ray2() {
         
 
         float factor = 1.0 - clamp(lenn, 0.0, 1.0);
+        if (factor == 0.0) continue;
 
         vec2 tc = TexPos.xy;
         vec2 deltaTexCoord = (tc - lightPositionOnScreen[clpos].xy);
@@ -104,5 +105,5 @@ void main() {
 
     outFragColor = vec4(finalColor, 1);
 
-    // outFragColor = raycolor + texture(sceneTexture, TexPos);
+    // outFragColor = texture(sceneTexture, TexPos);
 }
