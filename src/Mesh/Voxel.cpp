@@ -6,7 +6,7 @@
 namespace mav {
 
 	Voxel::Voxel(Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(8, {{3}, {3}, {2}}, environment, material, size, position) {}
+        : Mesh(8, environment, material, size, position) {}
 
 
     void Voxel::generateVertices(){

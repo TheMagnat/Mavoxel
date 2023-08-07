@@ -4,7 +4,7 @@
 
 namespace mav {
 
-    CollisionFace::CollisionFace(int32_t voxelP, Chunk* parentChunk, glm::uvec3 const& positionP, glm::vec3 const& normalP, float distanceP)
-        : voxel(voxelP),  chunk(parentChunk), position(positionP), normal(normalP), distance(distanceP) {}
+    RayCollisionInformations::RayCollisionInformations(int32_t voxelP, glm::uvec3 const& positionP, std::vector<glm::vec3> const& normalsP, float distanceP, Chunk* parentChunk)
+        : voxel(voxelP),  chunk(parentChunk), position(positionP), normals(normalsP), distance(distanceP) {}
 
 }

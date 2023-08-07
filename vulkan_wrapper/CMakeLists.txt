@@ -22,8 +22,6 @@ if ( MSVC )
     
     target_link_libraries(VulkanWrapper PRIVATE glfw3)
     target_link_libraries(VulkanWrapper PRIVATE ${Vulkan_LIBRARIES})
-    target_link_libraries(VulkanWrapper PRIVATE VulkanMemoryAllocator)
-
 
 elseif ( APPLE )
     

@@ -1,6 +1,7 @@
 
 #include <World/Chunk.hpp>
-#include <GLObject/BufferTemplates.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
+#include <files/DataFileConverter.hpp>
 
 #include <iostream>
 
@@ -12,18 +13,6 @@
 #ifndef NDEBUG
 #include <Core/DebugGlobal.hpp>
 #endif
-
-namespace {
-
-	uint8_t vertexAO(bool side1, bool corner, bool side2) {
-		if(side1 && side2) {
-			return 0;
-		}
-  		return 3 - (side1 + side2 + corner);
-	}
-
-}
-
 
 namespace mav{
 
@@ -46,25 +35,25 @@ namespace mav{
 	};
 
 	
-	Chunk::Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator)
-		: state(0), posX_(posX), posY_(posY), posZ_(posZ),
+	Chunk::Chunk(World* world, glm::ivec3 const& position, size_t octreeDepth, float voxelSize)
+		: state(0), position_(position),
 		size_((int)svo_.getLen()), voxelSize_(voxelSize),
-		centerWorldPosition_(posX*(size_*voxelSize), posY*(size_*voxelSize), posZ*(size_*voxelSize)),
+		centerWorldPosition_((glm::vec3)position_ * (size_ * voxelSize)),
 		collisionBox_(glm::vec3(centerWorldPosition_), size_*voxelSize),
 		svo_(octreeDepth),
-		world_(world), voxelMapGenerator_(voxelMapGenerator)
+		world_(world)
 
 		{}
 
 
-	void Chunk::generateVoxels() {
+	void Chunk::generateVoxels(const VoxelMapGenerator * voxelMapGenerator) {
 		
 		#ifdef TIME
 			Profiler profiler("Generate voxels");
 		#endif
 
 		// Move voxelMap and prepare indices size
-		VoxelData voxelData = voxelMapGenerator_->generate(posX_, posY_, posZ_);
+		VoxelData voxelData = voxelMapGenerator->generate(position_);
 		VoxelMap const& voxelMap = voxelData.map;
 
 		// Calculate the coordinates of each points
@@ -82,6 +71,27 @@ namespace mav{
 		}
 
 	}
+
+	void Chunk::loadVoxels(std::ifstream* stream) {
+
+		#ifdef TIME
+			Profiler profiler("Load voxels");
+		#endif
+
+		DataFileConverter::convertFromStream(*stream, {
+			{DataFileConverter::DataType::SVO, &svo_}
+		});
+
+	}
+
+	void Chunk::saveVoxels(std::ofstream* stream) {
+
+		DataFileConverter::convertIntoStream(*stream, {
+			{DataFileConverter::DataType::SVO, &svo_}
+		});
+
+	}
+
 
 	int Chunk::findVoxel(glm::vec3 const& position, VoxelMap const& voxelMap) const {
 
@@ -111,7 +121,7 @@ namespace mav{
 		return svo_.get(glm::uvec3(x, y, z)).first != 0;
 	}
 
-	int32_t Chunk::unsafeGetVoxel(int x, int y, int z) {
+	int32_t Chunk::unsafeGetVoxel(int x, int y, int z) const {
 
 		return svo_.get(glm::uvec3(x, y, z)).first;
 
@@ -123,6 +133,7 @@ namespace mav{
 		return svo_.get(position).first;
 	}
 
+	/*
 	std::pair<int32_t, Chunk*> Chunk::getSideVoxel(glm::ivec3 voxelPosition, uint8_t side) {
 
 		#ifdef TIME
@@ -168,6 +179,7 @@ namespace mav{
 		//Here, the position is in the current chunk but the voxel is empty
 		return {-1, nullptr};
 	}
+	*/
 
 	bool Chunk::deleteVoxel(glm::ivec3 position) {
 
@@ -183,8 +195,8 @@ namespace mav{
 		return true;
 	}
 
-	glm::ivec3 Chunk::getPosition() const {
-		return glm::ivec3(posX_, posY_, posZ_);
+	glm::ivec3 const& Chunk::getPosition() const {
+		return position_;
 	}
 
 	Chunk* Chunk::getChunk(glm::ivec3& voxelChunkPosition) const {
@@ -201,7 +213,7 @@ namespace mav{
 		positionOffset.y += voxelChunkPosition.y/size_;
 		positionOffset.z += voxelChunkPosition.z/size_;
 
-		Chunk* foundChunk = world_->getChunk(posX_ + positionOffset.x, posY_ + positionOffset.y, posZ_ + positionOffset.z);
+		Chunk* foundChunk = world_->getChunk(position_ + positionOffset);
 		
 		if (foundChunk) {
 
@@ -239,9 +251,7 @@ namespace mav{
 	}
 
 	void Chunk::graphicUpdate() {		
-		#ifdef RAY_CAST
 		svo_.updateBuffer();
-		#endif
 	}
 	
 }

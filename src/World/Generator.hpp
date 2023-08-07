@@ -17,7 +17,7 @@ namespace mav {
 
         public:
             virtual bool isIn(glm::ivec3 const& position) const = 0;
-            virtual VoxelData generate(int xGlobal, int yGlobal, int zGlobal) const = 0;
+            virtual VoxelData generate(glm::ivec3 const& globalPosition) const = 0;
 
     };
 

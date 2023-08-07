@@ -57,7 +57,7 @@ std::vector<float> ClassicVoxelMapGenerator::batchIsIn(glm::ivec3 const& startPo
 
 
 //TODO: Vérifier les perfs entre calculer la matrice puis regarder au dessus ou directement faire un appel a la noise fonction pour regarder au dessus
-mav::VoxelData ClassicVoxelMapGenerator::generate(int xGlobal, int yGlobal, int zGlobal) const {
+mav::VoxelData ClassicVoxelMapGenerator::generate(glm::ivec3 const& globalPosition) const {
     
     #ifdef TIME
         Profiler profiler("Generate voxel map (VoxelMapGenerator)");
@@ -67,7 +67,7 @@ mav::VoxelData ClassicVoxelMapGenerator::generate(int xGlobal, int yGlobal, int 
     mav::VoxelData output;
     output.count = 0;
 
-    glm::ivec3 startPosition(xGlobal * chunkSize_, yGlobal * chunkSize_, zGlobal * chunkSize_);
+    glm::ivec3 startPosition(globalPosition * (int)chunkSize_);
 
     std::vector<float> data = batchIsIn(startPosition, chunkSize_);
 

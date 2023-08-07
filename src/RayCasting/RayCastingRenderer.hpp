@@ -2,8 +2,10 @@
 #pragma once
 
 #include <World/World.hpp>
+#include <World/EntityManager.hpp>
 #include <Mesh/Simple/Quad.hpp>
 #include <VulkanWrapper/Shader.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
 
 //RAYTRACING_CHUNK_RANGE is set in the CMAKE
 #define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
@@ -14,8 +16,8 @@ namespace mav {
     class RayCastingRenderer : public Quad {
 
         public:
-            RayCastingRenderer(World* world, Environment* environment, size_t svoDepth)
-                : svoDepth_(svoDepth), world_(world), environment_(environment) {
+            RayCastingRenderer(World* world, EntityManager* entityManager, Environment* environment, size_t svoDepth)
+                : svoDepth_(svoDepth), world_(world), entityManager_(entityManager), environment_(environment) {
 
 
             }
@@ -100,9 +102,11 @@ namespace mav {
                 }
                 }
 
-                shader->updateUniformArray(2, currentFrame, svoInformations, sizeof(int));
-
-                shader->updateSSBOs(0, svoSsboInRange);
+                
+                shader->updateSSBOs(0, svoSsboInRange); //Binding 2
+                shader->updateUniformArray(2, currentFrame, svoInformations, sizeof(int)); //Binding 3
+                
+                shader->updateSSBOs(1, std::vector<const vuw::SSBO*>{ &entityManager_->getSSBO() }); //Binding 4
 
                 //TODO: Vérifier if modification entre frame d'avant et mtn sur les ptr de ssbo utilisé, et si oui call "updateDescriptorSets"
                 
@@ -116,6 +120,7 @@ namespace mav {
             size_t svoDepth_;
 
             World* world_;
+            EntityManager* entityManager_;
             Environment* environment_;
 
     };

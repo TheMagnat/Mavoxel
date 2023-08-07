@@ -4,11 +4,8 @@
 #include <World/World.hpp>
 #include <World/SimpleVoxel.hpp>
 #include <World/Generator.hpp>
-#include <GLObject/Drawable.hpp>
 
 #include <Octree/SparseVoxelOctree.hpp>
-
-#include <GLObject/GLObject.hpp>
 
 #include <vector>
 #include <unordered_map>
@@ -32,12 +29,14 @@ namespace mav {
 		static std::array<uint8_t, 6> faceToInverseFace;
 
 		public:
-			Chunk(World* world, int posX, int posY, int posZ, size_t octreeDepth, float voxelSize, const VoxelMapGenerator * voxelMapGenerator);
+			Chunk(World* world, glm::ivec3 const& position, size_t octreeDepth, float voxelSize);
 
-			void generateVoxels();
+			void generateVoxels(const VoxelMapGenerator * voxelMapGenerator);
 			void graphicUpdate();
 
-			std::array<float, 4> generateAmbientOcclusion(SimpleVoxel const& voxel, uint8_t faceIndex) const;
+			//File saving
+			void loadVoxels(std::ifstream* stream);
+			void saveVoxels(std::ofstream* stream);
 
 
 			//Find and/or get a voxel
@@ -63,7 +62,7 @@ namespace mav {
 			 * TODO: refaire description
 			 * @return SimpleVoxel* A Pointer to the requested voxel. nullptr will be returned if the position is empty.
 			 */
-			int32_t unsafeGetVoxel(int x, int y, int z);
+			int32_t unsafeGetVoxel(int x, int y, int z) const;
 
 			/**
 			 * Return -2 if position is out of bound, -1 if the position is empty
@@ -114,7 +113,7 @@ namespace mav {
 			*/
 			Chunk* getChunk(glm::ivec3& voxelChunkPosition) const;
 
-			glm::ivec3 getPosition() const;
+			glm::ivec3 const& getPosition() const;
 
 			//Vulkan
 			void draw(VkCommandBuffer commandBuffer);
@@ -128,9 +127,7 @@ namespace mav {
 			//Voxels informations
 			SparseVoxelOctree svo_; //SVO must be initialized first to then get it's len
 
-			int posX_;
-			int posY_;
-			int posZ_;
+			glm::ivec3 position_;
 
 			int size_; //Note: we store size as an int because size_t could cause problem with negativity
 			float voxelSize_;
@@ -140,7 +137,6 @@ namespace mav {
 
 			//Reference to the world
 			World* world_;
-			const VoxelMapGenerator * voxelMapGenerator_;
 
 	};
 

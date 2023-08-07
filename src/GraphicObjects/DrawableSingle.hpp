@@ -1,6 +1,6 @@
 
-#include <GLObject/DrawableContainer.hpp>
-#include <GLObject/Drawable.hpp>
+#include <GraphicObjects/DrawableContainer.hpp>
+#include <GraphicObjects/Drawable.hpp>
 
 
 namespace mav {

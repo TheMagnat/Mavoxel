@@ -5,92 +5,59 @@
 #include <Core/DebugGlobal.hpp>
 #endif
 
-#define FREE_FLIGHT_MULTIPLIER 5.0f
+#define GROUND_LEFT_THRESHOLD 0.001
 
 //TODO: le metre en paramètre de la class ?
-const static float friction = 0.01;
-const static float aerialFriction = 0.75;
 const static float minimumLength = 0.001;
-const static float dampingFactor = 0.5;
+
+
 
 namespace mav {
 
     //TODO: peut être avoir un bool qui vérifie qu'on peut utiliser front et right ?
-    Entity::Entity(AABB boundingBox) : velocity(0.0f), front_(nullptr), right_(nullptr), boundingBox_(boundingBox), gravity_(nullptr) {}
+    Entity::Entity(AABB boundingBox, float massP) : velocity(0.0f), movement(0.0f), acceleration(0.0f), mass(massP), boundingBox_(boundingBox), physicSystem_(nullptr) {}
 
-    void Entity::setGravity(const Gravity* newGravity) {
-        gravity_ = newGravity;
-    }
-
-
-    //Movement logic
-    void Entity::addVelocity(Direction direction, float strength, float deltaTime){
-        
-        switch(direction) {
-            case Direction::FRONT:
-                if(!freeFlight) {
-                    glm::vec3 trueFront = glm::normalize(glm::vec3(front_->x, 0.0f, front_->z));
-                    velocity += trueFront * (strength * deltaTime);
-                }
-                else {
-                    velocity += (*front_) * (strength * FREE_FLIGHT_MULTIPLIER * deltaTime);
-                }
-                break;
-
-            case Direction::UP:
-                velocity.y += strength * deltaTime;
-                break;
-
-            case Direction::RIGHT:
-                if(!freeFlight) {
-                    glm::vec3 trueRight = glm::normalize(glm::vec3(right_->x, 0.0f, right_->z));
-                    velocity += trueRight * (strength * deltaTime);
-                }
-                else {
-                    velocity += (*right_) * (strength * deltaTime);
-                }
-                break;
-        }
-
+    void Entity::setPhysicSystem(const PhysicSystem* newPhysicSystem) {
+        physicSystem_ = newPhysicSystem;
     }
     
-    /**
-     * Direction: binary representation of the direction to apply the strength :
-     *      001 -> Front
-     *      010 -> Right
-     *      100 -> Up
-    */
     void Entity::addVelocity(glm::vec3 const& direction, float strength, float deltaTime){
 
-        glm::vec3 normalizedDirectionStrength = glm::normalize(direction) * strength;
+        if (direction == glm::vec3(0.0f)) return;
+
+        glm::vec3 normalizedDirectionStrength = glm::normalize(direction) * strength / mass;
         
-        if(direction.x != 0) {
+        velocity += normalizedDirectionStrength * deltaTime;
 
-            if(!freeFlight) {
-                glm::vec3 trueRight = glm::normalize(glm::vec3(right_->x, 0.0f, right_->z));
-                velocity += trueRight * (normalizedDirectionStrength.x * deltaTime);
-            }
-            else {
-                velocity += (*right_) * (normalizedDirectionStrength.x * FREE_FLIGHT_MULTIPLIER * deltaTime);
-            }
 
-        }
-        if(direction.y != 0) {
+    }
 
-            velocity.y += normalizedDirectionStrength.y * deltaTime;
+    void Entity::addVelocity(glm::vec3 const& direction, float strength, float deltaTime, glm::vec3 const& front, glm::vec3 const& right){
 
-        }
-        if(direction.z != 0) {
+        if (direction == glm::vec3(0.0f)) return;
 
-            if(!freeFlight) {
-                glm::vec3 trueFront = glm::normalize(glm::vec3(front_->x, 0.0f, front_->z));
-                velocity += trueFront * (normalizedDirectionStrength.z * deltaTime);
-            }
-            else {
-                velocity += (*front_) * (normalizedDirectionStrength.z * FREE_FLIGHT_MULTIPLIER * deltaTime);
-            }
+        glm::vec3 normalizedDirectionStrength = glm::normalize(direction) * strength / mass;
+        
+        if (direction.z != 0) velocity += front * (normalizedDirectionStrength.z * deltaTime);
+        if (direction.x != 0) velocity += right * (normalizedDirectionStrength.x * deltaTime);
+        if (direction.y != 0) velocity.y += normalizedDirectionStrength.y * deltaTime;
 
-        }
+    }
+
+    void Entity::setAcceleration(glm::vec3 const& forceDirection, float magnitude) {
+        acceleration = forceDirection * magnitude / mass;
+    }
+
+    void Entity::setAcceleration(glm::vec3 const& forceDirection, float magnitude, glm::vec3 const& front, glm::vec3 const& right) {
+        
+        if (forceDirection == glm::vec3(0.0f)) return;
+
+        glm::vec3 scaledForce = glm::normalize(forceDirection) * magnitude / mass;
+
+        acceleration = glm::vec3(0.0f);
+        acceleration += front * (scaledForce.z);
+        acceleration += right * (scaledForce.x);
+        acceleration.y += scaledForce.y;
 
     }
 
@@ -126,51 +93,58 @@ namespace mav {
     bool Entity::update(float elapsedTime, World const& world) {
 
         timeSinceLastJump += elapsedTime;
+
+        //We apply the acceleration on the movement
+        movement += acceleration;
+        acceleration = glm::vec3(0.0f);
+
+        if (physicSystem_) physicSystem_->applyGravity(velocity, mass, elapsedTime);
         
-        //If we're not in free flight we apply gravity
-        if (!freeFlight)
-            //TODO: Make the gravity more smouth. Actuellement les entités tombent trop vite vers le bas (même après un saut)
-            if (gravity_) gravity_->apply(velocity, elapsedTime);
+        //We compute the total velocity
+        glm::vec3 totalVelocity = movement + velocity;
 
+        //We apply the forces
+        if (physicSystem_) {
+            physicSystem_->applyAirFriction(velocity, mass, elapsedTime);
+            physicSystem_->applyGroundFriction(movement, mass, elapsedTime);
 
-        //We apply friction and damping factor on our velocity
-        float timeGroundFriction = pow(friction, elapsedTime);
-        float timeAerialFriction = pow(aerialFriction, elapsedTime);
-        if (freeFlight) {
-            velocity *= timeGroundFriction;
-        }
-        else {
-            velocity.x *= timeGroundFriction;
-            velocity.z *= timeGroundFriction;
-            velocity.y *= timeAerialFriction;
+            if (onTheGround) {
+                physicSystem_->applyGroundFriction(velocity, mass, elapsedTime);
+            }
         }
 
-        if( glm::length(velocity) < minimumLength ) velocity = glm::vec3(0.0f);
+        //TODO: voir si utile, voir si faut pas plutôt utiliser velocity dans le test
+        if( glm::length(totalVelocity) < minimumLength ) velocity = glm::vec3(0.0f);
 
         //And we calculate the new position
         bool positionUpdated = false;
-        if( glm::length(velocity) ) {
+        if( glm::length(totalVelocity) ) {
 
-            auto [collisionVelocity, encounteredCollision] = world.collide(boundingBox_, velocity * elapsedTime);
+            auto [collisionVelocity, encounteredCollision] = world.collide(boundingBox_, totalVelocity * elapsedTime);
+
+            glm::vec3 collisionPower = glm::abs(totalVelocity * encounteredCollision);
 
             //On the collisions, put velocity at 0
             if (encounteredCollision.y != 0) velocity.y = 0.0f;
             if (encounteredCollision.x != 0) velocity.x = 0.0f;
             if (encounteredCollision.z != 0) velocity.z = 0.0f;
 
+            if (length(collisionPower) > 1) {
+                std::cout << "Choc de puissance: << " << glm::length(collisionPower) << " (" << collisionPower.x << " " << collisionPower.y << " " << collisionPower.z << ")" << std::endl;
+            }
+
             //Here we hitted the ground
             if (encounteredCollision.y == -1) {
                 groundHit();
             }
             else {
-                if (onTheGround) groundLeft();
+                //Note: if threshold is not reached, we don't consider we hit the ground but we don't consider we left it too. We're in an in-between state (Allowing the entity to still jump).
+                if (onTheGround && abs(collisionVelocity.y) > GROUND_LEFT_THRESHOLD) groundLeft();
             }
 
             //True velocity recalculated
             // velocity = collisionVelocity / elapsedTime;
         
-            //camera_.ProcessKeyboard(collisionVelocity);
-
             //Good collision
             boundingBox_.center += collisionVelocity;
 

@@ -1,16 +1,15 @@
 
 #include <Entity/Player.hpp>
 
-
 namespace mav {
 
-    Player::Player(glm::vec3 const& playerStartPosition, float voxelSize)
-        : Entity( AABB(playerStartPosition, glm::vec3(voxelSize/2.0f * 0.95f, voxelSize * 0.95f, voxelSize/2.0f * 0.95f)) ),
-        camera_(playerStartPosition), voxelSize_(voxelSize)
-    {
-        front_ = &camera_.Front;
-        right_ = &camera_.Right;
-        // box.updatePos(position.x, position.y - voxelSize/2.0f, position.z);
+    Player::Player(glm::vec3 const& playerStartPosition, float playerSize, float massP)
+        : Entity( AABB(playerStartPosition, glm::vec3(playerSize / 2.0f, playerSize, playerSize / 2.0f)), massP ),
+        camera_(playerStartPosition), playerSize_(playerSize) {}
+
+
+    void Player::setAcceleration(glm::vec3 const& newAcceleration, float magnitude, bool isFreeFlight) {
+        Entity::setAcceleration(newAcceleration, magnitude, isFreeFlight ? camera_.Front : glm::normalize(glm::vec3(camera_.Front.x, 0.0f, camera_.Front.z)), camera_.Right);
     }
 
     void Player::update(float elapsedTime) {
@@ -22,7 +21,7 @@ namespace mav {
         if (true) {
             //TODO: un truc plus clean ?
             camera_.Position = boundingBox_.center;
-            camera_.Position.y += voxelSize_ * 0.95 / 2.0f;
+            camera_.Position.y += playerSize_ / 2.0f;
             camera_.updateFrustum();
         }
 
@@ -36,7 +35,7 @@ namespace mav {
         if (positionUpdated) {
             //TODO: un truc plus clean ?
             camera_.Position = boundingBox_.center;
-            camera_.Position.y += voxelSize_ * 0.95 / 2.0f;
+            camera_.Position.y += playerSize_ / 2.0f;
             camera_.updateFrustum();
         }
 

@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <World/Generator.hpp>
 
 #include <FastNoise/FastNoise.h>
@@ -17,7 +19,7 @@ class ClassicVoxelMapGenerator : public mav::VoxelMapGenerator {
 
         bool isIn(glm::ivec3 const& position) const;
         std::vector<float> batchIsIn(glm::ivec3 const& startPosition, size_t len) const;
-        mav::VoxelData generate(int xGlobal, int yGlobal, int zGlobal) const;
+        mav::VoxelData generate(glm::ivec3 const& globalPosition) const;
 
     private:
         size_t seed_;

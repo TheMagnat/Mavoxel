@@ -2,12 +2,12 @@
 #include <Mesh/Face.hpp>
 
 #include <Core/Global.hpp>
-#include <GLObject/BufferTemplates.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
 
 namespace mav {
 
 	Face::Face(Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(8, {{3}, {3}, {2}}, environment, material, size, position) {}
+        : Mesh(8, environment, material, size, position) {}
 
     void Face::generateVertices() {}
 

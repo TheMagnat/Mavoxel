@@ -129,7 +129,11 @@ struct Camera {
 };
 
 //TODO: remove sun, create light with it's attributes
-struct Sun {
+struct LightVoxel {
+    vec3 position;
+};
+
+struct SimpleVoxel {
     vec3 position;
 };
 
@@ -139,10 +143,14 @@ layout (set = 0, binding = 0) uniform RayCastInformations {
     Camera camera;
     mat4 projection;
     mat4 view;
-    Sun sun;
+    LightVoxel sun;
     float time;
     vec3 voxelCursorPosition;
     vec3 faceCursorNormal;
+};
+
+layout(std430, binding = 4) buffer SsboSimpleVoxels {
+    SimpleVoxel simpleVoxels[];
 };
 
 //TODO: Smooth shadow
@@ -192,6 +200,9 @@ vec2 computeHitUV(vec3 hitPos, vec3 hitDir, vec3 hitVoxelChunkPos) {
 
 //TODO: verify impact on performance of AO
 float computeAO(vec3 norm, vec3 hitDir, vec3 hitVoxelChunkPos, vec2 uv) {
+
+    //TODO: voir si utile
+    roundPosition(hitVoxelChunkPos);
 
     ivec4 ed = edges( hitVoxelChunkPos, norm, hitDir );
     ivec4 co = corners( hitVoxelChunkPos, norm, hitDir );
@@ -274,13 +285,24 @@ RayCastingResult castRay(vec3 position, vec3 direction, float maxDistance) {
     // }
 
     //TODO: move this to a loop of sun, and select the goo ray casting algorithm
-    Ray rayTest = Ray(position, direction);
-    Box testBox = Box(sun.position, vec3(0.5), -vec3(0.5), mat3(1.0));
+    // Ray rayTest = Ray(position, direction);
+    // Box testBox = Box(sun.position, vec3(0.5), -vec3(0.5), mat3(1.0));
 
+    //TODO: have a global ray casting function that compare everything
     float distRez = 0;
     vec3 sunNormal = vec3(0.0);
     // bool toucheeed = ourIntersectBoxCommon(testBox, rayTest, distRez, norr, false, false, 1.0/direction);
     RayAABBResult sunRayResult =  box(position, direction, sun.position - 5, sun.position + 5);
+
+
+    for (int i = 0; i < simpleVoxels.length(); ++i) {
+        //return result;
+        vec3 voxelPos = simpleVoxels[i].position;
+        RayAABBResult voxelRayResult = box(position, direction, voxelPos - voxelSize * 0.5, voxelPos + voxelSize * 0.5);
+        if ( voxelRayResult.intersect && (!sunRayResult.intersect || voxelRayResult.dist < sunRayResult.dist) ) {
+            sunRayResult = voxelRayResult;
+        }
+    }
 
     if (sunRayResult.intersect && (rayCastResult.voxel == 0 || sunRayResult.dist < rayCastResult.dist)) {
         result.color = vec3(1.0);
@@ -305,7 +327,7 @@ RayCastingResult castRay(vec3 position, vec3 direction, float maxDistance) {
         //Calculate shadow ray
         //Note: dist is traveled distance
         float illuminated;
-        bool shadow = inShadow( rayCastResult.hitPosition, vec3(0), lightDir, min(lightDist, maxDistance) );
+        bool shadow = inShadow( rayCastResult.hitPosition /* + rayCastResult.normal * 0.001 */, vec3(0), lightDir, min(lightDist, maxDistance) );
         if (shadow) illuminated = 0.0;
         else illuminated = 1.0;// - (lightDist / maxDistance);
 

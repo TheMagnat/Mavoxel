@@ -2,12 +2,12 @@
 #include <Mesh/DebugVoxel.hpp>
 
 #include <Core/Global.hpp>
-#include <GLObject/BufferTemplates.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
 
 namespace mav {
 
 	DebugVoxel::DebugVoxel(Environment* environment, Material material, float size, glm::vec3 position)
-        : Mesh(3, {{3}}, environment, material, size, position), color_(1.0f, 1.0f, 1.0f) {}
+        : Mesh(3, environment, material, size, position), color_(1.0f, 1.0f, 1.0f) {}
 
     void DebugVoxel::generateVertices() {
 

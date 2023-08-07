@@ -4,77 +4,68 @@
 #include <glm/vec3.hpp>
 
 #include <Collision/AABB.hpp>
-#include <Physics/Gravity.hpp>
+#include <Physics/PhysicSystem.hpp>
 #include <World/World.hpp>
 
 #include <Mesh/DebugVoxel.hpp>
 
-
-#define GRAVITY_ON false
-
 namespace mav {
 
-    enum class Direction {
-        FRONT,
-        UP,
-        RIGHT
-    };
 
     class Entity {
 
         public:
         //TODO: peut être avoir un bool qui vérifie qu'on peut utiliser front et right ?
-            Entity(AABB boundingBox);
+            Entity(AABB boundingBox, float massP);
 
-            void setGravity(const Gravity* newGravity);
+            void setPhysicSystem(const PhysicSystem* newPhysicSystem);
 
 
             //Movement logic
-            void addVelocity(Direction direction, float strength, float deltaTime);
-            
-            /**
-             * Direction: binary representation of the direction to apply the strength :
-             *      001 -> Front
-             *      010 -> Right
-             *      100 -> Up
-            */
-            void addVelocity(glm::vec3 const& direction, float strength, float deltaTime);
+            virtual void addVelocity(glm::vec3 const& direction, float strength, float deltaTime);
+            void addVelocity(glm::vec3 const& direction, float strength, float deltaTime, glm::vec3 const& front, glm::vec3 const& right);
 
+            virtual void setAcceleration(glm::vec3 const& forceDirection, float magnitude);
+            void setAcceleration(glm::vec3 const& forceDirection, float magnitude, glm::vec3 const& front, glm::vec3 const& right);
+
+            //Jump / Ground logic
             void jump(float strength);
-
             void groundHit();
-
             void groundLeft();
             
+            //Update the position
             void update(float elapsedTime);
             bool update(float elapsedTime, World const& world);
             
-            //TODO: in cpp
-            glm::vec3 getPosition() const {
-                return boundingBox_.center;
-            }
+            //Getters
+            inline glm::vec3 const& getPosition() const { return boundingBox_.center; }
+            inline AABB const& getBoundingBox() const { return boundingBox_; }
 
         public:
+
+            //Movement / Velocity
             glm::vec3 velocity;
-            bool freeFlight = !GRAVITY_ON;
-            bool onTheGround = false;
+            glm::vec3 movement;
+            glm::vec3 acceleration;
+
+            //Entity informations
+            float mass;
+
+        protected:
 
             //Jump information
+            bool onTheGround = false;
+            
             int remainingJumps = 0;
             int maxJumps = 2;
             float timeSinceLastJump = 0.0f;
             float timeLimitBetweenJumps = 0.25f;
-
-        protected:
-
-            const glm::vec3* front_;
-            const glm::vec3* right_;
             
             //Collision
             AABB boundingBox_;
 
             //Physics
-            const Gravity* gravity_;
+            const PhysicSystem* physicSystem_;
 
     };
 

@@ -1,4 +1,10 @@
 
+#define ZERO_TO_ROUND 1000000.0
+
+//Round position to a certain limit of zero
+void roundPosition(inout vec3 position) {
+    position = round(position * ZERO_TO_ROUND) / ZERO_TO_ROUND;
+}
 
 struct LocalPositionResult {
     ivec3 chunkPosition;

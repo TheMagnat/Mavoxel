@@ -20,7 +20,7 @@ namespace vuw {
             SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, bool depthCheck = false) : imageCount_(imageCount), depthCheck_(depthCheck), renderPass_(device, 2, depthCheck) {
                 
                 //TODO: Set ailleur
-                float factor = 1;
+                float factor = 0.75;
                 sceneTextureInformations_ = Texture::TextureInformations{(uint32_t)(1920 * factor), (uint32_t)(1080 * factor), 1, VK_SHADER_STAGE_FRAGMENT_BIT};
                 extent_ = VkExtent2D{sceneTextureInformations_.width, sceneTextureInformations_.height};
 

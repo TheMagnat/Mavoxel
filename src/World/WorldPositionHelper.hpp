@@ -1,11 +1,18 @@
 
 #pragma once
 
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
 #include <cmath>
 
 namespace mav {
 
+    #define ZERO_TO_ROUND 1000000.0f
+    #define COMPARISON_DELTA 0.00001f
+
+    //Round position to a certain limit of zero
+    inline void roundPosition(glm::vec3& position) {
+        // position = round(position * ZERO_TO_ROUND) / ZERO_TO_ROUND;
+    }
 
     inline glm::ivec3 getDiscretePosition(glm::vec3 position, float voxelSize) {
         //TODO: Voir si il faut pas utiliser floor
@@ -14,29 +21,31 @@ namespace mav {
 
     //TODO: le faire avec des glm::vec3
     //Return the chunk coordinates and it's corresponding local position of the given position
-    inline std::pair<glm::ivec3, glm::vec3> getChunkLocalPosition(glm::vec3 position, size_t chunkSize, float voxelSize) {
+    inline std::pair<glm::ivec3, glm::vec3> getChunkLocalPosition(glm::vec3 position, float chunkSize) {
 
-		float xSign = std::signbit(position.x) ? -1 : 1;
-		float ySign = std::signbit(position.y) ? -1 : 1;
-		float zSign = std::signbit(position.z) ? -1 : 1;
+        glm::ivec3 chunkPosition = glm::ivec3(floor(position / chunkSize));
+        glm::vec3 localPosition = glm::mod(position, chunkSize);
 
-		float trueChunkSize = chunkSize * voxelSize;
-		//float chunkLen = trueChunkSize - voxelSize_;
-
-		float halfChunkSize = trueChunkSize / 2.0f;
-
-		int xIndex = (position.x + halfChunkSize * xSign) / trueChunkSize;
-		int yIndex = (position.y + halfChunkSize * ySign) / trueChunkSize;
-		int zIndex = (position.z + halfChunkSize * zSign) / trueChunkSize;
-
-		//TODO: voir si ça marche avec des positions pas pile sur le cube
-		float localX = ((position.x + halfChunkSize) - xIndex * trueChunkSize) / voxelSize;
-		float localY = ((position.y + halfChunkSize) - yIndex * trueChunkSize) / voxelSize;
-		float localZ = ((position.z + halfChunkSize) - zIndex * trueChunkSize) / voxelSize;
-
-        //TODO: Voir si il faut pas utiliser floor
-        return { glm::ivec3(xIndex, yIndex, zIndex), glm::vec3(localX, localY, localZ) };
+        return { chunkPosition, localPosition };
     }
+
+    inline glm::bvec3 vec3Not(glm::bvec3 const toInverse) {
+        return glm::bvec3(true, true, true) - toInverse;
+    }
+
+    inline void shiftOnLimitChunk(glm::ivec3& chunkPosition, glm::vec3& localPosition, glm::vec3 const& directionSign, float chunkLen) {
+    
+        static const glm::vec3 maxLenVec = glm::vec3(chunkLen);
+        static const glm::vec3 zeroVec = glm::vec3(0.0);
+
+        glm::bvec3 isGreaterThanMax = glm::bvec3(glm::uvec3(glm::greaterThanEqual(localPosition, maxLenVec)) * glm::uvec3(glm::greaterThan(directionSign, glm::vec3(0))));
+        glm::bvec3 isLessThanMax = glm::bvec3(glm::uvec3(glm::lessThanEqual(localPosition, zeroVec)) * glm::uvec3(glm::lessThan(directionSign, glm::vec3(0))));
+
+        localPosition = localPosition * glm::vec3(glm::uvec3(vec3Not(isGreaterThanMax)) * glm::uvec3(vec3Not(isLessThanMax))) + maxLenVec * glm::vec3(isLessThanMax);
+        chunkPosition += glm::ivec3(isGreaterThanMax) * glm::ivec3(1) + glm::ivec3(isLessThanMax) * glm::ivec3(-1);
+
+    }
+
     
     inline glm::uvec3 getDiscreteUnsignedPosition(glm::vec3 position, float voxelSize) {
         return glm::uvec3(position/voxelSize);

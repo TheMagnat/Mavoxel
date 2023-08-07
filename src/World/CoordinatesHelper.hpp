@@ -1,28 +1,14 @@
 
-#include <functional>
-#include <cstddef>
-#include <limits>
+#pragma once
 
-namespace mav {
+#include <glm/glm.hpp>
 
-    struct ChunkCoordinates {
-        
-        ChunkCoordinates(int xPos, int yPos, int zPos);
-        bool operator==(ChunkCoordinates const& toCompare) const;
-        
-        int x;
-        int y;
-        int z;
-
-    };
-
-}
 
 namespace std {
-    // Define a hash function for ChunkCoordinates
+    // Define a hash function for glm::ivec3
     template <>
-    struct hash<mav::ChunkCoordinates> {
-        size_t operator()(const mav::ChunkCoordinates& coords) const {
+    struct hash<glm::ivec3> {
+        size_t operator()(const glm::ivec3& coords) const {
             constexpr int PRIME_1 = 73856093;
             constexpr int PRIME_2 = 19349663;
             constexpr int PRIME_3 = 83492791;

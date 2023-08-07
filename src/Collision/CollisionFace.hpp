@@ -11,16 +11,16 @@ namespace mav {
 
     class Chunk;
 
-    struct CollisionFace {
+    struct RayCollisionInformations {
 
-        CollisionFace(int32_t voxelP, Chunk* parentChunk, glm::uvec3 const& positionP, glm::vec3 const& normalP, float distanceP);
+        RayCollisionInformations(int32_t voxelP, glm::uvec3 const& positionP, std::vector<glm::vec3> const& normalsP, float distanceP, Chunk* parentChunk = nullptr);
 
         //Information about the voxel owning the face
         int32_t voxel;
         Chunk* chunk;
 
         glm::uvec3 position;
-        glm::vec3 normal;
+        std::vector<glm::vec3> normals;
 
         float distance;
 
