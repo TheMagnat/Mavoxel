@@ -2,10 +2,9 @@
 
 #include <GraphicObjects/Camera.hpp>
 #include <GraphicObjects/Drawable.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
 
 #include <Environment/Environment.hpp>
-
-#include <Material/Material.hpp>
 
 #include <glm/glm.hpp>
 

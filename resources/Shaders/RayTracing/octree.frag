@@ -4,29 +4,7 @@
 //Global information used by Octree algorithm and Octree helper algorithms
 const ivec2 codeToOffset[6] = ivec2[6]( ivec2(0, 1), ivec2(0, -1), ivec2(1, 1), ivec2(1, -1), ivec2(2, 1), ivec2(2, -1) );
 
-layout (set = 0, binding = 1) uniform WorldOctreeInformations {
-    ivec3 centerChunkPosition;
-    int maxDepth;
-    int maxLen;
-    float voxelSize;
-};
-
 #include "octreeHelper.frag"
-
-//Usefull constants
-#define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
-#define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
-
-#define CENTER_OFFSET ivec3(RAYTRACING_CHUNK_RANGE, RAYTRACING_CHUNK_RANGE, RAYTRACING_CHUNK_RANGE)
-
-layout(std430, binding = 2) buffer SsboOctree {
-    int octreeData[];
-} ssboOctrees[RAYTRACING_SVO_SIZE];
-
-layout(set = 0, binding = 3) uniform SsboInformations {
-    int empty;
-} ssboInformations[RAYTRACING_SVO_SIZE];
-
 
 uint depthStep(inout uvec3 position, inout uint currentLen) {
 

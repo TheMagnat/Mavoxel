@@ -50,14 +50,15 @@ target_compile_features(app PRIVATE cxx_std_20)
 #Manually selected shaders
 #Note: dependencies of a shader must be added using the ":" symbol to separate them
 set(shadersToCompile
-    simple_voxel.vert simple_voxel.frag
-    basic_color.vert select_color.frag
-    sun_color.frag
-    only_color.vert only_color.frag
-    only_color_uni.vert only_color_uni.frag
-    only_texPos.vert only_texPos.frag
-    filter.frag
-    RayTracing/ray_tracing.frag:RayTracing/raycastLight.frag:RayTracing/octree.frag:RayTracing/lightHelper.frag:RayTracing/materials.frag:RayTracing/octreeHelper.frag
+    # simple_voxel.vert simple_voxel.frag
+    # basic_color.vert select_color.frag
+    # sun_color.frag
+    # only_color.vert only_color.frag
+    # only_color_uni.vert only_color_uni.frag
+    # only_texPos.frag
+    only_texPos.vert
+    Filter/filter.frag
+    RayTracing/ray_tracing.frag:RayTracing/raycastLight.frag:RayTracing/octree.frag:RayTracing/lightHelper.frag:RayTracing/materials.frag:RayTracing/octreeHelper.frag:RayTracing/inputs.frag:RayTracing/structures.frag
 )
 
 # Create the directory for shaders

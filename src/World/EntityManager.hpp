@@ -5,6 +5,7 @@
 #include <VulkanWrapper/SSBO.hpp>
 #include <Entity/Entity.hpp>
 #include <Physics/PhysicSystem.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
 
 #include <glm/vec3.hpp>
 
@@ -19,6 +20,8 @@ namespace mav {
             
             struct SimpleVoxel {
                 alignas(16) glm::vec3 position;
+                alignas(16) glm::vec3 extents;
+                Material material;
             };
 
 
@@ -50,14 +53,14 @@ namespace mav {
 
             void updateBuffer() {
                 
-                std::vector<SimpleVoxel> positions;
-                positions.reserve(entities_.size());
+                std::vector<SimpleVoxel> voxels;
+                voxels.reserve(entities_.size());
 
                 for (Entity const& entity : entities_) {
-                    positions.emplace_back(entity.getPosition());
+                    voxels.emplace_back(entity.getPosition(), entity.getBoundingBox().extents, Material{glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), 16.0f});
                 }
 
-                gpuBuffer_.update<SimpleVoxel>(positions);
+                gpuBuffer_.update<SimpleVoxel>(voxels);
             }
 
         private:

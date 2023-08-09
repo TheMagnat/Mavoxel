@@ -1,7 +1,6 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "octree.frag"
-#include "materials.frag"
 #include "lightHelper.frag"
 
 #define PI 3.1415926538
@@ -11,18 +10,6 @@
 struct RayAABBResult {
     bool intersect;
     float dist;
-};
-
-struct Box {
-    vec3 center;
-    vec3 radius;
-    vec3 invRadius;
-    mat3 rotation;
-};
-
-struct Ray {
-    vec3 origin;
-    vec3 direction;
 };
 
 RayAABBResult box(vec3 ray_origin, vec3 ray_dir, vec3 minpos, vec3 maxpos) {
@@ -38,120 +25,8 @@ RayAABBResult box(vec3 ray_origin, vec3 ray_dir, vec3 minpos, vec3 maxpos) {
   return RayAABBResult(traversehi > max(traverselow, 0.0), traverselow);
 }
 
-float maxComponent (vec3 v) {
-  return max (max (v.x, v.y), v.z);
-}
-
-// vec3 box.radius:       independent half-length along the X, Y, and Z axes
-// mat3 box.rotation:     box-to-world rotation (orthonormal 3x3 matrix) transformation
-// bool rayCanStartInBox: if true, assume the origin is never in a box. GLSL optimizes this at compile time
-// bool oriented:         if false, ignore box.rotation
-bool ourIntersectBoxCommon(Box box, Ray ray, out float distance, out vec3 normal, const bool rayCanStartInBox, const in bool oriented, in vec3 _invRayDirection) {
-
-    // Move to the box's reference frame. This is unavoidable and un-optimizable.
-    ray.origin = box.rotation * (ray.origin - box.center);
-    if (oriented) {
-        ray.direction = ray.direction * box.rotation;
-    }
-    
-    // This "rayCanStartInBox" branch is evaluated at compile time because `const` in GLSL
-    // means compile-time constant. The multiplication by 1.0 will likewise be compiled out
-    // when rayCanStartInBox = false.
-    float winding;
-    if (rayCanStartInBox) {
-        // Winding direction: -1 if the ray starts inside of the box (i.e., and is leaving), +1 if it is starting outside of the box
-        winding = (maxComponent(abs(ray.origin) * box.invRadius) < 1.0) ? -1.0 : 1.0;
-    } else {
-        winding = 1.0;
-    }
-
-    // We'll use the negated sign of the ray direction in several places, so precompute it.
-    // The sign() instruction is fast...but surprisingly not so fast that storing the result
-    // temporarily isn't an advantage.
-    vec3 sgn = -sign(ray.direction);
-
-	// Ray-plane intersection. For each pair of planes, choose the one that is front-facing
-    // to the ray and compute the distance to it.
-    vec3 distanceToPlane = box.radius * winding * sgn - ray.origin;
-    if (oriented) {
-        distanceToPlane /= ray.direction;
-    } else {
-        distanceToPlane *= _invRayDirection;
-    }
-
-    // Perform all three ray-box tests and cast to 0 or 1 on each axis. 
-    // Use a macro to eliminate the redundant code (no efficiency boost from doing so, of course!)
-    // Could be written with 
-#   define TEST(U, VW)\
-         /* Is there a hit on this axis in front of the origin? Use multiplication instead of && for a small speedup */\
-         (distanceToPlane.U >= 0.0) && \
-         /* Is that hit within the face of the box? */\
-         all(lessThan(abs(ray.origin.VW + ray.direction.VW * distanceToPlane.U), box.radius.VW))
-
-    bvec3 test = bvec3(TEST(x, yz), TEST(y, zx), TEST(z, xy));
-
-    // CMOV chain that guarantees exactly one element of sgn is preserved and that the value has the right sign
-    sgn = test.x ? vec3(sgn.x, 0.0, 0.0) : (test.y ? vec3(0.0, sgn.y, 0.0) : vec3(0.0, 0.0, test.z ? sgn.z : 0.0));    
-#   undef TEST
-        
-    // At most one element of sgn is non-zero now. That element carries the negative sign of the 
-    // ray direction as well. Notice that we were able to drop storage of the test vector from registers,
-    // because it will never be used again.
-
-    // Mask the distance by the non-zero axis
-    // Dot product is faster than this CMOV chain, but doesn't work when distanceToPlane contains nans or infs. 
-    //
-    distance = (sgn.x != 0.0) ? distanceToPlane.x : ((sgn.y != 0.0) ? distanceToPlane.y : distanceToPlane.z);
-
-    // Normal must face back along the ray. If you need
-    // to know whether we're entering or leaving the box, 
-    // then just look at the value of winding. If you need
-    // texture coordinates, then use box.invDirection * hitPoint.
-    
-    if (oriented) {
-        normal = box.rotation * sgn;
-    } else {
-        normal = sgn;
-    }
-    
-    return (sgn.x != 0) || (sgn.y != 0) || (sgn.z != 0);
-}
-
-
 //DEBUG END
 
-//Structures definition
-struct Camera {
-    vec3 position;
-    vec3 front;
-    vec3 up;
-    vec3 right;
-};
-
-//TODO: remove sun, create light with it's attributes
-struct LightVoxel {
-    vec3 position;
-};
-
-struct SimpleVoxel {
-    vec3 position;
-};
-
-//Uniforms
-layout (set = 0, binding = 0) uniform RayCastInformations {
-    float xRatio;
-    Camera camera;
-    mat4 projection;
-    mat4 view;
-    LightVoxel sun;
-    float time;
-    vec3 voxelCursorPosition;
-    vec3 faceCursorNormal;
-};
-
-layout(std430, binding = 4) buffer SsboSimpleVoxels {
-    SimpleVoxel simpleVoxels[];
-};
 
 //TODO: Smooth shadow
 bool inShadow (vec3 startPosition, vec3 offset, vec3 lightDir, float lightDist) {
@@ -160,8 +35,8 @@ bool inShadow (vec3 startPosition, vec3 offset, vec3 lightDir, float lightDist) 
     return shadowRayCastResult.voxel != 0;
 }
 
-ivec4 edges( in vec3 vos, in vec3 nor, in vec3 dir )
-{
+//TODO: rassembler tout les trucs en rapport avec l'AO dans un même frag file
+ivec4 edges( in vec3 vos, in vec3 nor, in vec3 dir ) {
 	vec3 v1 = vos + nor + dir.yzx;
 	vec3 v2 = vos + nor - dir.yzx;
 	vec3 v3 = vos + nor + dir.zxy;
@@ -176,8 +51,7 @@ ivec4 edges( in vec3 vos, in vec3 nor, in vec3 dir )
 	return res;
 }
 
-ivec4 corners( in vec3 vos, in vec3 nor, in vec3 dir )
-{
+ivec4 corners( in vec3 vos, in vec3 nor, in vec3 dir ) {
 	vec3 v1 = vos + nor + dir.yzx + dir.zxy;
 	vec3 v2 = vos + nor - dir.yzx + dir.zxy;
 	vec3 v3 = vos + nor - dir.yzx - dir.zxy;
@@ -190,12 +64,6 @@ ivec4 corners( in vec3 vos, in vec3 nor, in vec3 dir )
 	if( octreeGetWorld(v4).voxel != 0 ) res.w = 1;
 
 	return res;
-}
-
-//Note: UV are like the texture position of the hitted voxel face
-vec2 computeHitUV(vec3 hitPos, vec3 hitDir, vec3 hitVoxelChunkPos) {
-    vec3 uvw = (hitPos - (hitVoxelChunkPos + voxelSize * 0.5)) / voxelSize;
-    return vec2( dot(hitDir.yzx, uvw), dot(hitDir.zxy, uvw) ) + 0.5;
 }
 
 //TODO: verify impact on performance of AO
@@ -257,6 +125,12 @@ vec3 applyFog(vec3 color, vec3 fogColor, float colorDistance, float maxDistance)
 
 }
 
+//Note: UV are like the texture position of the hitted voxel face
+vec2 computeHitUV(vec3 hitPos, vec3 hitDir, vec3 hitVoxelChunkPos) {
+    vec3 uvw = (hitPos - (hitVoxelChunkPos + voxelSize * 0.5)) / voxelSize;
+    return vec2( dot(hitDir.yzx, uvw), dot(hitDir.zxy, uvw) ) + 0.5;
+}
+
 struct RayCastingResult {
     vec3 color;
     vec3 lightColor;
@@ -291,6 +165,7 @@ RayCastingResult castRay(vec3 position, vec3 direction, float maxDistance) {
     //TODO: have a global ray casting function that compare everything
     float distRez = 0;
     vec3 sunNormal = vec3(0.0);
+    vec3 voxelRayColor = vec3(1.0);
     // bool toucheeed = ourIntersectBoxCommon(testBox, rayTest, distRez, norr, false, false, 1.0/direction);
     RayAABBResult sunRayResult =  box(position, direction, sun.position - 5, sun.position + 5);
 
@@ -298,14 +173,16 @@ RayCastingResult castRay(vec3 position, vec3 direction, float maxDistance) {
     for (int i = 0; i < simpleVoxels.length(); ++i) {
         //return result;
         vec3 voxelPos = simpleVoxels[i].position;
-        RayAABBResult voxelRayResult = box(position, direction, voxelPos - voxelSize * 0.5, voxelPos + voxelSize * 0.5);
+        vec3 voxelExtents = simpleVoxels[i].extents;
+        RayAABBResult voxelRayResult = box(position, direction, voxelPos - voxelExtents, voxelPos + voxelExtents);
         if ( voxelRayResult.intersect && (!sunRayResult.intersect || voxelRayResult.dist < sunRayResult.dist) ) {
             sunRayResult = voxelRayResult;
+            voxelRayColor = simpleVoxels[i].material.ambient;
         }
     }
 
     if (sunRayResult.intersect && (rayCastResult.voxel == 0 || sunRayResult.dist < rayCastResult.dist)) {
-        result.color = vec3(1.0);
+        result.color = voxelRayColor;
         result.lightColor = vec3(1.0);
     }
     else if (rayCastResult.voxel != 0) {

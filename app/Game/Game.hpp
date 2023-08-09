@@ -77,7 +77,7 @@ class Game {
         Game(const vuw::Window* window) : window_(window),
             //Shaders
             rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/RayTracing/ray_tracing.frag.spv")),
-            filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/filter.frag.spv")),
+            filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/filter.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), 0.5f * 0.95f, PLAYER_MASS), generator(0, CHUNK_SIZE, VOXEL_SIZE), physicSystem(WORLD_GRAVITY_FORCE),
@@ -103,8 +103,8 @@ class Game {
 
             //Ray Casting
             rayCastingShader.addUniformBufferObjects({
-                {0, sizeof(RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-                {1, sizeof(WorldOctreeInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
+                {0, sizeof(mav::RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                {1, sizeof(mav::WorldOctreeInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
             });
             rayCastingShader.addSSBO({
                 //Binding, Stage flag, count, ssbo ptr
@@ -130,7 +130,7 @@ class Game {
                 vuw::TextureShaderInformation{filterSceneRenderer.getLightTextures().front().getInformations(), 1, &filterSceneRenderer.getLightTextures().front()},
             });
             filterShader.addUniformBufferObjects({
-                {2, sizeof(TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                {2, sizeof(mav::TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
             });
 
             filterShader.generateBindingsAndSets();
@@ -339,7 +339,7 @@ class Game {
 
                 mav::Camera* camera = player.getCamera();
 
-                entityManager.addEntity( mav::AABB( camera->Position + camera->Front * 5 , VOXEL_SIZE ) );
+                entityManager.addEntity( mav::AABB( camera->Position + camera->Front * 5 , VOXEL_SIZE * 0.95 * 0.5 ) );
 
             }
 
