@@ -5,7 +5,7 @@
 
 namespace mav {
 
-    Mesh::Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Environment* environmentP, Material materialP, float sizeP, glm::vec3 positionP)
+    Mesh::Mesh(size_t attributesSum, Environment* environmentP, Material materialP, float sizeP, glm::vec3 positionP)
         : Drawable(), size(sizeP), position(positionP), material(materialP), environment_(environmentP) {
             updatePosition();
         }

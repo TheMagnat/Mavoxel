@@ -41,10 +41,6 @@ namespace mav {
 
     void SparseVoxelOctree::set(glm::uvec3 position, int32_t value) {
 
-        #ifdef TIME
-			Profiler profiler("SVO Set");
-		#endif
-
         //Store the data chunk position and the parent cell offset index
         std::vector<std::pair<size_t, uint8_t>> parentStack;
 
@@ -187,62 +183,72 @@ namespace mav {
      *              - [1; 6] -> No collision, the value indicate on which side of the chunk the ray left.
      *          - float: Traveled distance
     */
-    std::tuple<int, float, std::optional<SVOCollisionInformation>> SparseVoxelOctree::castRay(glm::vec3& position, glm::vec3 const& direction, float maxDistance) const {
+    std::tuple<int, float, std::optional<SVOCollisionInformation>> SparseVoxelOctree::castRay(glm::vec3& position, glm::vec3 const& direction, float maxDistance, std::vector<glm::vec3>& normals) const {
         
         //This vector is used to find the correct side of the collided face
         static const std::vector<int> indexToSide {2, 4, 5, 0, 1, 3};
 
         //Positive or negative direction
-        glm::vec3 directionSign;
-
-        directionSign.x = std::signbit(direction.x) ? -1 : 1;
-        directionSign.y = std::signbit(direction.y) ? -1 : 1;
-        directionSign.z = std::signbit(direction.z) ? -1 : 1;
+		glm::vec3 directionSign = glm::step(0.0f, direction) * 2.0f - 1.0f;
+		glm::vec3 directionSignWithZero = glm::sign(direction);
 
         //Index of the first voxel
         glm::ivec3 voxelPosition = getIntPosition(position, directionSign);
 
-        //TODO: Maybe we could remove this or maybe not
-
-        int movingSide = -1; //bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-        uint32_t foundVoxel = 0;
-        // Chunk* foundChunk = nullptr;
-
+        uint32_t foundVoxel;
+        uint8_t foundDepth;
         float traveledDistance = 0.0f;
 
-        uint8_t foundDepth = 0;
-        float traveled;
-        uint8_t minimumValueIndex = 0; //DEBUG: remove default value
-
-
+        //Found a voxel before starting to move, the ray started in the SVO or perfectly at the limit between a voxel and an empty space.
         std::tie(foundVoxel, foundDepth) = get(voxelPosition);
-
-        //We prevent a return movingSide == -1
         if (foundVoxel != 0) {
-
+            
+            //This allow finding the axis causing the instant collision.
+            normals.clear();
             for (uint8_t i = 0; i < 3; ++i) {
-                if (std::trunc(position[i]) == position[i]) {
-                    return {0, traveledDistance, SVOCollisionInformation{foundVoxel, voxelPosition, indexToSide[i*2 + (directionSign[i]>0)]}};
+                if (std::trunc(position[i]) == position[i] && directionSignWithZero[i] != 0) {
+                    normals.emplace_back(0.0f);
+                    normals.back()[i] = -directionSignWithZero[i];
                 }
             }
 
-            //TODO: This will be corrected by implementing the chunk not found segment in world cast ray
-            std::cout << "Big error" << std::endl;
-
-            //TODO: add a big security that return side with the highest direction value.
+            //If no axis found, the Ray started inside the SVO.
+            if (normals.empty()) {
+                std::cout << "Ray-Casting starting inside the SVO." << std::endl;
+                return {1, maxDistance, {}};
+            }
+            
+            return {0, traveledDistance, SVOCollisionInformation{foundVoxel, voxelPosition}};
 
         }
 
+        float traveled;
+        uint8_t minimumValueIndex;
+        glm::vec3 crossedSides;
+
+        int count = 0;
         while(foundVoxel == 0) {
-            
+
+            if (count++ > 100) {
+                std::cout << "Infinite SVO loop" << std::endl;
+            }
+
             float leafSize = depthToLen_[foundDepth];
 
             //Required time to exit the full voxel along each axis.
-            std::tie(traveled, minimumValueIndex) = getTraveledDistanceAndIndex(position, direction, directionSign, leafSize);             
+            std::tie(traveled, minimumValueIndex) = getShortestTraveledDistanceAndIndex(position, direction, directionSign, leafSize);             
             
             //Compute position offset and add it to the current position to find the new current position
             glm::vec3 positionOffset = direction * traveled;
+
             position += positionOffset;
+            roundPosition(position);
+
+            glm::vec3 fractionPart = glm::fract(glm::mod(position, leafSize));
+            //Note: This line may be useless since we put good values for the round (it may even be equivalent to the COMPARISON DELTA). We could just use the equal now.
+            // crossedSides = glm::lessThan(fractionPart, glm::vec3(COMPARISON_DELTA)) + glm::greaterThan(fractionPart, glm::vec3(1.0f - COMPARISON_DELTA));
+            crossedSides = glm::equal(fractionPart, glm::vec3(0.0f));
+            crossedSides[minimumValueIndex] = 1.0f; //This line add a security if the precision is too low in the precedent operation
 
             //Add the traveled distance to the total traveled distance
             traveledDistance += traveled;
@@ -250,21 +256,68 @@ namespace mav {
             //Compute the new voxel position
             voxelPosition = getIntPosition(position, directionSign);
 
-            if (traveledDistance > maxDistance) return {1, traveledDistance, {}};
+            if (traveledDistance >= maxDistance) return {1, traveledDistance, {}};
 
-            //Test if we went out of bound
-            //Note: 2: x >= len, 3: x < 0, 4: y >= len, 5: y < 0, 6: z >= len, 7: z < 0
+            //Verify if we went out of the SVO
             for (uint8_t i = 0; i < 3; ++i) {
-                if (voxelPosition[i] >= (int)len_) return {2 + i*2, traveledDistance, {}};
-                if (voxelPosition[i] < 0) return {2 + i*2 + 1, traveledDistance, {}};
+                if (voxelPosition[i] >= (int)len_ && directionSignWithZero[i] != 0){
+                    normals.emplace_back(0.0f);
+                    normals.back()[minimumValueIndex] = -directionSignWithZero[minimumValueIndex];
+                    return { 2 + i*2, traveledDistance, {} };
+                }
+                if (voxelPosition[i] < 0 && directionSignWithZero[i] != 0) {
+                    normals.clear();
+                    normals.emplace_back(0.0f);
+                    normals.back()[minimumValueIndex] = -directionSignWithZero[minimumValueIndex];
+                    return { 2 + i*2 + 1, traveledDistance, {} };
+                }
             }
 
             std::tie(foundVoxel, foundDepth) = get(voxelPosition);
 
         }
 
+        //Calculate normals
+        normals.clear();
+        for (uint8_t i = 0; i < 3; ++i) {
+            if (crossedSides[i] != 0 && directionSignWithZero[i] != 0) {
+                normals.emplace_back(0.0f);
+                normals.back()[i] = -directionSignWithZero[i];
+            }
+        }
+
         //We only arrive here if found voxel is true
-        return {0, traveledDistance, SVOCollisionInformation{foundVoxel, voxelPosition, indexToSide[minimumValueIndex*2 + (directionSign[minimumValueIndex]>0)]}};
+        return {0, traveledDistance, SVOCollisionInformation{foundVoxel, voxelPosition}};
+
+    }
+
+    //File handler
+    void SparseVoxelOctree::writeToFile(std::ofstream& stream) const {
+        
+        size_t dataSize = data_.size();
+        stream.write(reinterpret_cast<const char*>(&dataSize), sizeof(size_t));
+        stream.write(reinterpret_cast<const char*>(data_.data()), sizeof(int32_t) * data_.size());
+
+        size_t freeDataChunkSize = freeDataChunk_.size();
+        stream.write(reinterpret_cast<const char*>(&freeDataChunkSize), sizeof(size_t));
+        stream.write(reinterpret_cast<const char*>(freeDataChunk_.data()), sizeof(size_t) * freeDataChunk_.size());
+
+    }
+
+    void SparseVoxelOctree::readFromFile(std::ifstream& stream) {
+        
+        size_t dataSize;
+        stream.read(reinterpret_cast<char*>(&dataSize), sizeof(size_t));
+
+        data_.resize(dataSize);
+        stream.read(reinterpret_cast<char*>(data_.data()), sizeof(int32_t) * dataSize);
+
+
+        size_t freeDataChunkSize;
+        stream.read(reinterpret_cast<char*>(&freeDataChunkSize), sizeof(size_t));
+
+        freeDataChunk_.resize(freeDataChunkSize);
+        stream.read(reinterpret_cast<char*>(freeDataChunk_.data()), sizeof(int32_t) * freeDataChunkSize);
 
     }
 

@@ -8,7 +8,6 @@ struct Material {
     float shininess;
 };
 
-
 Material light = Material(
     vec3(0.1f, 0.1f, 0.1f),
     vec3(0.5f, 0.5f, 0.5f),

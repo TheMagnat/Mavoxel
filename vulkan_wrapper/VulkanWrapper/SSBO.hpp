@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <VulkanWrapper/DeadBufferHandler.hpp>
 #include <VulkanWrapper/Helper/Buffer.hpp>
 
 #include <vector>
@@ -11,8 +12,8 @@ namespace vuw {
 
         public:
 
-            SSBO (const Device* device, VkCommandPool commandPool)
-                : device_(device), commandPool_(commandPool) {}
+            SSBO (const Device* device, VkCommandPool commandPool, DeadBufferHandler* deadBufferHandler)
+                : device_(device), commandPool_(commandPool), deadBufferHandler_(deadBufferHandler) {}
 
             ~SSBO() {
                 clean();
@@ -98,8 +99,7 @@ namespace vuw {
                 }
                 else {
                     if (bufferAllocationInfo_.size < bufferSize) {
-                        //TODO: ? deadBufferHandler_->addBufferToDeleteQueue(indexBuffer_, indexBufferAllocation_);
-                        vmaDestroyBuffer(device_->getAllocator(), buffer_, bufferAllocation_);
+                        deadBufferHandler_->addBufferToDeleteQueue(buffer_, bufferAllocation_);
                         Buffer::create(device_->getAllocator(), bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT , 0, buffer_, bufferAllocation_, bufferAllocationInfo_);
                     }
                 }
@@ -120,6 +120,7 @@ namespace vuw {
         private:
             const Device* device_;
             VkCommandPool commandPool_;
+            DeadBufferHandler* deadBufferHandler_;
 
             //Buffer
             VkBuffer buffer_ = nullptr;

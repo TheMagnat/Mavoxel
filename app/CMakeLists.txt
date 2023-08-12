@@ -50,14 +50,15 @@ target_compile_features(app PRIVATE cxx_std_20)
 #Manually selected shaders
 #Note: dependencies of a shader must be added using the ":" symbol to separate them
 set(shadersToCompile
-    simple_voxel.vert simple_voxel.frag
-    basic_color.vert select_color.frag
-    sun_color.frag
-    only_color.vert only_color.frag
-    only_color_uni.vert only_color_uni.frag
-    only_texPos.vert only_texPos.frag
-    filter.frag
-    ray_tracing.frag:raycastLight.frag:octree.frag:lightHelper.frag:materials.frag:octreeHelper.frag
+    # simple_voxel.vert simple_voxel.frag
+    # basic_color.vert select_color.frag
+    # sun_color.frag
+    # only_color.vert only_color.frag
+    # only_color_uni.vert only_color_uni.frag
+    # only_texPos.frag
+    only_texPos.vert
+    Filter/filter.frag
+    RayTracing/ray_tracing.frag:RayTracing/inputs.frag:RayTracing/materials.frag:RayTracing/structures.frag:RayTracing/rayTracing.frag:RayTracing/lightHelper.frag:RayTracing/octree.frag:RayTracing/octreeHelper.frag:RayTracing/enhancingEffects.frag:RayTracing/collisions.frag
 )
 
 # Create the directory for shaders
@@ -79,13 +80,14 @@ foreach(shaderFiles ${shadersToCompile})
     string(REPLACE ":" ";" shaderFilesList ${shaderFiles})
     list (GET shaderFilesList 0 shaderFile)
     list(TRANSFORM shaderFilesList PREPEND ${CMAKE_SOURCE_DIR}/resources/Shaders/)
-
+    
     set(shaderInPath  resources/Shaders/${shaderFile})
     set(shaderOutPath Shaders/${shaderFile}.spv)
-    set(testShaderOutPath ${CMAKE_SOURCE_DIR}/build/App/Release/Shaders/${shaderFile}.spv)
+
+    get_filename_component(trueFileName "${shaderOutPath}" NAME)
 
     # message("here: ${CMAKE_BINARY_DIR} / : ${CMAKE_MSVCIDE_RUN_PATH}")
-    add_custom_command(OUTPUT ${testShaderOutPath}
+    add_custom_command(OUTPUT $<CONFIG>/${shaderOutPath}
         COMMAND glslangValidator -V ${CMAKE_SOURCE_DIR}/${shaderInPath} -gVS -o $<TARGET_FILE_DIR:app>/${shaderOutPath}
         -DMAX_DEPTH=${svoDepth} -DDEPTH_TO_LEN=${depthToLen} -DRAYTRACING_CHUNK_RANGE=${raytracingChunkRange}
         DEPENDS ${shaderFilesList}
@@ -93,8 +95,8 @@ foreach(shaderFiles ${shadersToCompile})
     )
 
     # Add the custom command as a dependency of the Shaders target
-    add_custom_target(${shaderFile}Target DEPENDS ${testShaderOutPath})
-    add_dependencies(ShadersTarget ${shaderFile}Target)
+    add_custom_target(${trueFileName}Target DEPENDS $<CONFIG>/${shaderOutPath})
+    add_dependencies(ShadersTarget ${trueFileName}Target)
 
 endforeach()
 

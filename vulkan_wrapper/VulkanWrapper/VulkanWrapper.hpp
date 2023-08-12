@@ -74,7 +74,7 @@ namespace vuw {
 
                 //...Then we set it to the un-signaled state. Note: we un-signal it only if we're sure that we will submit work with it
                 vkResetFences(device_.get(), 1, &syncObjs_.inFlightFences[currentFrame_]);
-                                
+
                 //TODO: Voir l'ordre ?
                 //TODO: LE DÉPLACER
                 // updateUniformBuffer(currentFrame_);
@@ -126,8 +126,11 @@ namespace vuw {
                 submitInfo.signalSemaphoreCount = 1;
                 submitInfo.pSignalSemaphores = signalSemaphores;
 
-                if (vkQueueSubmit(device_.getGraphicsQueue(), 1, &submitInfo, syncObjs_.inFlightFences[currentFrame_]) != VK_SUCCESS) {
-                    throw std::runtime_error("failed to submit draw command buffer !");
+                VkResult submitResult = vkQueueSubmit(device_.getGraphicsQueue(), 1, &submitInfo, syncObjs_.inFlightFences[currentFrame_]);
+                if (submitResult != VK_SUCCESS) {
+                    ok = false;
+                    std::cout << "Failed the vkQueueSubmit, here is the return code: " << submitResult << std::endl;
+                    //throw std::runtime_error("failed to submit draw command buffer !");
                 }
 
                 VkPresentInfoKHR presentInfo{};
@@ -144,7 +147,7 @@ namespace vuw {
 
                 presentInfo.pResults = nullptr; // Optionnel
 
-                VkResult result = vkQueuePresentKHR(device_.getPresentQueue(), &presentInfo);
+                VkResult result = vkQueuePresentKHR(device_.getPresentQueue(), &presentInfo);  
                 if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized_) {
                     framebufferResized_ = false;
                     recreateGraphicWindow();
@@ -227,7 +230,7 @@ namespace vuw {
             }
 
             SSBO generateSSBO() {
-                return SSBO(&device_, commandPool_.get());
+                return SSBO(&device_, commandPool_.get(), &deadBufferHandler_);
             }
 
             VertexData generateVertexData() {
@@ -338,6 +341,12 @@ namespace vuw {
 
             //TODO: a améliorer
             SceneRenderer filterRenderer_;
+
+
+            //DEBUG
+            //TODO: REMOVE
+            public:
+                bool ok = true;
     };
 
 }

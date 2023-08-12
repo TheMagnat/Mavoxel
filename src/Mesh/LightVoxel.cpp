@@ -2,7 +2,8 @@
 #include <Mesh/LightVoxel.hpp>
 
 #include <Core/Global.hpp>
-#include <GLObject/BufferTemplates.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
+
 
 namespace mav {
 

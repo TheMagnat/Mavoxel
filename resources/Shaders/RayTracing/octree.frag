@@ -4,32 +4,7 @@
 //Global information used by Octree algorithm and Octree helper algorithms
 const ivec2 codeToOffset[6] = ivec2[6]( ivec2(0, 1), ivec2(0, -1), ivec2(1, 1), ivec2(1, -1), ivec2(2, 1), ivec2(2, -1) );
 
-layout (set = 0, binding = 1) uniform WorldOctreeInformations {
-    ivec3 centerChunkPosition;
-    int maxDepth;
-    int maxLen;
-    float voxelSize;
-};
-
 #include "octreeHelper.frag"
-
-
-//Usefull constants
-#define ZERO_TO_ROUND 1000000.0
-
-#define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
-#define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
-
-#define CENTER_OFFSET ivec3(RAYTRACING_CHUNK_RANGE, RAYTRACING_CHUNK_RANGE, RAYTRACING_CHUNK_RANGE)
-
-layout(std430, binding = 2) buffer SsboOctree {
-    int octreeData[];
-} ssboOctrees[RAYTRACING_SVO_SIZE];
-
-layout(set = 0, binding = 3) uniform SsboInformations {
-    int empty;
-} ssboInformations[RAYTRACING_SVO_SIZE];
-
 
 uint depthStep(inout uvec3 position, inout uint currentLen) {
 
@@ -47,7 +22,7 @@ struct getResult {
     uint depth;
 };
 
-getResult octreeGet(int ssboIndex, uvec3 position) {
+getResult octreeGet(uint ssboIndex, uvec3 position) {
     
     uint currentIndex = 0;
     uint currentDepth = 0;
@@ -66,7 +41,7 @@ getResult octreeGet(int ssboIndex, uvec3 position) {
 
         //indicate index of the next depth
         int currentValue = ssboOctrees[nonuniformEXT(ssboIndex)].octreeData[currentIndex];
-     
+    
         //If true, we found the value of the given position
         if (currentValue <= 0) return getResult( -currentValue, currentDepth );
 
@@ -85,8 +60,13 @@ getResult octreeGetWorld(vec3 worldPosition) {
     LocalPositionResult localPositionResult = getChunkLocalPosition(worldPosition, maxLen);
 
     //Convert chunk position to ssbo index
-    ivec3 centeredChunkPosition = (localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET;
-    int ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
+    uvec3 centeredChunkPosition = uvec3((localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET);
+    
+    //Verify if we are out of the chunk range
+    if ( any( greaterThanEqual(centeredChunkPosition, uvec3(RAYTRACING_CHUNK_PER_AXIS)) ) )
+        return getResult( 0, 0 );
+    
+    uint ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
     
     return octreeGet(ssboIndex, uvec3(floor(localPositionResult.localPosition)));
 
@@ -99,7 +79,7 @@ struct octreeRayCastResult {
     vec3 hitPosition;
 };
 
-octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 direction, float maxDistance, inout vec3 normal) {
+octreeRayCastResult octreeCastRay(uint ssboIndex, inout vec3 position, in vec3 direction, float maxDistance, inout vec3 normal) {
 
     //Positive or negative direction
     vec3 directionSign = step(0.0, direction) * 2.0 - 1.0;
@@ -109,23 +89,22 @@ octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 di
 
     getResult voxelAndDepth = getResult(0, 0);
     float traveledDistance = 0.0f;
-
-    shortestResult traveledAndIndex;
     
     voxelAndDepth = octreeGet(ssboIndex, voxelPosition);
     if (voxelAndDepth.voxel != 0) {
         return octreeRayCastResult(0, traveledDistance, voxelAndDepth.voxel, voxelPosition);
     }
 
+    shortestResult traveledAndIndex;
  
-    int totalLoop = 0;
+    // int totalLoop = 0;
     while(voxelAndDepth.voxel == 0) {
         
         //TODO: Remove ?
-        ++totalLoop;
-        if (totalLoop > 100){
-            return octreeRayCastResult(8, traveledDistance, voxelAndDepth.voxel, vec3(0)); 
-        }
+        // ++totalLoop;
+        // if (totalLoop > 100){
+        //     return octreeRayCastResult(8, traveledDistance, voxelAndDepth.voxel, vec3(0)); 
+        // }
 
         float leafSize = DEPTH_TO_LEN[voxelAndDepth.depth];
 
@@ -136,7 +115,7 @@ octreeRayCastResult octreeCastRay(int ssboIndex, inout vec3 position, in vec3 di
         vec3 positionOffset = direction * traveledAndIndex.traveledDistance;
 
         position += positionOffset;
-        position = round(position * ZERO_TO_ROUND) / ZERO_TO_ROUND;
+        roundPosition(position);
 
         //Add the traveled distance to the total traveled distance
         traveledDistance += traveledAndIndex.traveledDistance;
@@ -195,6 +174,7 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     vec3 directionSign = step(0.0, direction) * 2.0 - 1.0;
 
     LocalPositionResult localPositionResult = getChunkLocalPosition(position, maxLen);
+    roundPosition(localPositionResult.localPosition);
     
     //To ensure that we do not start on the limit of a chunk tower the direction vector
     shiftOnLimitChunk(localPositionResult, directionSign);
@@ -212,26 +192,19 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     int count = 0;
     while (totalTraveledDistance < maxDistance) {
         
-        ++count;
-        if (count > 100) {
-            return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        }
-        //TODO: Better ?
-        ivec3 centeredChunkPosition = (localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET;
+        // ++count;
+        // if (count > 100) {
+        //     return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
+        // }
 
-        if (centeredChunkPosition.x < 0) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.y < 0) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.z < 0) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
+        uvec3 centeredChunkPosition = uvec3((localPositionResult.chunkPosition - centerChunkPosition) + CENTER_OFFSET);
 
-        if (centeredChunkPosition.x >= RAYTRACING_CHUNK_PER_AXIS) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.y >= RAYTRACING_CHUNK_PER_AXIS) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
-        if (centeredChunkPosition.z >= RAYTRACING_CHUNK_PER_AXIS) return WorldRayCastResult( 0, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), totalTraveledDistance * voxelSize );
+        //Verify if we are out of the chunk range
+        if ( any( greaterThanEqual(centeredChunkPosition, uvec3(RAYTRACING_CHUNK_PER_AXIS)) ) )
+            return WorldRayCastResult( 0, vec3(0), vec3(0), vec3(0), 0 );
 
-        int ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
+        uint ssboIndex = centeredChunkPosition.x * (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS) + centeredChunkPosition.y * RAYTRACING_CHUNK_PER_AXIS + centeredChunkPosition.z;
         //Up to here
-
-        vec3 oldLocal = localPositionResult.localPosition;
-        
         if (ssboInformations[nonuniformEXT(ssboIndex)].empty == 1) {
             
             //TODO: changer le type pour mettre une majuscule
@@ -240,7 +213,7 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
             vec3 positionOffset = direction * res.traveledDistance;
             
             localPositionResult.localPosition += positionOffset;
-            localPositionResult.localPosition = round(localPositionResult.localPosition * ZERO_TO_ROUND) / ZERO_TO_ROUND;
+            roundPosition(localPositionResult.localPosition);
 
             if (totalTraveledDistance + res.traveledDistance > maxDistance) rayCastRes.returnCode = 1;
             else rayCastRes.returnCode = 2 + res.index * 2 + int(directionSign[res.index] < 0);
@@ -278,10 +251,10 @@ WorldRayCastResult worldCastRay(in vec3 position, vec3 direction, float maxDista
     }
 
     //We can recalculate it like this !
-    vec3 worldPosition = localPositionResult.localPosition + (localPositionResult.chunkPosition * maxLen) - maxLen / 2;
-    vec3 voxelWorldPosition = rayCastRes.hitPosition + (localPositionResult.chunkPosition * maxLen) - maxLen / 2;
+    vec3 worldPosition = localPositionResult.localPosition + (localPositionResult.chunkPosition * maxLen);
+    vec3 voxelWorldPosition = rayCastRes.hitPosition + (localPositionResult.chunkPosition * maxLen);
 
-    //Resultat marant
+    //Resultat marrant
     //return WorldRayCastResult( rayCastRes.voxel, worldPosition * voxelSize, vec3(0), rayCastRes.normal, totalTraveledDistance * voxelSize );
     return WorldRayCastResult( rayCastRes.voxel, worldPosition * voxelSize, voxelWorldPosition * voxelSize, normal, totalTraveledDistance * voxelSize );
 

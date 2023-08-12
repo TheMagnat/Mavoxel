@@ -1,4 +1,10 @@
 
+#define ZERO_TO_ROUND 1000000.0
+
+//Round position to a certain limit of zero
+void roundPosition(inout vec3 position) {
+    position = round(position * ZERO_TO_ROUND) / ZERO_TO_ROUND;
+}
 
 struct LocalPositionResult {
     ivec3 chunkPosition;
@@ -7,8 +13,6 @@ struct LocalPositionResult {
 
 //Return the chunk coordinates and it's corresponding local position of the given position
 LocalPositionResult getChunkLocalPosition(vec3 position, uint chunkSize) {
-
-    position += chunkSize / 2.0;
     
     ivec3 chunkPosition = ivec3(floor(position / chunkSize));
     vec3 localPosition = mod(position, chunkSize);

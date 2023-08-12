@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <GLObject/Camera.hpp>
+#include <GraphicObjects/Camera.hpp>
 #include <Entity/Entity.hpp>
 
 namespace mav {
@@ -9,10 +9,11 @@ namespace mav {
     class Player : public Entity {
 
             public:
-                Player(glm::vec3 const& playerStartPosition, float voxelSize);
+                Player(glm::vec3 const& playerStartPosition, float playerSize, float massP);
 
+                void setAcceleration(glm::vec3 const& newAcceleration, float magnitude, bool isFreeFlight);
+                
                 void update(float elapsedTime);
-
                 bool update(float elapsedTime, World const& world);
 
                 //TODO: retirer ?
@@ -22,6 +23,22 @@ namespace mav {
                 Camera* getCamera();
 
                 void updateCamera(double xPos, double yPos);
+
+                //TODO: in cpp
+                //For debug purpose
+                void setState(glm::vec3 position, float yaw, float pitch) {
+                    
+                    boundingBox_.center = position;
+                    camera_.Position = boundingBox_.center;
+                    camera_.Position.y += playerSize_ / 2.0f;
+
+                    camera_.Yaw = yaw;
+                    camera_.Pitch = pitch;
+
+                    camera_.updateCameraVectors();
+                    camera_.updateFrustum();
+
+                }
 
             private:
                 //Camera logic
@@ -34,7 +51,7 @@ namespace mav {
                 float lastFov = 45.0f;
 
                 //World data
-                float voxelSize_;
+                float playerSize_;
 
     };
 

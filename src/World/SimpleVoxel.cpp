@@ -177,6 +177,32 @@ namespace mav {
 
     }
 
+    //TODO: Better, generate the normal vector manually as a static variable
+    glm::vec3 SimpleVoxel::getFaceNormal(uint8_t faceIndex) {
+        
+        /**
+         * This vector store a pair for each face that tell which axe is fixed (first) and what's its value (second).
+         */
+        static const std::vector<std::pair<size_t, float>> faceFixedValue {
+            {1, -1.0f}, //bottom
+            {2, 1.0f}, //front
+            {0, 1.0f}, //right
+            {2, -1.0f}, //back
+            {0, -1.0f}, //left
+            {1, 1.0f} //top
+        };
+
+        // We will copy the face at faceIndex
+        size_t fixedIndex = faceFixedValue[faceIndex].first;
+        float fixedValue = faceFixedValue[faceIndex].second;
+
+        glm::vec3 normal(0.0f);
+        normal[fixedIndex] = fixedValue;
+
+        return normal;
+
+    }
+
     void SimpleVoxel::setFaceState(uint8_t faceIndex, bool state) {
         stateOfFaces_[faceIndex] = state;
     }

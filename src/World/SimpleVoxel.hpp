@@ -33,6 +33,8 @@ namespace mav {
             // Faces informations
             std::vector<float> getFace(uint8_t faceIndex) const;
             std::vector<float> getFace(uint8_t faceIndex, std::array<float, 4> const& ambientOcclusion) const;
+            
+            static glm::vec3 getFaceNormal(uint8_t faceIndex);
 
             void setFaceState(uint8_t faceIndex, bool state = true);
             bool getFaceState(uint8_t faceIndex) const;

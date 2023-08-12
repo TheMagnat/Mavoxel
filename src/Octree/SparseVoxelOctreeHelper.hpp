@@ -13,14 +13,11 @@ namespace mav {
     struct SVOCollisionInformation {
         uint32_t id;
         glm::uvec3 position;
-        int side;
     };
 
     inline glm::ivec3 getIntPosition(glm::vec3 const& position, glm::vec3 const& directionSign) {
 
-        glm::ivec3 intPosition = directionSign * glm::floor(directionSign * position) - (glm::vec3)glm::lessThan(directionSign, glm::vec3(0));
-
-        return intPosition;
+        return directionSign * glm::floor(directionSign * position) - (glm::vec3)glm::lessThan(directionSign, glm::vec3(0));
 
     }
 
@@ -51,17 +48,16 @@ namespace mav {
         return index;
     }
 
-    inline std::pair<float, uint8_t> getTraveledDistanceAndIndex(glm::vec3 const& position, glm::vec3 const& direction, glm::vec3 const& directionSign, float leafSize) {
+    inline std::pair<float, uint8_t> getShortestTraveledDistanceAndIndex(glm::vec3 const& position, glm::vec3 const& direction, glm::vec3 const& directionSign, float leafSize) {
         //Required time to exit the full voxel along each axis.
         glm::vec3 tMax = computeDistanceToSide(position, direction, directionSign, leafSize);
+        
+        glm::vec3 lowestIndexVec = glm::step(tMax, glm::vec3(tMax.y, tMax.z, tMax.x));
+        lowestIndexVec *= (glm::vec3(1.0) - glm::vec3(lowestIndexVec.z, lowestIndexVec.x, lowestIndexVec.y));
 
-        glm::vec3 dim = glm::step(tMax, glm::vec3(tMax.y, tMax.z, tMax.x));
-		dim *= (glm::vec3(1.0) - glm::vec3(dim.z, dim.x, dim.y));
+        uint8_t lowestIndex = uint8_t(glm::dot(lowestIndexVec, glm::vec3(0, 1, 2)));
 
-
-        uint8_t minimumValueIndex = argMin(tMax);
-        return { tMax[minimumValueIndex], minimumValueIndex };
+        return { tMax[lowestIndex], lowestIndex };
     }
-
 
 }

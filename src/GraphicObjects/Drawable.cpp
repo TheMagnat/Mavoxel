@@ -1,5 +1,5 @@
 
-#include <GLObject/Drawable.hpp>
+#include <GraphicObjects/Drawable.hpp>
 
 #include <Core/Global.hpp>
 

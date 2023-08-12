@@ -112,7 +112,8 @@
 		"span": "cpp",
 		"xtree": "cpp",
 		"shared_mutex": "cpp",
-		"unordered_set": "cpp"
+		"unordered_set": "cpp",
+		"filesystem": "cpp"
 	},
 	"cSpell.words": [
 		"AABB",
@@ -141,5 +142,8 @@
 		"voxels"
 	],
 	"cmake.configureOnOpen": true,
-	"cSpell.language": "en,fr"
+	"cSpell.language": "en,fr",
+	"cSpell.enableFiletypes": [
+		"glsl"
+	]
 }

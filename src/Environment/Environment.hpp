@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Mesh/Mesh.hpp>
-#include <GLObject/Camera.hpp>
+#include <GraphicObjects/Camera.hpp>
 
 #include <Collision/CollisionInformations.hpp>
 

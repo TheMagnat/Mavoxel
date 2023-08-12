@@ -55,7 +55,14 @@ inline ThreadPool::ThreadPool(size_t threads)
                         this->tasks.pop();
                     }
                     
-                    task();
+                    try {
+                        task();
+                    }
+                    catch (std::exception ex) {
+                        std::cout << "Exception caught in thread: " << ex.what() << std::endl;
+                        throw ex;
+                    }
+
                 }
             }
         );

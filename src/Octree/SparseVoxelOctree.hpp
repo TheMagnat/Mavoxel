@@ -3,7 +3,6 @@
 
 
 #include <Octree/SparseVoxelOctreeHelper.hpp>
-#include <VulkanWrapper/Device.hpp>
 #include <VulkanWrapper/SSBO.hpp>
 
 
@@ -11,6 +10,7 @@
 
 #include <vector>
 #include <optional>
+#include <fstream>
 
 namespace mav {
 
@@ -45,22 +45,26 @@ namespace mav {
              *              - [1; 6] -> No collision, the value indicate on which side of the chunk the ray left.
              *          - float: Traveled distance
             */
-            std::tuple<int, float, std::optional<SVOCollisionInformation>> castRay(glm::vec3& position, glm::vec3 const& direction, float maxDistance) const;
+            std::tuple<int, float, std::optional<SVOCollisionInformation>> castRay(glm::vec3& position, glm::vec3 const& direction, float maxDistance, std::vector<glm::vec3>& normals) const;
 
             inline size_t getLen() { return len_; }
             inline size_t getSize() { return size_; }
             inline size_t getDepth() { return depth_; }
 
             //Vulkan part
-            void generateBuffer() {
-                gpuBuffer_.generate<int32_t>(data_);
-            }
 
+            /**
+             * Update the SSBO GPU buffer. If it's not created, it will also create it. 
+             */
             void updateBuffer() {
                 gpuBuffer_.update<int32_t>(data_);
             }
 
             inline vuw::SSBO const& getSSBO() { return gpuBuffer_; }
+
+            //File handler
+            void writeToFile(std::ofstream& stream) const;
+            void readFromFile(std::ifstream& stream);
 
         private:
             uint8_t depthStep(glm::uvec3& position, size_t& currentLen) const;

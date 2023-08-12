@@ -40,13 +40,9 @@ namespace vuw {
 
                 }
 
-                if (bufferStateTrueNb_ < framesInFlight_) {
-                    std::cout << "Added to queue" << std::endl;
-                    deleteQueue_.emplace_front(device_->getAllocator(), buffer, allocation, bufferState_, bufferStateTrueNb_);
-                }
-                else {
-                    vmaDestroyBuffer(device_->getAllocator(), buffer, allocation);
-                }
+                //Add to delete queue if at lease one frame is currently rendering
+                if (bufferStateTrueNb_ < framesInFlight_) deleteQueue_.emplace_front(device_->getAllocator(), buffer, allocation, bufferState_, bufferStateTrueNb_);
+                else vmaDestroyBuffer(device_->getAllocator(), buffer, allocation);
 
             }
 
@@ -55,16 +51,16 @@ namespace vuw {
                 if (deleteQueue_.empty()) return;
 
                 deleteQueue_.remove_if([this, finishedFrame](SafeBufferWrapper& safeBufferWrapper){
-
+                    
+                    //Verify if the current frame was already notified, if not, add it to the total number of finished frame
                     if (!safeBufferWrapper.bufferState_[finishedFrame]) {
                         safeBufferWrapper.bufferState_[finishedFrame] = true;
                         ++safeBufferWrapper.bufferStateTrueNb_;
-                        std::cout << "Buffer can be freed ? : " << (safeBufferWrapper.bufferStateTrueNb_ >= framesInFlight_) << std::endl;
                         return safeBufferWrapper.bufferStateTrueNb_ >= framesInFlight_; //If true, all state are at true and it mean the buffer is ready to be freed
                     }
 
-                    std::cout << "Can't be freed yet" << std::endl;
                     return false;
+
                 });
 
             }

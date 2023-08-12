@@ -3,7 +3,6 @@
 #include <Mesh/Mesh.hpp>
 
 #include <Environment/Environment.hpp>
-#include <GLObject/GLObject.hpp>
 
 #include <glm/glm.hpp>
 

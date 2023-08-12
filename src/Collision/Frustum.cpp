@@ -1,7 +1,7 @@
 
 #include <Collision/Frustum.hpp>
 
-#include <GLObject/Camera.hpp>
+#include <GraphicObjects/Camera.hpp>
 
 namespace {
 

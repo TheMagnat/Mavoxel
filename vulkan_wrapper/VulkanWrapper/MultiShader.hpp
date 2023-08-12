@@ -197,7 +197,7 @@ namespace vuw {
 
                     Texture::TextureInformations const& currentTextureInformations = textureInformations_[i].informations;
 
-                    layoutBindings[currentIndex].binding = currentTextureInformations.binding;
+                    layoutBindings[currentIndex].binding = textureInformations_[i].binding;
                     layoutBindings[currentIndex].descriptorCount = 1;
                     layoutBindings[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     layoutBindings[currentIndex].pImmutableSamplers = nullptr;
@@ -318,7 +318,7 @@ namespace vuw {
 
                         writeDescriptors[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                         writeDescriptors[currentIndex].dstSet = multiDescriptorSets_[objectIndex][frameIndex];
-                        writeDescriptors[currentIndex].dstBinding = currentTexture->getInformations().binding;
+                        writeDescriptors[currentIndex].dstBinding = textureInformations_[textureIndex].binding;
                         writeDescriptors[currentIndex].dstArrayElement = 0;
 
                         writeDescriptors[currentIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

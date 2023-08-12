@@ -72,9 +72,6 @@ namespace vuw {
             VkDeviceSize vertexBufferSize = sizeof(float) * vertices.size();
             VkDeviceSize indexBufferSize = sizeof(uint32_t) * indices.size();
 
-
-            void* data;
-
             //// Create vertex buffer
 
             //Staging buffer

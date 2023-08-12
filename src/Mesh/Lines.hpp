@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GLObject/Drawable.hpp>
+#include <GraphicObjects/Drawable.hpp>
 
 
 namespace mav {

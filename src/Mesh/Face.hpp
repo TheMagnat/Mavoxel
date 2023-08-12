@@ -4,7 +4,6 @@
 
 #include <VulkanWrapper/Shader.hpp>
 #include <Environment/Environment.hpp>
-#include <GLObject/GLObject.hpp>
 
 #include <glm/glm.hpp>
 

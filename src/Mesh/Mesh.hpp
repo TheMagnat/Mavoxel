@@ -1,12 +1,10 @@
 #pragma once
 
-#include <GLObject/Camera.hpp>
-#include <GLObject/GLObject.hpp>
-#include <GLObject/Drawable.hpp>
+#include <GraphicObjects/Camera.hpp>
+#include <GraphicObjects/Drawable.hpp>
+#include <GraphicObjects/BufferTemplates.hpp>
 
 #include <Environment/Environment.hpp>
-
-#include <Material/Material.hpp>
 
 #include <glm/glm.hpp>
 
@@ -22,7 +20,7 @@ namespace mav {
         public:
 
             //TODO: retirer cette dépendant à un material qui est peu utilisé
-            Mesh(size_t attributesSum, std::vector<VAO::Attribute> const& attributes, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
+            Mesh(size_t attributesSum, Environment* environment, Material material, float size = 1, glm::vec3 position = glm::vec3(0.0f));
 
 
             void setPosition(glm::vec3 const& newPosition);

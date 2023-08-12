@@ -18,11 +18,15 @@ namespace vuw {
     class RenderPass {
 
         public:
-            RenderPass(Device const& device, SwapChain const& swapChain, bool depthCheck = false) : devicePtr_(device.get()) {
+            RenderPass(Device const& device, SwapChain const& swapChain, bool depthCheck = false) : devicePtr_(device.get()), nbColors_(1) {
                 initializeRenderPass(swapChain, depthCheck);
             };
 
-            RenderPass(Device const& device, bool depthCheck = false) : devicePtr_(device.get()) {
+            RenderPass(Device const& device, bool depthCheck = false) : devicePtr_(device.get()), nbColors_(1) {
+                initializeRenderPass(depthCheck);
+            };
+
+            RenderPass(Device const& device, size_t nbColors, bool depthCheck = false) : devicePtr_(device.get()), nbColors_(nbColors) {
                 initializeRenderPass(depthCheck);
             };
 
@@ -48,6 +52,10 @@ namespace vuw {
             VkRenderPass get() const {
                 return renderPass_;
             }
+
+            size_t getNbColors() const {
+                return nbColors_;
+            }
             
 
         private:
@@ -55,6 +63,7 @@ namespace vuw {
 
             VkRenderPass renderPass_;
 
+            size_t nbColors_;
 
     };
 
