@@ -55,7 +55,7 @@
 #define WORLD_GRAVITY_FORCE 9.81
 
 #define GRAVITY_ON false //If we start in free flight or not
-#define FREE_FLIGHT_MULTIPLIER 50.0f
+#define FREE_FLIGHT_MULTIPLIER 5.0f
 
 constexpr mav::Material grassMaterial {
     {0.0f, 1.0f, 0.0f},
@@ -80,7 +80,8 @@ class Game {
             filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/filter.frag.spv")),
 
             totalElapsedTime_(0),
-            player(glm::vec3(-5, 0, 0), 0.5f * 0.95f, PLAYER_MASS), generator(0, CHUNK_SIZE, VOXEL_SIZE), physicSystem(WORLD_GRAVITY_FORCE),
+            player(glm::vec3(-5, 0, 0), 0.5f * 0.95f, PLAYER_MASS), generator(0, CHUNK_SIZE, VOXEL_SIZE),
+            physicSystem(WORLD_GRAVITY_FORCE), freeFlightPhysicSystem(0),
             world(&generator, SVO_DEPTH, VOXEL_SIZE, "demoWorld", false),
             entityManager(&physicSystem),
 
@@ -144,7 +145,7 @@ class Game {
             filterRendererWrapper.initializeVertices();
 
 
-            player.setPhysicSystem(&physicSystem);
+            player.setPhysicSystem(freeFlight ? &freeFlightPhysicSystem : &physicSystem);
 
             //Init environment
             environment.sun = &sun;
@@ -164,7 +165,7 @@ class Game {
         void initChunks() {
 
             if (SOLO_CHUNK) {
-                // world.loadOrCreateChunk(glm::ivec3(0, -1, -1));
+                world.loadOrCreateChunk(glm::ivec3(0, -1, -1));
                 // world.loadOrCreateChunk(glm::ivec3(0, 0, -1));
                 // world.loadOrCreateChunk(glm::ivec3(1, 0, 1));
                 // world.loadOrCreateChunk(glm::ivec3(0, 0, -1));
@@ -242,10 +243,11 @@ class Game {
                 // else player.setPhysicSystem(&physicSystem);
 
                 if (freeFlight) {
-                    physicSystem.setGravityStrength(0);
+                    player.setPhysicSystem(&freeFlightPhysicSystem);
+                    // physicSystem.setGravityStrength(0);
                     player.velocity = glm::vec3(0.0f);
                 }
-                else physicSystem.setGravityStrength(WORLD_GRAVITY_FORCE);
+                else player.setPhysicSystem(&physicSystem);
 
             }
 
@@ -339,7 +341,7 @@ class Game {
 
                 mav::Camera* camera = player.getCamera();
 
-                entityManager.addEntity( mav::AABB( camera->Position + camera->Front * 5 , VOXEL_SIZE * 0.95 * 0.5 ) );
+                entityManager.addEntity( mav::AABB( camera->Position + camera->Front * 5 , VOXEL_SIZE * 0.95 * 3 ) );
 
             }
 
@@ -355,6 +357,16 @@ class Game {
 
                 world.save();
                 std::cout << "World saved !" << std::endl;
+
+            }
+
+            if(key == GLFW_KEY_F && action == GLFW_PRESS){
+
+                mav::Camera* camera = player.getCamera();
+
+                camera->Position;
+
+                world.getVoxel(camera->Position.x, camera->Position.y, camera->Position.z);
 
             }
 
@@ -566,6 +578,7 @@ class Game {
         
         //Physics
         mav::PhysicSystem physicSystem;
+        mav::PhysicSystem freeFlightPhysicSystem;
 
         mav::World world;
         mav::EntityManager entityManager;

@@ -1,6 +1,9 @@
 #version 450 core
 #extension GL_GOOGLE_include_directive : require
 
+// Global
+#define PI 3.1415926538
+
 #include "inputs.frag"
 
 //POSITION: DEBUG
@@ -10,13 +13,12 @@ layout (location = 1) out vec4 outLightColor;
 
 layout (location = 0) in vec2 TexPos;
 
-#include "raycastLight.frag"
+#include "rayTracing.frag"
 
 //PRAMS
 #define RAY_DISTANCE 384
 
-vec3 createRay(vec2 px, mat4 PInv, mat4 VInv)
-{
+vec3 createRay(vec2 px, mat4 PInv, mat4 VInv) {
   
     // convert pixel to NDS
     // [0,1] -> [-1,1]
@@ -47,6 +49,7 @@ vec3 createRay(vec2 px, mat4 PInv, mat4 VInv)
     return normalize(dirWorld); 
 }
 
+//Old functions...
 vec3 getRayTarget() {
     vec2 uv = TexPos * 2 - 1.0;
     uv.x *= xRatio;
@@ -61,7 +64,7 @@ vec3 getRayTarget() {
 vec3 getRayDir(vec3 rayTarget) {
     return normalize(rayTarget - camera.position);
 }
-
+//End old functions
 
 //Main function
 void main() {
@@ -69,9 +72,8 @@ void main() {
     vec3 rayDirection = createRay(TexPos, inverse(projection), inverse(view));
     // vec3 rayDirection = getRayDir(rayTarget);
 
-    //HERE TODO ADAPT TO OCTREE
-    RayCastingResult rayCastingResult = castRay(camera.position, rayDirection, RAY_DISTANCE);
-    outFragColor = vec4(rayCastingResult.color, 1.0);
-    outLightColor = vec4(rayCastingResult.lightColor, 1.0);
+    RayTracingResult rayTracingResult = applyRayTracing(camera.position, rayDirection, RAY_DISTANCE);
+    outFragColor = vec4(rayTracingResult.color, 1.0);
+    outLightColor = vec4(rayTracingResult.lightColor, 1.0);
 
 }

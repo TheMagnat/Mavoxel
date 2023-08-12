@@ -142,5 +142,8 @@
 		"voxels"
 	],
 	"cmake.configureOnOpen": true,
-	"cSpell.language": "en,fr"
+	"cSpell.language": "en,fr",
+	"cSpell.enableFiletypes": [
+		"glsl"
+	]
 }

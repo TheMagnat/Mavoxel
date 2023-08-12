@@ -57,7 +57,7 @@ namespace mav {
                 voxels.reserve(entities_.size());
 
                 for (Entity const& entity : entities_) {
-                    voxels.emplace_back(entity.getPosition(), entity.getBoundingBox().extents, Material{glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), 16.0f});
+                    voxels.emplace_back(entity.getPosition(), entity.getBoundingBox().extents, Material{glm::vec3(0, 0, 1.0f), glm::vec3(0, 0, 1.0f), glm::vec3(0.1f, 0.1f, 0.1f), 16.0f});
                 }
 
                 gpuBuffer_.update<SimpleVoxel>(voxels);

@@ -58,7 +58,7 @@ set(shadersToCompile
     # only_texPos.frag
     only_texPos.vert
     Filter/filter.frag
-    RayTracing/ray_tracing.frag:RayTracing/raycastLight.frag:RayTracing/octree.frag:RayTracing/lightHelper.frag:RayTracing/materials.frag:RayTracing/octreeHelper.frag:RayTracing/inputs.frag:RayTracing/structures.frag
+    RayTracing/ray_tracing.frag:RayTracing/inputs.frag:RayTracing/materials.frag:RayTracing/structures.frag:RayTracing/rayTracing.frag:RayTracing/lightHelper.frag:RayTracing/octree.frag:RayTracing/octreeHelper.frag:RayTracing/enhancingEffects.frag:RayTracing/collisions.frag
 )
 
 # Create the directory for shaders

@@ -1,5 +1,4 @@
 
-
 float maxComponent (vec3 v) {
     return max (max (v.x, v.y), v.z);
 }
@@ -89,4 +88,52 @@ bool ourIntersectBoxCommon(Box box, Ray ray, out float distance, out vec3 normal
     }
     
     return (sgn.x != 0) || (sgn.y != 0) || (sgn.z != 0);
+}
+
+struct RayAABBResult {
+    bool intersect;
+    vec3 hitPosition;
+    vec3 normal;
+    float dist;
+};
+
+RayAABBResult box(vec3 ray_origin, vec3 ray_dir, vec3 minPos, vec3 maxPos) {
+
+    RayAABBResult result;
+
+    vec3 inverse_dir = 1.0 / ray_dir;
+    vec3 tbot = inverse_dir * (minPos - ray_origin);
+    vec3 ttop = inverse_dir * (maxPos - ray_origin);
+    vec3 tmin = min(ttop, tbot);
+    vec3 tmax = max(ttop, tbot);
+    vec2 traverse = max(tmin.xx, tmin.yz);
+    float traverselow = max(traverse.x, traverse.y);
+    traverse = min(tmax.xx, tmax.yz);
+    float traversehi = min(traverse.x, traverse.y);
+
+    result.intersect = traversehi > max(traverselow, 0.0);
+
+    if (result.intersect) {
+
+        result.dist = traverselow;
+        result.hitPosition = ray_origin + ray_dir * result.dist;
+
+        vec3 c = (minPos + maxPos) * 0.5;
+        vec3 p = result.hitPosition - c;
+        vec3 d = (minPos - maxPos) * 0.5;
+        
+        float bias = 1.001;
+
+        result.normal = normalize(vec3(
+            float(int(p.x / abs(d.x) * bias)),
+            float(int(p.y / abs(d.y) * bias)),
+            float(int(p.z / abs(d.z) * bias))
+        ));
+
+        result.hitPosition += result.normal * 0.00001;
+
+    }
+
+    return result;
+
 }

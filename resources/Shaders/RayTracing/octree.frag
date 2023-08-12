@@ -41,7 +41,7 @@ getResult octreeGet(uint ssboIndex, uvec3 position) {
 
         //indicate index of the next depth
         int currentValue = ssboOctrees[nonuniformEXT(ssboIndex)].octreeData[currentIndex];
-     
+    
         //If true, we found the value of the given position
         if (currentValue <= 0) return getResult( -currentValue, currentDepth );
 
