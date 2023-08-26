@@ -22,7 +22,7 @@ namespace mav {
 
             }
 
-            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override {
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) override {
                 
                 //Uniforms
                 RayCastInformations rci;

@@ -123,7 +123,9 @@ namespace vuw {
         for (size_t i = 0; i < nbColors_; ++i) {
 
             // Color attachment description
-            attachments[i].format = VK_FORMAT_R8G8B8A8_UNORM;
+
+            //TODO: passer ça en paramètre plutot que faire ce truc sale et arbitraire
+            attachments[i].format = i > 0 ? VK_FORMAT_R32G32B32A32_SFLOAT : VK_FORMAT_R8G8B8A8_UNORM;
             attachments[i].samples = VK_SAMPLE_COUNT_1_BIT;
 
             attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;

@@ -10,6 +10,7 @@
 //Inpute / Outputs
 layout (location = 0) out vec4 outFragColor;
 layout (location = 1) out vec4 outLightColor;
+layout (location = 2) out vec4 outPosition;
 
 layout (location = 0) in vec2 TexPos;
 
@@ -75,5 +76,6 @@ void main() {
     RayTracingResult rayTracingResult = applyRayTracing(camera.position, rayDirection, RAY_DISTANCE);
     outFragColor = vec4(rayTracingResult.color, 1.0);
     outLightColor = vec4(rayTracingResult.lightColor, 1.0);
+    outPosition = rayTracingResult.position;
 
 }

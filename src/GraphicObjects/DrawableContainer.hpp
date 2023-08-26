@@ -23,9 +23,13 @@ namespace mav {
             /**
              * To initialize the graphic pipeline.
              * It must be called before doing any bind/draw
+             * 
+             * Note: renderIndex must be equal to the desired render in the global vulkanWrapper class.
+             *       Less than 0 mean using the normal renderer, any other index mean using the corresponding filter render.
             */
-            void initializePipeline(std::vector<uint32_t> const& vertexAttributesSizes, bool filterPipeline = false, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
-                graphicsPipeline_ = filterPipeline ? Global::vulkanWrapper->generateGraphicsPipelineForFilter(*shader_, vertexAttributesSizes, topology) : Global::vulkanWrapper->generateGraphicsPipeline(*shader_, vertexAttributesSizes, topology);
+            void initializePipeline(std::vector<uint32_t> const& vertexAttributesSizes, int renderIndex, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) {
+                //TODO: meilleur solution pour récupérer la pipeline ?
+                graphicsPipeline_ = Global::vulkanWrapper->generateGraphicsPipeline(*shader_, vertexAttributesSizes, renderIndex, topology);
                 Global::vulkanWrapper->saveGraphicPipeline(&graphicsPipeline_);
             }
 

@@ -76,7 +76,7 @@ namespace mav {
                 return {3, 3};
             }
 
-            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override {
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) override {
                 //Binding 0
                 ViewProjectionObject vp{};
                 vp.view = camera->GetViewMatrix();

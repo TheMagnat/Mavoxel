@@ -122,7 +122,7 @@ namespace mav {
         return {3, 3, 2};
     }
 
-    void Voxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
+    void Voxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) {
         //TODO
     }
 

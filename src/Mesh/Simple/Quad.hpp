@@ -17,7 +17,7 @@ namespace mav {
                 return {{3}, {2}};
             }
 
-            virtual void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override {
+            virtual void updateShader(vuw::Shader* shader, uint32_t currentFrame) override {
                 //TODO
             }
 

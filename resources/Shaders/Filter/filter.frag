@@ -7,10 +7,17 @@ layout (location = 0) in vec2 TexPos;
 //Full rendered scene texture
 layout(binding = 0) uniform sampler2D sceneTexture;
 layout(binding = 1) uniform sampler2D sceneLightTexture;
+layout(binding = 2) uniform sampler2D scenePositionTexture;
 
 //Uniforms
-layout (set = 0, binding = 2) uniform RayCastInformations {
+layout (set = 0, binding = 3) uniform RayCastInformations {
     vec2 sun;
+};
+
+layout (set = 0, binding = 4) uniform FilterInformations {
+    mat4 oldProjectionViewMat;
+    mat4 newProjectionViewMat;
+    mat4 view;
 };
 
 vec2 lightPositionOnScreen[1] = vec2[1](sun);
@@ -96,7 +103,10 @@ vec4 ray(){
     return tempoFragColor;
 }
 
+
 void main() {
+
+    
     
     vec3 color = texture(sceneTexture, TexPos).rgb;
     vec3 raycolor = ray2();
@@ -105,5 +115,19 @@ void main() {
 
     outFragColor = vec4(finalColor, 1);
 
-    // outFragColor = texture(sceneTexture, TexPos);
+    // bool debug = true;
+    // if (debug) {
+        
+    //     float middleSize = 0.001;
+
+    //     if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
+    //         outFragColor = vec4(vec3(1.0), 1.0);
+    //     }
+    //     else if (TexPos.x > 0.5) {
+    //         outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
+    //     }
+    
+    // }
+
+    // outFragColor = vec4(vec3(texture(scenePositionTexture, TexPos)), 1);
 }

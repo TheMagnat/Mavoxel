@@ -111,7 +111,7 @@ namespace mav {
         return {3};
     }
 
-    void DebugVoxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) const {
+    void DebugVoxel::updateShader(vuw::Shader* shader, uint32_t currentFrame) {
         
         //Binding 0
         ModelViewProjectionObjectNoNormal mvp{};

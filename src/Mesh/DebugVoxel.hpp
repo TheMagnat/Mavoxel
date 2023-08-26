@@ -23,7 +23,7 @@ namespace mav {
 			void setColor(glm::vec3 const& color);
 
 			std::vector<uint32_t> getVertexAttributesSizes() const override;
-            void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
+            void updateShader(vuw::Shader* shader, uint32_t currentFrame) override;
 		
 		private:
 

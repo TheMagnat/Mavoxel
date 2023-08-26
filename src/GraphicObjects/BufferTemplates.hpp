@@ -67,6 +67,14 @@ namespace mav {
         glm::vec2 sunScreenPos;
     };
 
+    struct FilterInformations {
+        alignas(16) glm::mat4 oldProjectionView;
+        alignas(16) glm::mat4 newProjectionView;
+        alignas(16) glm::mat4 view;
+    };
+
+    
+
     struct Material {
         alignas(16) glm::vec3 ambient;
         alignas(16) glm::vec3 diffuse;

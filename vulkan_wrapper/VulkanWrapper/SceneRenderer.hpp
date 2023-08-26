@@ -17,26 +17,38 @@ namespace vuw {
 
         public:
             
-            SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, bool depthCheck = false) : imageCount_(imageCount), depthCheck_(depthCheck), renderPass_(device, 2, depthCheck) {
+            SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, int nbAdditionalImages = 0, bool depthCheck = false)
+                : imageCount_(imageCount), depthCheck_(depthCheck), renderPass_(device, 1 + nbAdditionalImages, depthCheck), additionalOutputImages_(nbAdditionalImages) {
                 
                 //TODO: Set ailleur
                 float factor = 0.75;
                 sceneTextureInformations_ = Texture::TextureInformations{(uint32_t)(1920 * factor), (uint32_t)(1080 * factor), 1, VK_SHADER_STAGE_FRAGMENT_BIT};
+                additionalOutputTextureInformations_ = Texture::TextureInformations{(uint32_t)(1920 * factor), (uint32_t)(1080 * factor), 1, VK_SHADER_STAGE_FRAGMENT_BIT};
                 extent_ = VkExtent2D{sceneTextureInformations_.width, sceneTextureInformations_.height};
+
 
                 for (uint16_t i = 0; i < imageCount_; ++i) {
                     images_.emplace_back(&device, commandPool, device.getGraphicsQueue(), sceneTextureInformations_, VK_FORMAT_R8G8B8A8_UNORM);
-                    //TODO: Render le nombre d'images paramétrable et non plus "2" tout le temps
-                    lightImages_.emplace_back(&device, commandPool, device.getGraphicsQueue(), sceneTextureInformations_, VK_FORMAT_R8G8B8A8_UNORM);
-                
+
+                    //Create additional textures
+                    for (size_t j = 0; j < nbAdditionalImages; ++j) {
+                        additionalOutputImages_[j].emplace_back(&device, commandPool, device.getGraphicsQueue(), additionalOutputTextureInformations_, VK_FORMAT_R32G32B32A32_SFLOAT);
+                    }
+
+                    //Create textures ptr vector for the framebuffer
+                    std::vector<const Texture*> tempoTexturesPtr {&images_.back()};
+                    for (std::vector<Texture> const& textures : additionalOutputImages_) {
+                        tempoTexturesPtr.emplace_back(&textures.back());
+                    }
+
                     if (depthCheck_) {
                         //TODO: voir si il faut pas d'autre type de texture pour la depth
                         depthTextures_.emplace_back(&device, commandPool, device.getGraphicsQueue(), sceneTextureInformations_);
-                        framebuffers_.emplace_back(device, renderPass_, std::vector<const Texture*>{&images_.back(), &lightImages_.back()}, &depthTextures_.back());
+                        framebuffers_.emplace_back(device, renderPass_, tempoTexturesPtr, &depthTextures_.back());
                         
                     }
                     else {
-                        framebuffers_.emplace_back(device, renderPass_, std::vector<const Texture*>{&images_.back(), &lightImages_.back()});
+                        framebuffers_.emplace_back(device, renderPass_, tempoTexturesPtr);
                     }
 
                 }
@@ -63,10 +75,10 @@ namespace vuw {
                     renderPassInfo.renderArea.extent = {sceneTextureInformations_.width, sceneTextureInformations_.height};
 
                     //TODO: rendre ça paramétrable
-                    std::vector<VkClearValue> clearValues(2 + depthCheck_);
-                    clearValues[0] = {{0.5294f, 0.8078f, 0.9216f, 1.0f}};
-                    clearValues[1] = {{0.0f, 0.0f, 1.0f, 1.0f}};
-                    if (depthCheck_) clearValues[1] = {1.0f, 0};
+                    std::vector<VkClearValue> clearValues(1 + additionalOutputImages_.size(), VkClearValue({{0.0f, 0.0f, 0.0f, 1.0f}}));
+                    // clearValues[0] = {{0.0f, 0.0f, 0.0f, 1.0f}};
+                    // clearValues[1] = {{0.0f, 0.0f, 0.0f, 1.0f}};
+                    if (depthCheck_) clearValues.push_back( VkClearValue{1.0f, 0} );
 
                     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
                     renderPassInfo.pClearValues = clearValues.data();
@@ -103,8 +115,8 @@ namespace vuw {
                 return images_;
             }
 
-            std::vector<Texture> const& getLightTextures() const {
-                return lightImages_;
+            std::vector<std::vector<Texture>> const& getAdditionalTextures() const {
+                return additionalOutputImages_;
             }
 
             RenderPass const& getRenderpass() const {
@@ -124,12 +136,13 @@ namespace vuw {
             bool depthCheck_;
 
             Texture::TextureInformations sceneTextureInformations_;
+            Texture::TextureInformations additionalOutputTextureInformations_;
             VkExtent2D extent_;
 
             RenderPass renderPass_;
             
             std::vector<Texture> images_;
-            std::vector<Texture> lightImages_;
+            std::vector<std::vector<Texture>> additionalOutputImages_;
             std::vector<Texture> depthTextures_;
 
             std::vector<Framebuffer> framebuffers_;

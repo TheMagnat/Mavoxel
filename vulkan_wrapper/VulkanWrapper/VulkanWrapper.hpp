@@ -36,10 +36,15 @@ namespace vuw {
         public:
             VulkanWrapper(GLFWwindow* window, uint16_t framesInFlight, bool depthCheck = false, bool validationDebugLayerActivated = true)
                 : framesInFlight_(framesInFlight), depthCheck_(depthCheck), window_(window), instance_(validationDebugLayerActivated), debugMessenger_(instance_, validationDebugLayerActivated), surface_(window_, instance_), device_(instance_, surface_, validationDebugLayerActivated), swapChain_(window, surface_, device_, depthCheck_),
-                renderPass_(device_, swapChain_, depthCheck_), commandPool_(surface_, device_), commandBuffers_(framesInFlight_, device_, commandPool_), syncObjs_(framesInFlight, device_), deadBufferHandler_(framesInFlight, &device_, &syncObjs_),
-                filterRenderer_(device_, commandPool_.get(), framesInFlight, false)
+                renderPass_(device_, swapChain_, depthCheck_), commandPool_(surface_, device_), commandBuffers_(framesInFlight_, device_, commandPool_), syncObjs_(framesInFlight_, device_), deadBufferHandler_(framesInFlight_, &device_, &syncObjs_)
+                //, filterRenderer_(device_, commandPool_.get(), framesInFlight_, 2, false)
             {
                 swapChain_.initializeFramebuffers(renderPass_);
+            }
+
+            void addFilterRenderer() {
+                //TODO: rendre des trucs paramétrable genre le nombre d'images par exemple
+                filterRenderers_.emplace_back(device_, commandPool_.get(), framesInFlight_, 2, false);
             }
 
             //If true, recording started
@@ -217,12 +222,14 @@ namespace vuw {
                 return MultiShader(&device_, framesInFlight_, vertexFilename, fragmentFilename);
             }
 
-            GraphicsPipeline generateGraphicsPipeline(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
-                return GraphicsPipeline(device_, shader, &swapChain_.getExtent(), &renderPass_, vertexAttributesSize, depthCheck_, topology);
-            }
+            GraphicsPipeline generateGraphicsPipeline(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, int rendererIndex, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
+                
+                if (rendererIndex < 0) return GraphicsPipeline(device_, shader, &swapChain_.getExtent(), &renderPass_, vertexAttributesSize, depthCheck_, topology);
+                
+                //Verify if the asked index is within our renders range
+                assert(rendererIndex < filterRenderers_.size());
 
-            GraphicsPipeline generateGraphicsPipelineForFilter(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
-                return GraphicsPipeline(device_, shader, &filterRenderer_.getExtent(), &filterRenderer_.getRenderpass(), vertexAttributesSize, depthCheck_, topology);
+                return GraphicsPipeline(device_, shader, &filterRenderers_[rendererIndex].getExtent(), &filterRenderers_[rendererIndex].getRenderpass(), vertexAttributesSize, depthCheck_, topology);
             }
 
             GraphicsPipeline generateGraphicsPipelineAntialiasing(Shader const& shader, std::vector<uint32_t> const& vertexAttributesSize, VkSampleCountFlagBits msaaSamples, VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST) const {
@@ -300,8 +307,8 @@ namespace vuw {
 
             }
 
-            SceneRenderer const& getFilterRenderer() const {
-                return filterRenderer_;
+            std::vector<SceneRenderer> const& getFilterRenderers() const {
+                return filterRenderers_;
             }
 
         private:
@@ -340,8 +347,7 @@ namespace vuw {
             std::chrono::time_point<std::chrono::high_resolution_clock> lastAcquireTime_;
 
             //TODO: a améliorer
-            SceneRenderer filterRenderer_;
-
+            std::vector<SceneRenderer> filterRenderers_;
 
             //DEBUG
             //TODO: REMOVE

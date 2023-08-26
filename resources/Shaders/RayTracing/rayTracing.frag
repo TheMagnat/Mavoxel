@@ -83,6 +83,7 @@ bool inShadow (vec3 startPosition, vec3 lightDir, float lightDist) {
 struct RayTracingResult {
     vec3 color;
     vec3 lightColor;
+    vec4 position;
 };
 
 RayTracingResult applyRayTracing(vec3 position, vec3 direction, float maxDistance) {
@@ -90,7 +91,7 @@ RayTracingResult applyRayTracing(vec3 position, vec3 direction, float maxDistanc
     //Parameter background color
     const vec3 skyColor = vec3(0.5294, 0.8078, 0.9216); //Sky
     
-    RayTracingResult result = RayTracingResult(skyColor, skyColor);
+    RayTracingResult result = RayTracingResult(skyColor, skyColor, vec4(0.0));
 
     //TODO: add distance as parameter of the Shader
     RayCastResult rayCastResult = castRay(position, direction, maxDistance, false);
@@ -111,11 +112,13 @@ RayTracingResult applyRayTracing(vec3 position, vec3 direction, float maxDistanc
     if (rayCastResult.hitType == 3) {
         result.color = rayCastResult.material.specular;
         result.lightColor = rayCastResult.material.specular;
+        result.position = projection * view * vec4(rayCastResult.hitPosition, 1);
     }
     else if (rayCastResult.hitType == 1 || rayCastResult.hitType == 2) {
         
         //TODO: Pour le moment un voxel = pas de light color, peut être modifier ce comportement
         result.lightColor = vec3(0.0);
+        result.position = projection * view * vec4(rayCastResult.hitPosition, 1);
         
         //Hit position informations
         //TODO: better hitdir ?

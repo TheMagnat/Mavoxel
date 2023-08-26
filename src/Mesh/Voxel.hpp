@@ -20,7 +20,7 @@ namespace mav {
 			void generateVertices() override;
 
 			std::vector<uint32_t> getVertexAttributesSizes() const override;
-            virtual void updateShader(vuw::Shader* shader, uint32_t currentFrame) const override;
+            virtual void updateShader(vuw::Shader* shader, uint32_t currentFrame) override;
 
     };
 

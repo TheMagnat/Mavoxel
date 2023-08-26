@@ -58,6 +58,7 @@ set(shadersToCompile
     # only_texPos.frag
     only_texPos.vert
     Filter/filter.frag
+    Filter/motionBlur.frag
     RayTracing/ray_tracing.frag:RayTracing/inputs.frag:RayTracing/materials.frag:RayTracing/structures.frag:RayTracing/rayTracing.frag:RayTracing/lightHelper.frag:RayTracing/octree.frag:RayTracing/octreeHelper.frag:RayTracing/enhancingEffects.frag:RayTracing/collisions.frag
 )
 
