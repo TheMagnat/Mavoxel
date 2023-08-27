@@ -104,30 +104,82 @@ vec4 ray(){
 }
 
 
+vec4 outLining() {
+
+    float minSeparation = 1.0;
+    float maxSeparation = 1.0;
+    float minDistance   = 0.25;
+    float maxDistance   = 0.65;
+    int   size          = 2;
+    vec3 colorModifier  = vec3(0.324, 0.063, 0.099);
+
+    //TEMPO:
+    float near = 0;
+    float far = 100;
+
+    vec2 texSize = textureSize(sceneTexture, 0).xy;
+
+    vec4 position = texture(scenePositionTexture, TexPos);
+
+    float depth = clamp ( 1.0 - ( (far - position.z) / (far - near) ), 0.0, 1.0);
+
+    float separation = mix(maxSeparation, minSeparation, depth);
+
+
+    //Findind discountinuties
+
+    float mx = 0.0;
+
+    for (int i = -size; i <= size; ++i) {
+        for (int j = -size; j <= size; ++j) {
+        // ...
+
+            vec2 newTexCoord = TexPos + (vec2(i, j) * separation) / texSize;
+
+            vec4 positionTemp = texture( scenePositionTexture, newTexCoord);
+
+            mx = max(mx, abs(position.z - positionTemp.z));
+
+
+        }
+    }
+
+    float diff = smoothstep(minDistance, maxDistance, mx);
+
+    //vec3 lineColor = texture(sceneTexture, TexPos).rgb * colorModifier;
+
+    return vec4(texture(sceneTexture, TexPos).rgb * (1 - diff), 1.0);
+    // return vec4(vec3(1.0 - diff), 1.0);
+
+}
+
 void main() {
 
     
     
-    vec3 color = texture(sceneTexture, TexPos).rgb;
-    vec3 raycolor = ray2();
+    // vec3 color = texture(sceneTexture, TexPos).rgb;
+    // vec3 raycolor = ray2();
 
-    vec3 finalColor = color + 1.15*raycolor;
+    // vec3 finalColor = color + 1.15*raycolor;
 
-    outFragColor = vec4(finalColor, 1);
+    // outFragColor = vec4(finalColor, 1);
 
-    // bool debug = true;
-    // if (debug) {
+    outFragColor = outLining();
+
+
+    bool debug = true;
+    if (debug) {
         
-    //     float middleSize = 0.001;
+        float middleSize = 0.001;
 
-    //     if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
-    //         outFragColor = vec4(vec3(1.0), 1.0);
-    //     }
-    //     else if (TexPos.x > 0.5) {
-    //         outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
-    //     }
+        if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
+            outFragColor = vec4(vec3(1.0), 1.0);
+        }
+        else if (TexPos.x > 0.5) {
+            outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
+        }
     
-    // }
+    }
 
     // outFragColor = vec4(vec3(texture(scenePositionTexture, TexPos)), 1);
 }

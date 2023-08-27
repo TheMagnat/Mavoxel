@@ -88,6 +88,7 @@ void main() {
 
     outFragColor = vec4(vec3(motionBlurResult.color), 1);
     outLightColor = vec4(vec3(motionBlurResult.lightColor), 1);
+    outPosition = texture(scenePositionTexture, TexPos);
 
     // outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
     // outLightColor = vec4(vec3(texture(sceneLightTexture, TexPos)), 1);
