@@ -5,6 +5,7 @@
 
 #include <GraphicObjects/BufferTemplates.hpp>
 #include <GraphicObjects/DrawableSingle.hpp>
+#include <GraphicObjects/RenderChainHandler.hpp>
 
 #include <Generator/VoxelMapGenerator.hpp>
 
@@ -77,8 +78,9 @@ class Game {
         Game(const vuw::Window* window) : window_(window),
             //Shaders
             rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/RayTracing/ray_tracing.frag.spv")),
-            filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/filter.frag.spv")),
             motionBlurFilterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/motionBlur.frag.spv")),
+            filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/filter.frag.spv")),
+            aaShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/antiAliasing.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), 0.5f * 0.95f, PLAYER_MASS), generator(0, CHUNK_SIZE, VOXEL_SIZE),
@@ -87,6 +89,8 @@ class Game {
             entityManager(&physicSystem),
 
             sun(&environment, sunMaterial, 1),
+
+            renderChainHandler(true),
 
             //Ray casting
             RCRenderer(&world, &entityManager, &environment, SVO_DEPTH),
@@ -97,15 +101,23 @@ class Game {
             filterRendererWrapper(&filterShader, &filterRenderer),
 
             motionBlurRenderer(&environment, nullptr, nullptr),
-            motionBlurRendererWrapper(&motionBlurFilterShader, &motionBlurRenderer)
+            motionBlurRendererWrapper(&motionBlurFilterShader, &motionBlurRenderer),
+
+            aaRenderer(&environment, nullptr, nullptr),
+            aaRendererWrapper(&aaShader, &aaRenderer)
 
         {
             
-            mav::Global::vulkanWrapper->addFilterRenderer(); //Motion blur
-            mav::Global::vulkanWrapper->addFilterRenderer(); //End texture
+            float rayTracingResolutionFactor = 0.75;
+            glm::uvec2 rayTracingResolution(1920 * rayTracingResolutionFactor, 1080 * rayTracingResolutionFactor);
 
-            motionBlurRenderer.setTextures(&mav::Global::vulkanWrapper->getFilterRenderers()[0].getTextures(), &mav::Global::vulkanWrapper->getFilterRenderers()[0].getAdditionalTextures());
-            filterRenderer.setTextures(&mav::Global::vulkanWrapper->getFilterRenderers()[1].getTextures(), &mav::Global::vulkanWrapper->getFilterRenderers()[1].getAdditionalTextures());
+            //Add to render chain handler scenes to render
+            renderChainHandler.addScene(&RCRendererWrapper, rayTracingResolution);
+            renderChainHandler.addScene(&motionBlurRendererWrapper, rayTracingResolution);
+            renderChainHandler.addScene(&filterRendererWrapper, glm::uvec2(1920, 1080));
+            renderChainHandler.addScene(&aaRendererWrapper);
+
+            renderChainHandler.initializeScenes();
 
             entityManager.addEntity( mav::AABB( glm::vec3(-5, 0, 0), VOXEL_SIZE ) );
             entityManager.addEntity( mav::AABB( glm::vec3(-5, 0, -5), VOXEL_SIZE ) );
@@ -170,24 +182,24 @@ class Game {
 
             motionBlurFilterShader.generateBindingsAndSets();
 
-            
+            //Anti-Aliasing filter
+            aaShader.addTexture({
+                vuw::TextureShaderInformation{filterSceneRenderers[2].getTextures().front().getInformations(), 0, &filterSceneRenderers[2].getTextures().front()},
+            });
+            aaShader.addTexture({
+                vuw::TextureShaderInformation{filterSceneRenderers[2].getAdditionalTextures()[0].front().getInformations(), 1, &filterSceneRenderers[2].getAdditionalTextures()[0].front()},
+            });
+            aaShader.addTexture({
+                vuw::TextureShaderInformation{filterSceneRenderers[2].getAdditionalTextures()[1].front().getInformations(), 2, &filterSceneRenderers[2].getAdditionalTextures()[1].front()},
+            });
+            aaShader.addUniformBufferObjects({
+                {3, sizeof(mav::TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                {4, sizeof(mav::FilterInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+            });
 
-            
+            aaShader.generateBindingsAndSets();
 
-            //Ray casting
-            RCRendererWrapper.initializePipeline(0);
-            RCRendererWrapper.initializeVertices();
-
-            //Motion Blur
-            motionBlurRendererWrapper.initializePipeline(1);
-            motionBlurRendererWrapper.initializeVertices();
-
-            //Filter
-            filterRendererWrapper.initializePipeline(-1);
-            filterRendererWrapper.initializeVertices();
-
-
-
+            renderChainHandler.initializePipelines();
 
             player.setPhysicSystem(freeFlight ? &freeFlightPhysicSystem : &physicSystem);
 
@@ -504,18 +516,8 @@ class Game {
             // sun.setPosition(cos(totalElapsedTime_/25.0f) * 400.f, sin(totalElapsedTime_/25.0f) * 400.f, 100.0f); // Simulate a sun rotation
             // sun.setPosition(player.getCamera()->Position.x, player.getCamera()->Position.y, player.getCamera()->Position.z); // Light on yourself
 
-            //Drawing phase
-            uint32_t currentFrame = mav::Global::vulkanWrapper->getCurrentFrame(); //First get the frame index
-            VkCommandBuffer currentCommandBuffer = mav::Global::vulkanWrapper->beginRecordingDraw(); //Then get the command buffer
-            if (!currentCommandBuffer) {
-                std::cout << "Can't acquire new image to start recording a draw." << std::endl;
-                return;
-            }
-
-            std::vector<vuw::SceneRenderer> const& filterSceneRenderers = mav::Global::vulkanWrapper->getFilterRenderers();
 
             //Start scene rendering into a texture
-            filterSceneRenderers[0].beginRecordingCommandBuffer(currentCommandBuffer, currentFrame);
 
             //Can be here or before "beginRecordingDraw"
             // updateUniformBuffer(currentFrame, timeFromStart);
@@ -567,30 +569,9 @@ class Game {
                 environment.collisionInformations = nullptr;
             }
 
-            RCRendererWrapper.draw(currentCommandBuffer, currentFrame);
 
-            //End scene rendering into a texture
-            filterSceneRenderers[0].endRecordingCommandBuffer(currentCommandBuffer);
-
-            filterSceneRenderers[1].beginRecordingCommandBuffer(currentCommandBuffer, currentFrame);
-
-            motionBlurRendererWrapper.draw(currentCommandBuffer, currentFrame);
-
-            filterSceneRenderers[1].endRecordingCommandBuffer(currentCommandBuffer);
-
-
-            //Start rendering final scene
-            mav::Global::vulkanWrapper->beginRecordingCommandBuffer(currentCommandBuffer);
-
-            //This will draw on a texture            
-            
-            filterRendererWrapper.draw(currentCommandBuffer, currentFrame);
-
-            //End rendering final scene
-            mav::Global::vulkanWrapper->endRecordingCommandBuffer(currentCommandBuffer);
-
-            //End the global rendering processus
-            mav::Global::vulkanWrapper->endRecordingDraw();
+            //Drawing phase
+            renderChainHandler.draw();
 
             //Debug system, remove when we're sure that the game won't ever crash
             if (!mav::Global::vulkanWrapper->ok) {
@@ -620,6 +601,7 @@ class Game {
         //Filter
         vuw::Shader filterShader;
         vuw::Shader motionBlurFilterShader;
+        vuw::Shader aaShader;
 
         float totalElapsedTime_;
 
@@ -641,6 +623,9 @@ class Game {
         std::optional<mav::RayCollisionInformations> currentlyLookingCollision;
         mav::CollisionInformations collisionInformations;
 
+        //Render chain
+        mav::RenderChainHandler renderChainHandler;
+
         //Ray Casting
         mav::RayCastingRenderer RCRenderer;
         mav::DrawableSingle RCRendererWrapper;
@@ -651,6 +636,9 @@ class Game {
 
         mav::FilterRenderer motionBlurRenderer;
         mav::DrawableSingle motionBlurRendererWrapper;
+
+        mav::FilterRenderer aaRenderer;
+        mav::DrawableSingle aaRendererWrapper;
 
         //Debug / Benchmark
         size_t frameCount = 0;

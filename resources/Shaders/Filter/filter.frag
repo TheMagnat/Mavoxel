@@ -157,29 +157,39 @@ void main() {
 
     
     
-    // vec3 color = texture(sceneTexture, TexPos).rgb;
-    // vec3 raycolor = ray2();
+    vec3 color = texture(sceneTexture, TexPos).rgb;
+    vec3 raycolor = ray2();
 
-    // vec3 finalColor = color + 1.15*raycolor;
+    vec3 finalColor = color + 1.15*raycolor;
 
-    // outFragColor = vec4(finalColor, 1);
-
-    outFragColor = outLining();
+    outFragColor = vec4(finalColor, 1);
 
 
-    bool debug = true;
-    if (debug) {
+
+    // outFragColor = outLining();
+
+    // outFragColor.xyz = fxaa();
+    // outFragColor.a = 1.0;
+
+    // vec2 frameBufSize = textureSize(sceneTexture, 0).xy;
+    // vec4 SourceSize = vec4(frameBufSize, 1.0 / frameBufSize); //either TextureSize or InputSize
+
+    // outFragColor = vec4(FxaaPixelShader(TexPos, sceneTexture, vec2(SourceSize.z, SourceSize.w)), 1.0) * 1.0;
+
+
+    // bool debug = true;
+    // if (debug) {
         
-        float middleSize = 0.001;
+    //     float middleSize = 0.001;
 
-        if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
-            outFragColor = vec4(vec3(1.0), 1.0);
-        }
-        else if (TexPos.x > 0.5) {
-            outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
-        }
+    //     if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
+    //         outFragColor = vec4(vec3(1.0), 1.0);
+    //     }
+    //     else if (TexPos.x > 0.5) {
+    //         outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
+    //     }
     
-    }
+    // }
 
-    // outFragColor = vec4(vec3(texture(scenePositionTexture, TexPos)), 1);
+    // outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
 }

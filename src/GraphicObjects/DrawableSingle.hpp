@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <GraphicObjects/DrawableContainer.hpp>
 #include <GraphicObjects/Drawable.hpp>
 
@@ -20,6 +22,10 @@ namespace mav {
 
             void initializeVertices() {
                 drawableItem_->initialize();
+            }
+
+            Drawable* getDrawable() {
+                return drawableItem_;
             }
             
             //Note: you must call "initializePipeline" and "initializeVertices" before calling draw

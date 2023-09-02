@@ -47,8 +47,10 @@ namespace mav {
                 
                 //Update textures...
                 shader->updateTexture(0, &textures_->at(currentFrame));
-                shader->updateTexture(1, &additionalTextures_->at(0)[currentFrame]);
-                shader->updateTexture(2, &additionalTextures_->at(1)[currentFrame]);
+
+                for (size_t i = 0; i < additionalTextures_->size(); ++i) {
+                    shader->updateTexture(i + 1, &additionalTextures_->at(i)[currentFrame]);
+                }
                 
                 shader->updateDescriptorSets(currentFrame);
 

@@ -42,9 +42,9 @@ namespace vuw {
                 swapChain_.initializeFramebuffers(renderPass_);
             }
 
-            void addFilterRenderer() {
+            void addFilterRenderer(glm::uvec2 const& resolution) {
                 //TODO: rendre des trucs paramétrable genre le nombre d'images par exemple
-                filterRenderers_.emplace_back(device_, commandPool_.get(), framesInFlight_, 2, false);
+                filterRenderers_.emplace_back(device_, commandPool_.get(), framesInFlight_, resolution, 2, false);
             }
 
             //If true, recording started

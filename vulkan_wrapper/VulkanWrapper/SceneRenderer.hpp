@@ -8,6 +8,8 @@
 #include <VulkanWrapper/SwapChain.hpp>
 #include <VulkanWrapper/Texture.hpp>
 
+#include <glm/vec2.hpp>
+
 #include <vector>
 
 
@@ -17,13 +19,12 @@ namespace vuw {
 
         public:
             
-            SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, int nbAdditionalImages = 0, bool depthCheck = false)
+            SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, glm::uvec2 imageResolution, int nbAdditionalImages = 0, bool depthCheck = false)
                 : imageCount_(imageCount), depthCheck_(depthCheck), renderPass_(device, 1 + nbAdditionalImages, depthCheck), additionalOutputImages_(nbAdditionalImages) {
                 
                 //TODO: Set ailleur
-                float factor = 0.75;
-                sceneTextureInformations_ = Texture::TextureInformations{(uint32_t)(1920 * factor), (uint32_t)(1080 * factor), 1, VK_SHADER_STAGE_FRAGMENT_BIT};
-                additionalOutputTextureInformations_ = Texture::TextureInformations{(uint32_t)(1920 * factor), (uint32_t)(1080 * factor), 1, VK_SHADER_STAGE_FRAGMENT_BIT};
+                sceneTextureInformations_ = Texture::TextureInformations{(uint32_t)imageResolution.x, (uint32_t)imageResolution.y, 1, VK_SHADER_STAGE_FRAGMENT_BIT};
+                additionalOutputTextureInformations_ = Texture::TextureInformations{(uint32_t)imageResolution.x, (uint32_t)imageResolution.y, 1, VK_SHADER_STAGE_FRAGMENT_BIT};
                 extent_ = VkExtent2D{sceneTextureInformations_.width, sceneTextureInformations_.height};
 
 
