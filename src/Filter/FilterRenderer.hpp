@@ -56,6 +56,25 @@ namespace mav {
 
             }
 
+            static void initializeShaderLayout(vuw::Shader* shader, const vuw::SceneRenderer* sceneRenderer) {
+
+                //Global filter
+                shader->addTexture({
+                    vuw::TextureShaderInformation{sceneRenderer->getTextures().front().getInformations(), 0, &sceneRenderer->getTextures().front()},
+                });
+                shader->addTexture({
+                    vuw::TextureShaderInformation{sceneRenderer->getAdditionalTextures()[0].front().getInformations(), 1, &sceneRenderer->getAdditionalTextures()[0].front()},
+                });
+                shader->addTexture({
+                    vuw::TextureShaderInformation{sceneRenderer->getAdditionalTextures()[1].front().getInformations(), 2, &sceneRenderer->getAdditionalTextures()[1].front()},
+                });
+                shader->addUniformBufferObjects({
+                    {3, sizeof(mav::TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                    {4, sizeof(mav::FilterInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                });
+                
+            }
+
         private:
             Environment* environment_;
 

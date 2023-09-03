@@ -20,6 +20,10 @@ namespace mav {
                 Global::vulkanWrapper->removeGraphicPipeline(&graphicsPipeline_);
             }
 
+            vuw::Shader* getShader() {
+                return shader_;
+            }
+
             /**
              * To initialize the graphic pipeline.
              * It must be called before doing any bind/draw

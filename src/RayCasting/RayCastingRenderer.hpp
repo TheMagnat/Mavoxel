@@ -115,6 +115,27 @@ namespace mav {
             }
 
 
+            static void initializeShaderLayout(vuw::Shader* shader) {
+
+                //Ray Casting
+                shader->addUniformBufferObjects({
+                    {0, sizeof(mav::RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
+                    {1, sizeof(mav::WorldOctreeInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
+                });
+                shader->addSSBO({
+                    //Binding, Stage flag, count, ssbo ptr
+                    2, VK_SHADER_STAGE_FRAGMENT_BIT, RAYTRACING_SVO_SIZE, std::vector<const vuw::SSBO*>(RAYTRACING_SVO_SIZE, nullptr)
+                });
+                shader->addUniformBufferObjects({
+                    {3, sizeof(int), VK_SHADER_STAGE_FRAGMENT_BIT, RAYTRACING_SVO_SIZE},
+                });
+                shader->addSSBO({
+                    //Binding, Stage flag, count, ssbo ptr
+                    4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, std::vector<const vuw::SSBO*>(1, nullptr)
+                });
+
+            }
+
         private:
 
             size_t svoDepth_;

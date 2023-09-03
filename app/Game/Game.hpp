@@ -5,7 +5,7 @@
 
 #include <GraphicObjects/BufferTemplates.hpp>
 #include <GraphicObjects/DrawableSingle.hpp>
-#include <GraphicObjects/RenderChainHandler.hpp>
+#include <Scenes/RenderChainHandler.hpp>
 
 #include <Generator/VoxelMapGenerator.hpp>
 
@@ -112,94 +112,18 @@ class Game {
             glm::uvec2 rayTracingResolution(1920 * rayTracingResolutionFactor, 1080 * rayTracingResolutionFactor);
 
             //Add to render chain handler scenes to render
-            renderChainHandler.addScene(&RCRendererWrapper, rayTracingResolution);
-            renderChainHandler.addScene(&motionBlurRendererWrapper, rayTracingResolution);
-            renderChainHandler.addScene(&filterRendererWrapper, glm::uvec2(1920, 1080));
-            renderChainHandler.addScene(&aaRendererWrapper);
+            renderChainHandler.addScene(&RCRendererWrapper, mav::SceneType::RAY_TRACING, rayTracingResolution);
+            renderChainHandler.addScene(&motionBlurRendererWrapper, mav::SceneType::FILTER, rayTracingResolution);
+            renderChainHandler.addScene(&filterRendererWrapper, mav::SceneType::FILTER, glm::uvec2(1920, 1080));
+            renderChainHandler.addScene(&aaRendererWrapper, mav::SceneType::FILTER);
 
             renderChainHandler.initializeScenes();
+            renderChainHandler.initializeShaders();
+            renderChainHandler.initializePipelines();
 
             entityManager.addEntity( mav::AABB( glm::vec3(-5, 0, 0), VOXEL_SIZE ) );
             entityManager.addEntity( mav::AABB( glm::vec3(-5, 0, -5), VOXEL_SIZE ) );
             entityManager.addEntity( mav::AABB( glm::vec3(-5, 0, 5), VOXEL_SIZE ) );
-
-            //TODO: add a static method in the rayTracing class / Filter classes to generate the shader
-
-            //Ray Casting
-            rayCastingShader.addUniformBufferObjects({
-                {0, sizeof(mav::RayCastInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-                {1, sizeof(mav::WorldOctreeInformations), VK_SHADER_STAGE_FRAGMENT_BIT}
-            });
-            rayCastingShader.addSSBO({
-                //Binding, Stage flag, count, ssbo ptr
-                2, VK_SHADER_STAGE_FRAGMENT_BIT, RAYTRACING_SVO_SIZE, std::vector<const vuw::SSBO*>(RAYTRACING_SVO_SIZE, nullptr)
-            });
-            rayCastingShader.addUniformBufferObjects({
-                {3, sizeof(int), VK_SHADER_STAGE_FRAGMENT_BIT, RAYTRACING_SVO_SIZE},
-            });
-            rayCastingShader.addSSBO({
-                //Binding, Stage flag, count, ssbo ptr
-                4, VK_SHADER_STAGE_FRAGMENT_BIT, 1, std::vector<const vuw::SSBO*>(1, nullptr)
-            });
-
-            
-            rayCastingShader.generateBindingsAndSets();
-
-            //Filters
-            std::vector<vuw::SceneRenderer> const& filterSceneRenderers = mav::Global::vulkanWrapper->getFilterRenderers();
-
-            //Global filter
-            filterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[1].getTextures().front().getInformations(), 0, &filterSceneRenderers[1].getTextures().front()},
-            });
-            filterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[1].getAdditionalTextures()[0].front().getInformations(), 1, &filterSceneRenderers[1].getAdditionalTextures()[0].front()},
-            });
-            filterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[1].getAdditionalTextures()[1].front().getInformations(), 2, &filterSceneRenderers[1].getAdditionalTextures()[1].front()},
-            });
-            filterShader.addUniformBufferObjects({
-                {3, sizeof(mav::TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-                {4, sizeof(mav::FilterInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-            });
-
-            filterShader.generateBindingsAndSets();
-            
-            //Motion Blur filter
-            motionBlurFilterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[0].getTextures().front().getInformations(), 0, &filterSceneRenderers[0].getTextures().front()},
-            });
-            motionBlurFilterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[0].getAdditionalTextures()[0].front().getInformations(), 1, &filterSceneRenderers[0].getAdditionalTextures()[0].front()},
-            });
-            motionBlurFilterShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[0].getAdditionalTextures()[1].front().getInformations(), 2, &filterSceneRenderers[0].getAdditionalTextures()[1].front()},
-            });
-            motionBlurFilterShader.addUniformBufferObjects({
-                {3, sizeof(mav::TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-                {4, sizeof(mav::FilterInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-            });
-
-            motionBlurFilterShader.generateBindingsAndSets();
-
-            //Anti-Aliasing filter
-            aaShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[2].getTextures().front().getInformations(), 0, &filterSceneRenderers[2].getTextures().front()},
-            });
-            aaShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[2].getAdditionalTextures()[0].front().getInformations(), 1, &filterSceneRenderers[2].getAdditionalTextures()[0].front()},
-            });
-            aaShader.addTexture({
-                vuw::TextureShaderInformation{filterSceneRenderers[2].getAdditionalTextures()[1].front().getInformations(), 2, &filterSceneRenderers[2].getAdditionalTextures()[1].front()},
-            });
-            aaShader.addUniformBufferObjects({
-                {3, sizeof(mav::TestInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-                {4, sizeof(mav::FilterInformations), VK_SHADER_STAGE_FRAGMENT_BIT},
-            });
-
-            aaShader.generateBindingsAndSets();
-
-            renderChainHandler.initializePipelines();
 
             player.setPhysicSystem(freeFlight ? &freeFlightPhysicSystem : &physicSystem);
 

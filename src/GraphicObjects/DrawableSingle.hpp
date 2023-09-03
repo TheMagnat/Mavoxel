@@ -7,7 +7,7 @@
 
 namespace mav {
 
-    class DrawableSingle : private DrawableContainer  {
+    class DrawableSingle : public DrawableContainer  {
 
         public:
             DrawableSingle(vuw::Shader* shader, Drawable* drawableItem) : DrawableContainer(shader), drawableItem_(drawableItem) {}

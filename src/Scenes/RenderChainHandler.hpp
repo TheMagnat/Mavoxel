@@ -1,8 +1,14 @@
 
 #pragma once
 
+#include <Scenes/SceneInformation.hpp>
+
 #include <GraphicObjects/DrawableSingle.hpp>
+
+//Renderer
 #include <Filter/FilterRenderer.hpp>
+#include <RayCasting/RayCastingRenderer.hpp>
+
 
 #include <VulkanWrapper/SceneRenderer.hpp>
 
@@ -13,27 +19,17 @@
 namespace mav {
 
     class RenderChainHandler {
-        
-        struct DrawableInformation {
-            DrawableInformation(mav::DrawableSingle* drawable_p, int rendererInIndex_p, int rendererIndex_p, std::optional<glm::uvec2> outputResolution_p) :
-                drawable(drawable_p), rendererInIndex(rendererInIndex_p), rendererIndex(rendererIndex_p), outputResolution(outputResolution_p) {}
-
-            mav::DrawableSingle* drawable;
-            int rendererInIndex; //Renderer input
-            int rendererIndex; //Renderer output
-            std::optional<glm::uvec2> outputResolution;
-        };
 
         public:
 
             RenderChainHandler(bool generateRenderers = false) : generateRenderers_(generateRenderers) {}
 
-            void addScene(mav::DrawableSingle* newScene, int rendererInIndex, int rendererIndex) {
-                scenes_.emplace_back(newScene, rendererInIndex, rendererIndex, std::optional<glm::uvec2>());
+            void addScene(mav::DrawableSingle* newScene, int rendererInIndex, int rendererIndex, SceneType sceneType) {
+                scenes_.emplace_back(newScene, rendererInIndex, rendererIndex, sceneType, std::nullopt);
             }
 
             //Automatic index addScene
-            void addScene(mav::DrawableSingle* newScene, std::optional<glm::uvec2> outputResolution = std::nullopt) {
+            void addScene(mav::DrawableSingle* newScene, SceneType sceneType, std::optional<glm::uvec2> outputResolution = std::nullopt) {
                 
                 int currentScenesSize = scenes_.size();
 
@@ -51,7 +47,7 @@ namespace mav {
 
                 
                 //Take as input the precedent scene and as output the framebuffer until another scene is added
-                scenes_.emplace_back(newScene, currentScenesSize - 1, -1, outputResolution);
+                scenes_.emplace_back(newScene, currentScenesSize - 1, -1, sceneType, outputResolution);
             }
 
             void addRenderer(const vuw::SceneRenderer* renderer) {
@@ -82,6 +78,28 @@ namespace mav {
                         );
 
                     }
+
+                }
+
+            }
+
+            void initializeShaders() {
+
+                for (DrawableInformation& scene : scenes_) {
+                    
+                    switch (scene.sceneType) {
+                        
+                        case SceneType::RAY_TRACING:
+                            RayCastingRenderer::initializeShaderLayout(scene.drawable->getShader());
+                            break;
+
+                        case SceneType::FILTER:
+                            FilterRenderer::initializeShaderLayout(scene.drawable->getShader(), sceneRenderers_[scene.rendererInIndex]);
+                            break;
+
+                    }
+
+                    scene.drawable->getShader()->generateBindingsAndSets();
 
                 }
 

@@ -426,19 +426,19 @@ void main() {
     outFragColor = vec4(FxaaPixelShader(TexPos, sceneTexture, vec2(SourceSize.z, SourceSize.w)), 1.0) * 1.0;
 
 
-    bool debug = true;
-    if (debug) {
+    // bool debug = true;
+    // if (debug) {
         
-        float middleSize = 0.001;
+    //     float middleSize = 0.001;
 
-        if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
-            outFragColor = vec4(vec3(1.0), 1.0);
-        }
-        else if (TexPos.x > 0.5) {
-            outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
-        }
+    //     if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
+    //         outFragColor = vec4(vec3(1.0), 1.0);
+    //     }
+    //     else if (TexPos.x > 0.5) {
+    //         outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
+    //     }
     
-    }
+    // }
 
     // outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
 }
