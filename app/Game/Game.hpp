@@ -81,6 +81,7 @@ class Game {
             motionBlurFilterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/motionBlur.frag.spv")),
             filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/filter.frag.spv")),
             aaShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/antiAliasing.frag.spv")),
+            taaShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/taa.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), 0.5f * 0.95f, PLAYER_MASS), generator(0, CHUNK_SIZE, VOXEL_SIZE),
@@ -97,26 +98,44 @@ class Game {
             RCRendererWrapper(&rayCastingShader, &RCRenderer),
 
             //Filter
-            filterRenderer(&environment, nullptr, nullptr),
+            filterRenderer(&environment),
             filterRendererWrapper(&filterShader, &filterRenderer),
 
-            motionBlurRenderer(&environment, nullptr, nullptr),
+            motionBlurRenderer(&environment),
             motionBlurRendererWrapper(&motionBlurFilterShader, &motionBlurRenderer),
 
-            aaRenderer(&environment, nullptr, nullptr),
-            aaRendererWrapper(&aaShader, &aaRenderer)
+            aaRenderer(&environment),
+            aaRendererWrapper(&aaShader, &aaRenderer),
+
+            taaRenderer(&environment),
+            taaRendererWrapper(&taaShader, &taaRenderer)
+
 
         {
             
             float rayTracingResolutionFactor = 0.75;
             glm::uvec2 rayTracingResolution(1920 * rayTracingResolutionFactor, 1080 * rayTracingResolutionFactor);
 
-            //Add to render chain handler scenes to render
-            renderChainHandler.addScene(&RCRendererWrapper, mav::SceneType::RAY_TRACING, rayTracingResolution);
-            renderChainHandler.addScene(&motionBlurRendererWrapper, mav::SceneType::FILTER, rayTracingResolution);
-            renderChainHandler.addScene(&filterRendererWrapper, mav::SceneType::FILTER, glm::uvec2(1920, 1080));
-            renderChainHandler.addScene(&aaRendererWrapper, mav::SceneType::FILTER);
+            //// Add to renderChainHandler scenes to render
+            //
+            //Main Ray-Traced scene
+            renderChainHandler.addScene({&RCRendererWrapper, mav::SceneType::RAY_TRACING}, rayTracingResolution);
+            //
+            //This scene fill the velocity texture
+            renderChainHandler.addScene({&motionBlurRendererWrapper, mav::SceneType::FILTER, {{{mav::OwnedTextureType::COPY, 0, 2}}}}, rayTracingResolution);
+            //
+            //God Ray Scene
+            renderChainHandler.addScene({&filterRendererWrapper, mav::SceneType::FILTER}, rayTracingResolution);
+            //
+            //TAA Scene
+            renderChainHandler.addScene({&taaRendererWrapper, mav::SceneType::FILTER, {{{mav::OwnedTextureType::COPY, 3, 0}, {mav::OwnedTextureType::COPY, 3, 2}}}}, glm::uvec2(1920, 1080));
+            //
+            //FXAA Scene
+            renderChainHandler.addScene({&aaRendererWrapper, mav::SceneType::FILTER});
+            //
+            ////
 
+            //Now that every scene is added, generates every ressources
             renderChainHandler.initializeScenes();
             renderChainHandler.initializeShaders();
             renderChainHandler.initializePipelines();
@@ -526,6 +545,7 @@ class Game {
         vuw::Shader filterShader;
         vuw::Shader motionBlurFilterShader;
         vuw::Shader aaShader;
+        vuw::Shader taaShader;
 
         float totalElapsedTime_;
 
@@ -563,6 +583,9 @@ class Game {
 
         mav::FilterRenderer aaRenderer;
         mav::DrawableSingle aaRendererWrapper;
+
+        mav::FilterRenderer taaRenderer;
+        mav::DrawableSingle taaRendererWrapper;
 
         //Debug / Benchmark
         size_t frameCount = 0;

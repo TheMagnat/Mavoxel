@@ -24,12 +24,13 @@ namespace mav {
 
             RenderChainHandler(bool generateRenderers = false) : generateRenderers_(generateRenderers) {}
 
-            void addScene(mav::DrawableSingle* newScene, int rendererInIndex, int rendererIndex, SceneType sceneType) {
-                scenes_.emplace_back(newScene, rendererInIndex, rendererIndex, sceneType, std::nullopt);
-            }
+            //TODO: adapter au SceneWrapper
+            // void addScene(mav::DrawableSingle* newScene, int rendererInIndex, int rendererIndex, SceneType sceneType) {
+            //     scenes_.emplace_back(newScene, rendererInIndex, rendererIndex, sceneType, std::nullopt);
+            // }
 
             //Automatic index addScene
-            void addScene(mav::DrawableSingle* newScene, SceneType sceneType, std::optional<glm::uvec2> outputResolution = std::nullopt) {
+            void addScene(SceneWrapper const& sceneWrapper, std::optional<glm::uvec2> outputResolution = std::nullopt) {
                 
                 int currentScenesSize = scenes_.size();
 
@@ -40,14 +41,16 @@ namespace mav {
                     //If generate renderers is true, generate scene renderer to render the precedent scene on it and use it as an input of the new scene
                     if (generateRenderers_) {
                         if (!scenes_.back().outputResolution) throw std::exception("Scene have no resolution but generateRenderers is set to true.");
-                        mav::Global::vulkanWrapper->addFilterRenderer(*scenes_.back().outputResolution);
+                        //TODO: ne plus créer les scene après un add scene, mais les accumuler et tout résoudre quand la fonction initializeScenes est appelé pour permettre de ne plus dépendre du type pour savoir si on met les texture en mode copy autorisée mais plutôt de si la texture est copié
+                        // mav::Global::vulkanWrapper->addFilterRenderer(*scenes_.back().outputResolution, (int)(scenes_.back().sceneType == SceneType::TAA));
+                        mav::Global::vulkanWrapper->addFilterRenderer(*scenes_.back().outputResolution, 1);
                     }
 
                 }
-
                 
                 //Take as input the precedent scene and as output the framebuffer until another scene is added
-                scenes_.emplace_back(newScene, currentScenesSize - 1, -1, sceneType, outputResolution);
+                scenes_.emplace_back(sceneWrapper, currentScenesSize - 1, -1, outputResolution);
+
             }
 
             void addRenderer(const vuw::SceneRenderer* renderer) {
@@ -68,14 +71,58 @@ namespace mav {
 
                 if (generateRenderers_) addRenderers(mav::Global::vulkanWrapper->getFilterRenderers());
 
-                for (DrawableInformation& scene : scenes_) {
+                for (size_t sceneIndex = 0; sceneIndex < scenes_.size(); ++sceneIndex) {
                     
-                    if (scene.rendererInIndex >= 0) {
+                    DrawableInformation& scene = scenes_[sceneIndex];
 
-                        static_cast<FilterRenderer*>( scene.drawable->getDrawable() )->setTextures(
-                            &sceneRenderers_[scene.rendererInIndex]->getTextures(),
-                            &sceneRenderers_[scene.rendererInIndex]->getAdditionalTextures()
-                        );
+                    //Maybe add this security: if (scene.rendererInIndex >= 0)
+
+                    switch (scene.sceneType) {
+                        
+                        case SceneType::RAY_TRACING:
+                            break;
+
+                        case SceneType::FILTER:
+                        {
+                            
+                            //Generate the texture input of the renderer
+                            std::vector<const std::vector<vuw::Texture>*> input;
+
+                            input.push_back(&sceneRenderers_[scene.rendererInIndex]->getTextures());
+
+                            for (std::vector<vuw::Texture> const& textures : sceneRenderers_[scene.rendererInIndex]->getAdditionalTextures()) {
+                                input.push_back(&textures);
+                            }
+
+                            //If the scene contain owned textures, generate their information
+                            std::vector<vuw::Texture::TextureInformations> rendererOwnedTexturesInformations;
+                            if (scene.ownedTextures) {
+
+                                for (size_t ownedTextureIndex = 0; ownedTextureIndex < scene.ownedTextures->size(); ++ownedTextureIndex) {
+                                    
+                                    OwnedTextureInformation const& ownedTextureInformation = scene.ownedTextures->at(ownedTextureIndex);
+
+                                    //IF TYPE == COPY... add new type here
+
+                                    vuw::Texture const& originalTexture = ownedTextureInformation.textureIndex == 0
+                                        ? sceneRenderers_[ownedTextureInformation.rendererIndex]->getTextures().front()
+                                        : sceneRenderers_[ownedTextureInformation.rendererIndex]->getAdditionalTextures()[ownedTextureInformation.textureIndex - 1].front();
+
+                                    vuw::Texture::TextureInformations originalInformation = originalTexture.getInformations();
+                                    rendererOwnedTexturesInformations.emplace_back(
+                                        originalInformation.width, originalInformation.height, originalInformation.depth, VK_SHADER_STAGE_FRAGMENT_BIT, originalTexture.getFormat()
+                                    );
+                                    
+                                    toCopy_.emplace_back(sceneIndex, ownedTextureIndex);
+
+                                }
+
+                            }
+
+                            static_cast<FilterRenderer*>( scene.drawable->getDrawable() )->setTextures( input, rendererOwnedTexturesInformations );
+
+                            break;
+                        }
 
                     }
 
@@ -94,7 +141,11 @@ namespace mav {
                             break;
 
                         case SceneType::FILTER:
-                            FilterRenderer::initializeShaderLayout(scene.drawable->getShader(), sceneRenderers_[scene.rendererInIndex]);
+
+                            static_cast<FilterRenderer*>( scene.drawable->getDrawable() )->initializeShaderLayout(
+                                scene.drawable->getShader()
+                            );
+
                             break;
 
                     }
@@ -142,6 +193,21 @@ namespace mav {
 
                 mav::Global::vulkanWrapper->endRecordingDraw();
 
+                //Post draw logic
+                for (auto [sceneIndex, ownedTextureIndex] : toCopy_) {
+
+                    DrawableInformation const& scene = scenes_[sceneIndex];
+
+                    OwnedTextureInformation const& ownedTextureInformation = scene.ownedTextures->at(ownedTextureIndex);
+
+                    vuw::Texture const& originalTexture = ownedTextureInformation.textureIndex == 0
+                        ? sceneRenderers_[ownedTextureInformation.rendererIndex]->getTextures()[currentFrame]
+                        : sceneRenderers_[ownedTextureInformation.rendererIndex]->getAdditionalTextures()[ownedTextureInformation.textureIndex - 1][currentFrame];
+
+                    static_cast<FilterRenderer*>( scene.drawable->getDrawable() )->copyIntoOwnedTexture(currentFrame, originalTexture, ownedTextureIndex);
+
+                }
+
             }
 
         private:
@@ -151,6 +217,10 @@ namespace mav {
             std::vector<DrawableInformation> scenes_;
             std::vector<const vuw::SceneRenderer*> sceneRenderers_;
 
+            //Specific to scene type saves :
+
+            //Save the texture to copy after a render. The pair correspond to the scene and the owned texture index.
+            std::vector<std::pair<size_t, size_t>> toCopy_;
 
     };
 

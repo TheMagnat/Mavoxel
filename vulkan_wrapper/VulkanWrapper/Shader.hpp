@@ -37,6 +37,7 @@ namespace vuw {
     };
 
     struct TextureShaderInformation {
+        //TODO: retirer informations et utiliser les informations directement dans la texture ?
         Texture::TextureInformations informations;
         uint32_t binding;
         const Texture* texturePtr;
@@ -473,9 +474,21 @@ namespace vuw {
 
                     const Texture* currentTexture = textureInformations_[textureIndex].texturePtr;
 
-                    imagesInfos[textureIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                    imagesInfos[textureIndex].imageView = currentTexture->getImageView();
-                    imagesInfos[textureIndex].sampler = currentTexture->getSampler();
+                    //TODO: vérifier si ce if est vraiment useless (je crois que les textures peuvent pas être null)
+                    // if (currentTexture) {
+                        imagesInfos[textureIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                        imagesInfos[textureIndex].imageView = currentTexture->getImageView();
+                        imagesInfos[textureIndex].sampler = currentTexture->getSampler();
+                    // }
+                    // else {
+                    //     imagesInfos[textureIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    //     imagesInfos[textureIndex].imageView = VK_NULL_HANDLE;
+                    //     imagesInfos[textureIndex].sampler = VK_NULL_HANDLE;
+                    // }
+
+                    // imagesInfos[textureIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    // imagesInfos[textureIndex].imageView = currentTexture->getImageView();
+                    // imagesInfos[textureIndex].sampler = currentTexture->getSampler();
 
                     writeDescriptors[currentIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                     writeDescriptors[currentIndex].dstSet = descriptorSets_[frameIndex];

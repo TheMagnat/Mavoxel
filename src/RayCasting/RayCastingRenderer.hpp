@@ -11,6 +11,28 @@
 #define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
 #define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
 
+
+//TODO: mettre dans un fichier helper ou un truc du genre
+namespace {
+
+    float halton(uint32_t i, uint32_t b) {
+
+        float f = 1.0f;
+        float r = 0.0f;
+    
+        while (i > 0)
+        {
+            f /= static_cast<float>(b);
+            r = r + f * static_cast<float>(i % b);
+            i = static_cast<uint32_t>(floorf(static_cast<float>(i) / static_cast<float>(b)));
+        }
+    
+        return r;
+    }
+
+}
+
+
 namespace mav {
 
     class RayCastingRenderer : public Quad {
@@ -57,7 +79,17 @@ namespace mav {
                     rci.voxelCursorPosition = glm::vec3(0.0f);
                     rci.faceCursorNormal = glm::vec3(0.0f);
                 }
-                
+
+                ++iteration_;
+
+                float haltonX = 2.0f * halton(iteration_ + 1, 2) - 1.0f;
+                float haltonY = 2.0f * halton(iteration_ + 1, 3) - 1.0f;
+
+                //TODO: ne plus mettre en dur la résolution
+                float weight = 1.0f;
+                rci.jitter.x = (haltonX / (1920 * weight));
+                rci.jitter.y = (haltonY / (1080 * weight));
+                // rci.jitter = glm::vec2(0.0);
 
                 //Current chunk position
                 woi.centerChunkPosition = world_->getChunkIndex(environment_->camera->Position);
@@ -143,6 +175,8 @@ namespace mav {
             World* world_;
             EntityManager* entityManager_;
             Environment* environment_;
+
+            int iteration_ = 0;
 
     };
 

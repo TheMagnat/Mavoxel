@@ -57,9 +57,10 @@ set(shadersToCompile
     # only_color_uni.vert only_color_uni.frag
     # only_texPos.frag
     only_texPos.vert
-    Filter/filter.frag
-    Filter/motionBlur.frag
-    Filter/antiAliasing.frag
+    Filter/filter.frag:Filter/filterUniforms.frag
+    Filter/motionBlur.frag:Filter/filterUniforms.frag
+    Filter/antiAliasing.frag:Filter/filterUniforms.frag
+    Filter/taa.frag:Filter/filterUniforms.frag
     RayTracing/ray_tracing.frag:RayTracing/inputs.frag:RayTracing/materials.frag:RayTracing/structures.frag:RayTracing/rayTracing.frag:RayTracing/lightHelper.frag:RayTracing/octree.frag:RayTracing/octreeHelper.frag:RayTracing/enhancingEffects.frag:RayTracing/collisions.frag
 )
 

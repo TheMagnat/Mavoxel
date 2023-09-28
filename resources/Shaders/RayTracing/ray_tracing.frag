@@ -73,7 +73,17 @@ void main() {
     vec3 rayDirection = createRay(TexPos, inverse(projection), inverse(view));
     // vec3 rayDirection = getRayDir(rayTarget);
 
-    RayTracingResult rayTracingResult = applyRayTracing(camera.position, rayDirection, RAY_DISTANCE);
+    vec2 jitterMore = jitter * 1;
+    //DEBUG
+    // if (TexPos.x > 0.5) {
+    //     jitterMore = vec2(0.0);
+    // }
+
+    // jitterMore = vec2(0.0);
+    vec3 cameraJittered = camera.position + camera.right * jitterMore.x + camera.up * jitterMore.y;
+    vec3 directionJittered = rayDirection + camera.right * jitterMore.x + camera.up * jitterMore.y;
+
+    RayTracingResult rayTracingResult = applyRayTracing(camera.position, directionJittered, RAY_DISTANCE);
     outFragColor = vec4(rayTracingResult.color, 1.0);
     outLightColor = vec4(rayTracingResult.lightColor, 1.0);
     outPosition = rayTracingResult.position;

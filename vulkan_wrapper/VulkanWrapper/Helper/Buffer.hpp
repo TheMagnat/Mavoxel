@@ -180,6 +180,31 @@ class Buffer {
             Command::endSingleTimeCommands(device, commandPool, graphicsQueue, commandBuffer);
         }
 
+        static void copyImageToImage(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
+            
+            VkCommandBuffer commandBuffer = Command::beginSingleTimeCommands(device, commandPool);
+            
+            VkImageCopy copyRegion = {};
+            copyRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+            copyRegion.srcOffset = { 0, 0, 0 };
+            copyRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+            copyRegion.dstOffset = { 0, 0, 0 };
+            copyRegion.extent = { width, height, 1 }; // Set the width and height accordingly
+
+            vkCmdCopyImage(
+                commandBuffer,
+                srcImage,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                dstImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1,
+                &copyRegion
+            );
+
+            Command::endSingleTimeCommands(device, commandPool, graphicsQueue, commandBuffer);
+
+        }
+
         static void copyToImage(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
             
             VkCommandBuffer commandBuffer = Command::beginSingleTimeCommands(device, commandPool);

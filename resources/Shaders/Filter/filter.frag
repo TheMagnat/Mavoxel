@@ -1,24 +1,19 @@
 #version 450 core
+#extension GL_GOOGLE_include_directive : require
 
 layout (location = 0) out vec4 outFragColor;
+layout (location = 1) out vec4 outLightColor;
+layout (location = 2) out vec4 outPosition;
 
 layout (location = 0) in vec2 TexPos;
 
+#include "filterUniforms.frag"
+
 //Full rendered scene texture
-layout(binding = 0) uniform sampler2D sceneTexture;
-layout(binding = 1) uniform sampler2D sceneLightTexture;
-layout(binding = 2) uniform sampler2D scenePositionTexture;
+layout(binding = 2) uniform sampler2D sceneTexture;
+layout(binding = 3) uniform sampler2D sceneLightTexture;
+layout(binding = 4) uniform sampler2D scenePositionTexture;
 
-//Uniforms
-layout (set = 0, binding = 3) uniform RayCastInformations {
-    vec2 sun;
-};
-
-layout (set = 0, binding = 4) uniform FilterInformations {
-    mat4 oldProjectionViewMat;
-    mat4 newProjectionViewMat;
-    mat4 view;
-};
 
 vec2 lightPositionOnScreen[1] = vec2[1](sun);
 int n = 1;
@@ -119,7 +114,7 @@ vec4 outLining() {
 
     vec2 texSize = textureSize(sceneTexture, 0).xy;
 
-    vec4 position = texture(scenePositionTexture, TexPos);
+    vec4 position = newProjectionViewMat * texture(scenePositionTexture, TexPos);
 
     float depth = clamp ( 1.0 - ( (far - position.z) / (far - near) ), 0.0, 1.0);
 
@@ -136,7 +131,7 @@ vec4 outLining() {
 
             vec2 newTexCoord = TexPos + (vec2(i, j) * separation) / texSize;
 
-            vec4 positionTemp = texture( scenePositionTexture, newTexCoord);
+            vec4 positionTemp = newProjectionViewMat * texture( scenePositionTexture, newTexCoord);
 
             mx = max(mx, abs(position.z - positionTemp.z));
 
@@ -163,6 +158,8 @@ void main() {
     vec3 finalColor = color + 1.15*raycolor;
 
     outFragColor = vec4(finalColor, 1);
+    outLightColor = texture(sceneLightTexture, TexPos);
+    outPosition = texture(scenePositionTexture, TexPos);
 
 
 
@@ -177,19 +174,18 @@ void main() {
     // outFragColor = vec4(FxaaPixelShader(TexPos, sceneTexture, vec2(SourceSize.z, SourceSize.w)), 1.0) * 1.0;
 
 
-    // bool debug = true;
-    // if (debug) {
+    if (debug == 1) {
         
-    //     float middleSize = 0.001;
+        float middleSize = 0.001;
 
-    //     if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
-    //         outFragColor = vec4(vec3(1.0), 1.0);
-    //     }
-    //     else if (TexPos.x > 0.5) {
-    //         outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
-    //     }
+        if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
+            outFragColor = vec4(vec3(1.0), 1.0);
+        }
+        else if (TexPos.x > 0.5) {
+            outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
+        }
     
-    // }
+    }
 
     // outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
 }

@@ -12,6 +12,21 @@
 
 #include <vector>
 
+namespace {
+
+
+    VkImageUsageFlags textureUsageToFlag(int usage) {
+
+        if (usage == 1) {
+            return VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
+
+        return 0;
+
+    }
+
+
+}
 
 namespace vuw {
 
@@ -19,8 +34,8 @@ namespace vuw {
 
         public:
             
-            SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, glm::uvec2 imageResolution, int nbAdditionalImages = 0, bool depthCheck = false)
-                : imageCount_(imageCount), depthCheck_(depthCheck), renderPass_(device, 1 + nbAdditionalImages, depthCheck), additionalOutputImages_(nbAdditionalImages) {
+            SceneRenderer(Device const& device, VkCommandPool commandPool, uint16_t imageCount, glm::uvec2 imageResolution, int nbAdditionalImages = 0, bool depthCheck = false, int textureUsage = 0)
+                : imageCount_(imageCount), depthCheck_(depthCheck), textureUsage_(textureUsage), renderPass_(device, 1 + nbAdditionalImages, depthCheck), additionalOutputImages_(nbAdditionalImages) {
                 
                 //TODO: Set ailleur
                 sceneTextureInformations_ = Texture::TextureInformations{(uint32_t)imageResolution.x, (uint32_t)imageResolution.y, 1, VK_SHADER_STAGE_FRAGMENT_BIT};
@@ -29,11 +44,11 @@ namespace vuw {
 
 
                 for (uint16_t i = 0; i < imageCount_; ++i) {
-                    images_.emplace_back(&device, commandPool, device.getGraphicsQueue(), sceneTextureInformations_, VK_FORMAT_R8G8B8A8_UNORM);
+                    images_.emplace_back(&device, commandPool, device.getGraphicsQueue(), sceneTextureInformations_, VK_FORMAT_R8G8B8A8_UNORM, textureUsageToFlag(textureUsage_));
 
                     //Create additional textures
                     for (size_t j = 0; j < nbAdditionalImages; ++j) {
-                        additionalOutputImages_[j].emplace_back(&device, commandPool, device.getGraphicsQueue(), additionalOutputTextureInformations_, VK_FORMAT_R32G32B32A32_SFLOAT);
+                        additionalOutputImages_[j].emplace_back(&device, commandPool, device.getGraphicsQueue(), additionalOutputTextureInformations_, VK_FORMAT_R32G32B32A32_SFLOAT, textureUsageToFlag(textureUsage_));
                     }
 
                     //Create textures ptr vector for the framebuffer
@@ -135,6 +150,7 @@ namespace vuw {
         private:
             uint16_t imageCount_;
             bool depthCheck_;
+            int textureUsage_;
 
             Texture::TextureInformations sceneTextureInformations_;
             Texture::TextureInformations additionalOutputTextureInformations_;

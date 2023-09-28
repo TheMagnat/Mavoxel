@@ -1,24 +1,16 @@
 #version 450 core
+#extension GL_GOOGLE_include_directive : require
 
 layout (location = 0) out vec4 outFragColor;
 
 layout (location = 0) in vec2 TexPos;
 
+#include "filterUniforms.frag"
+
 //Full rendered scene texture
-layout(binding = 0) uniform sampler2D sceneTexture;
-layout(binding = 1) uniform sampler2D sceneLightTexture;
-layout(binding = 2) uniform sampler2D scenePositionTexture;
-
-//Uniforms
-layout (set = 0, binding = 3) uniform RayCastInformations {
-    vec2 sun;
-};
-
-layout (set = 0, binding = 4) uniform FilterInformations {
-    mat4 oldProjectionViewMat;
-    mat4 newProjectionViewMat;
-    mat4 view;
-};
+layout(binding = 2) uniform sampler2D sceneTexture;
+layout(binding = 3) uniform sampler2D sceneLightTexture;
+layout(binding = 4) uniform sampler2D scenePositionTexture;
 
 vec2 lightPositionOnScreen[1] = vec2[1](sun);
 int n = 1;
@@ -405,40 +397,31 @@ vec3 FxaaPixelShader(vec2 pos, sampler2D tex, vec2 rcpFrame)
 void main() {
 
     
-    
-    // vec3 color = texture(sceneTexture, TexPos).rgb;
-    // vec3 raycolor = ray2();
-
-    // vec3 finalColor = color + 1.15*raycolor;
-
-    // outFragColor = vec4(finalColor, 1);
-
-
 
     // outFragColor = outLining();
 
     // outFragColor.xyz = fxaa();
     // outFragColor.a = 1.0;
 
+    //ICI
     vec2 frameBufSize = textureSize(sceneTexture, 0).xy;
     vec4 SourceSize = vec4(frameBufSize, 1.0 / frameBufSize); //either TextureSize or InputSize
 
     outFragColor = vec4(FxaaPixelShader(TexPos, sceneTexture, vec2(SourceSize.z, SourceSize.w)), 1.0) * 1.0;
+    //A ICI
 
-
-    // bool debug = true;
-    // if (debug) {
+    if (debug == 1) {
         
-    //     float middleSize = 0.001;
+        float middleSize = 0.001;
 
-    //     if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
-    //         outFragColor = vec4(vec3(1.0), 1.0);
-    //     }
-    //     else if (TexPos.x > 0.5) {
-    //         outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
-    //     }
+        if (TexPos.x + middleSize > 0.5 && TexPos.x - middleSize < 0.5) {
+            outFragColor = vec4(vec3(1.0), 1.0);
+        }
+        else if (TexPos.x > 0.5) {
+            outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
+        }
     
-    // }
+    }
 
     // outFragColor = vec4(vec3(texture(sceneTexture, TexPos)), 1);
 }

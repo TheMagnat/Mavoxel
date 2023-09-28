@@ -22,6 +22,9 @@ namespace vuw {
                 uint32_t height;
                 uint32_t depth; //Note : should be 1 if not used
                 VkShaderStageFlags flags;
+
+                //TODO: Se servir de ça plutôt que de le passer en argument à chaque fois
+                VkFormat imageFormat;
             };
 
             Texture(const Device* device, size_t dataSize, TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB)
@@ -39,8 +42,8 @@ namespace vuw {
             }
 
             //Create without data
-            Texture(const Device* device, VkCommandPool commandPool, VkQueue queue, TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB)
-                : device_(device), size_(textureInformations.width * textureInformations.height * textureInformations.depth), textureInformations_(textureInformations), imageFormat_(imageFormat) {
+            Texture(const Device* device, VkCommandPool commandPool, VkQueue queue, TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB, VkImageUsageFlags imageBonusFlag = 0)
+                : device_(device), size_(textureInformations.width * textureInformations.height * textureInformations.depth), textureInformations_(textureInformations), bonusUsageFlags_(imageBonusFlag), imageFormat_(imageFormat) {
                 
                 createInputTextureBuffers(commandPool, queue);
                 textureImageView_= Image::createImageView(device_->get(), textureImage_, imageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -61,11 +64,13 @@ namespace vuw {
             Texture(Texture&& movedTexture) :
                 size_(std::move(movedTexture.size_)),
                 textureInformations_(std::move(movedTexture.textureInformations_)),
+                bonusUsageFlags_(std::move(movedTexture.bonusUsageFlags_)),
                 device_(std::move(movedTexture.device_)),
                 textureImage_(std::move(movedTexture.textureImage_)),
                 textureImageAllocation_(std::move(movedTexture.textureImageAllocation_)),
                 textureImageView_(std::move(movedTexture.textureImageView_)),
-                textureSampler_(std::move(movedTexture.textureSampler_))
+                textureSampler_(std::move(movedTexture.textureSampler_)),
+                imageFormat_(std::move(movedTexture.imageFormat_))
             {
                 movedTexture.textureImage_ = nullptr;
                 movedTexture.textureImageAllocation_ = nullptr;
@@ -124,7 +129,7 @@ namespace vuw {
             virtual void createInputTextureBuffers(VkCommandPool commandPool, VkQueue queue) {
                 
                 //TODO: rendre VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT paramétrable
-                Buffer::createImage(device_->getAllocator(), textureInformations_.width, textureInformations_.height, imageFormat_, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, textureImage_, textureImageAllocation_); 
+                Buffer::createImage(device_->getAllocator(), textureInformations_.width, textureInformations_.height, imageFormat_, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | bonusUsageFlags_, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, textureImage_, textureImageAllocation_); 
 
                 // // Change the organisation of the image to optimize the data reception
                 // Image::transitionImageLayout(device_->get(), commandPool, queue, textureImage_, imageFormat_, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -178,6 +183,10 @@ namespace vuw {
             }
 
             //TODO: verify const keyword
+            const VkImage getImage() const {
+                return textureImage_;
+            }
+
             const VkImageView getImageView() const {
                 return textureImageView_;
             }
@@ -186,9 +195,14 @@ namespace vuw {
                 return textureSampler_;
             }
 
+            VkFormat getFormat() const {
+                return imageFormat_;
+            }
+
         protected:
             VkDeviceSize size_;
             TextureInformations textureInformations_;
+            VkImageUsageFlags bonusUsageFlags_;
             
             //Saved vulkan objects
             const Device* device_;

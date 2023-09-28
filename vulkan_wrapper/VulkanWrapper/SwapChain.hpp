@@ -187,8 +187,12 @@ namespace vuw {
             }
 
             //Framebuffers
-            std::vector<VkFramebuffer> const& getFramebuffers() {
+            std::vector<VkFramebuffer> const& getFramebuffers() const {
                 return swapChainFramebuffers_;
+            }
+
+            std::vector<VkImage> const& getImages() const {
+                return swapChainImages_;
             }
 
             //Format and extent

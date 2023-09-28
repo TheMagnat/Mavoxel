@@ -16,6 +16,7 @@ layout (set = 0, binding = 0) uniform RayCastInformations {
     float time;
     vec3 voxelCursorPosition;
     vec3 faceCursorNormal;
+    vec2 jitter;
 };
 
 layout(std430, binding = 4) buffer SsboSimpleVoxels {

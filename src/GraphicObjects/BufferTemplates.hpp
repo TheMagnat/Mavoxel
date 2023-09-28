@@ -54,6 +54,7 @@ namespace mav {
         alignas(16) float time;
         alignas(16) glm::vec3 voxelCursorPosition;
         alignas(16) glm::vec3 faceCursorNormal;
+        alignas(16) glm::vec2 jitter;
     };
 
     struct WorldOctreeInformations {
@@ -71,6 +72,7 @@ namespace mav {
         alignas(16) glm::mat4 oldProjectionView;
         alignas(16) glm::mat4 newProjectionView;
         alignas(16) glm::mat4 view;
+        alignas(16) int debug;
     };
 
     

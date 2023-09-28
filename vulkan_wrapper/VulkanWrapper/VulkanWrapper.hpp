@@ -42,9 +42,9 @@ namespace vuw {
                 swapChain_.initializeFramebuffers(renderPass_);
             }
 
-            void addFilterRenderer(glm::uvec2 const& resolution) {
+            void addFilterRenderer(glm::uvec2 const& resolution, int textureUsage) {
                 //TODO: rendre des trucs paramétrable genre le nombre d'images par exemple
-                filterRenderers_.emplace_back(device_, commandPool_.get(), framesInFlight_, resolution, 2, false);
+                filterRenderers_.emplace_back(device_, commandPool_.get(), framesInFlight_, resolution, 2, false, textureUsage);
             }
 
             //If true, recording started
@@ -248,8 +248,29 @@ namespace vuw {
                 return Texture(&device_, commandPool_.get(), device_.getGraphicsQueue(), textureData, textureInformations);
             }
 
+            Texture generateEmptyTexture(Texture::TextureInformations const& textureInformations, VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB, VkImageUsageFlags usageFlags = 0) const {
+                return Texture(&device_, commandPool_.get(), device_.getGraphicsQueue(), textureInformations, imageFormat, usageFlags);
+            }
+
             Texture generateTexture3D(std::vector<uint8_t> const& textureData, Texture::TextureInformations const& textureInformations) const {
                 return Texture3D(&device_, commandPool_.get(), device_.getGraphicsQueue(), textureData, textureInformations);
+            }
+
+            void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
+                Image::transitionImageLayout(device_.get(), commandPool_.get(), device_.getGraphicsQueue(), image, format, oldLayout, newLayout);
+            }
+
+            //TODO: Permettre de paramétrer le format et les layouts ?
+            void copyImageToImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
+
+                transitionImageLayout(srcImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                transitionImageLayout(dstImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+                Buffer::copyImageToImage(device_.get(), commandPool_.get(), device_.getGraphicsQueue(), srcImage, dstImage, width, height);
+            
+                transitionImageLayout(srcImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                transitionImageLayout(dstImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
             }
 
             void waitIdle() const {
