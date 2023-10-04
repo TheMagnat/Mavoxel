@@ -39,6 +39,9 @@ elseif ( APPLE )
 
 endif ( MSVC )
 
+#Other libs
+target_link_libraries(Mavoxel PRIVATE zlibstatic)
+
 ## Compilation features
 target_compile_features(Mavoxel PRIVATE cxx_std_20)
 

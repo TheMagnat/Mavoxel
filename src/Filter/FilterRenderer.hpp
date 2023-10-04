@@ -73,7 +73,7 @@ namespace mav {
                 filterShaderInformations.view = environment_->camera->GetViewMatrix();
                 filterShaderInformations.oldProjectionView = filterShaderInformations.newProjectionView;
                 filterShaderInformations.newProjectionView = environment_->camera->Projection * filterShaderInformations.view;
-                filterShaderInformations.debug = fmod(environment_->totalElapsedTime, 4) < 2.0;
+                filterShaderInformations.debug = false;//fmod(environment_->totalElapsedTime, 4) < 2.0;
 
                 glm::vec4 viewPosition = filterShaderInformations.view * glm::vec4(environment_->sun->getPosition(), 1.0);
                 

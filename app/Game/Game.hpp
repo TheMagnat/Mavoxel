@@ -78,10 +78,11 @@ class Game {
         Game(const vuw::Window* window) : window_(window),
             //Shaders
             rayCastingShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/RayTracing/ray_tracing.frag.spv")),
-            motionBlurFilterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/motionBlur.frag.spv")),
+            computeVelocityShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/computeVelocity.frag.spv")),
             filterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/filter.frag.spv")),
             aaShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/antiAliasing.frag.spv")),
             taaShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/taa.frag.spv")),
+            motionBlurFilterShader(mav::Global::vulkanWrapper->generateShader("Shaders/only_texPos.vert.spv", "Shaders/Filter/motionBlur.frag.spv")),
 
             totalElapsedTime_(0),
             player(glm::vec3(-5, 0, 0), 0.5f * 0.95f, PLAYER_MASS), generator(0, CHUNK_SIZE, VOXEL_SIZE),
@@ -101,6 +102,9 @@ class Game {
             filterRenderer(&environment),
             filterRendererWrapper(&filterShader, &filterRenderer),
 
+            computeVelocityRenderer(&environment),
+            computeVelocityRendererWrapper(&computeVelocityShader, &computeVelocityRenderer),
+
             motionBlurRenderer(&environment),
             motionBlurRendererWrapper(&motionBlurFilterShader, &motionBlurRenderer),
 
@@ -115,6 +119,7 @@ class Game {
             
             float rayTracingResolutionFactor = 0.75;
             glm::uvec2 rayTracingResolution(1920 * rayTracingResolutionFactor, 1080 * rayTracingResolutionFactor);
+            glm::uvec2 finalResolution(2560, 1440);
 
             //// Add to renderChainHandler scenes to render
             //
@@ -122,16 +127,18 @@ class Game {
             renderChainHandler.addScene({&RCRendererWrapper, mav::SceneType::RAY_TRACING}, rayTracingResolution);
             //
             //This scene fill the velocity texture
-            renderChainHandler.addScene({&motionBlurRendererWrapper, mav::SceneType::FILTER, {{{mav::OwnedTextureType::COPY, 0, 2}}}}, rayTracingResolution);
+            renderChainHandler.addScene({&computeVelocityRendererWrapper, mav::SceneType::FILTER, {{{mav::OwnedTextureType::COPY, 0, 2}}}}, rayTracingResolution);
             //
             //God Ray Scene
             renderChainHandler.addScene({&filterRendererWrapper, mav::SceneType::FILTER}, rayTracingResolution);
             //
             //TAA Scene
-            renderChainHandler.addScene({&taaRendererWrapper, mav::SceneType::FILTER, {{{mav::OwnedTextureType::COPY, 3, 0}, {mav::OwnedTextureType::COPY, 3, 2}}}}, glm::uvec2(1920, 1080));
+            renderChainHandler.addScene({&taaRendererWrapper, mav::SceneType::FILTER, {{{mav::OwnedTextureType::COPY, 3, 0}, {mav::OwnedTextureType::COPY, 3, 2}}}}, finalResolution);
             //
             //FXAA Scene
-            renderChainHandler.addScene({&aaRendererWrapper, mav::SceneType::FILTER});
+            renderChainHandler.addScene({&aaRendererWrapper, mav::SceneType::FILTER}, finalResolution);
+            // Motion Blur
+            renderChainHandler.addScene({&motionBlurRendererWrapper, mav::SceneType::FILTER});
             //
             ////
 
@@ -543,9 +550,10 @@ class Game {
 
         //Filter
         vuw::Shader filterShader;
-        vuw::Shader motionBlurFilterShader;
+        vuw::Shader computeVelocityShader;
         vuw::Shader aaShader;
         vuw::Shader taaShader;
+        vuw::Shader motionBlurFilterShader;
 
         float totalElapsedTime_;
 
@@ -578,14 +586,17 @@ class Game {
         mav::FilterRenderer filterRenderer;
         mav::DrawableSingle filterRendererWrapper;
 
-        mav::FilterRenderer motionBlurRenderer;
-        mav::DrawableSingle motionBlurRendererWrapper;
+        mav::FilterRenderer computeVelocityRenderer;
+        mav::DrawableSingle computeVelocityRendererWrapper;
 
         mav::FilterRenderer aaRenderer;
         mav::DrawableSingle aaRendererWrapper;
 
         mav::FilterRenderer taaRenderer;
         mav::DrawableSingle taaRendererWrapper;
+
+        mav::FilterRenderer motionBlurRenderer;
+        mav::DrawableSingle motionBlurRendererWrapper;
 
         //Debug / Benchmark
         size_t frameCount = 0;

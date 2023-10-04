@@ -86,8 +86,8 @@ namespace mav {
                 float haltonY = 2.0f * halton(iteration_ + 1, 3) - 1.0f;
 
                 //TODO: ne plus mettre en dur la résolution
-                float weight = 1.0f;
-                rci.jitter.x = (haltonX / (1920 * weight));
+                float weight = 3.0f;
+                rci.jitter.x = (haltonX / (1080 * weight));
                 rci.jitter.y = (haltonY / (1080 * weight));
                 // rci.jitter = glm::vec2(0.0);
 

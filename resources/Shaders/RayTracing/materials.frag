@@ -15,6 +15,13 @@ Material light = Material(
     32.0
 );
 
+// Material light = Material(
+//     vec3(0.1f, 0.1f, 0.1f),
+//     vec3(0.5f, 0.5f, 0.0f),
+//     vec3(1.0f, 1.0f, 0.0f),
+//     32.0
+// );
+
 Material materials[] = Material[](
     //0 - Default / Error
     Material(

@@ -58,6 +58,7 @@ set(shadersToCompile
     # only_texPos.frag
     only_texPos.vert
     Filter/filter.frag:Filter/filterUniforms.frag
+    Filter/computeVelocity.frag:Filter/filterUniforms.frag
     Filter/motionBlur.frag:Filter/filterUniforms.frag
     Filter/antiAliasing.frag:Filter/filterUniforms.frag
     Filter/taa.frag:Filter/filterUniforms.frag

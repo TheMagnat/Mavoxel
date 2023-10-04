@@ -6,6 +6,9 @@
 #include <Octree/SparseVoxelOctreeHelper.hpp>
 #include <Core/Global.hpp>
 
+//File saving / compression
+#include <zlib/zlib.h>
+
 #ifdef TIME
     //Help/debug
     #include <Helper/Benchmark/Profiler.hpp>
@@ -294,10 +297,34 @@ namespace mav {
     //File handler
     void SparseVoxelOctree::writeToFile(std::ofstream& stream) const {
         
-        size_t dataSize = data_.size();
-        stream.write(reinterpret_cast<const char*>(&dataSize), sizeof(size_t));
-        stream.write(reinterpret_cast<const char*>(data_.data()), sizeof(int32_t) * data_.size());
+        //Save original size
+        size_t dataOriginalSize = data_.size();
+        size_t dataOriginalByteSize = dataOriginalSize * sizeof(int32_t);
 
+        uLong dataCompressedSize_uLong;
+        std::vector<unsigned char> compressedData;
+
+        {
+                
+            #ifdef TIME
+                Profiler profiler("Octree compression");
+            #endif
+
+            dataCompressedSize_uLong = compressBound(dataOriginalByteSize); //Get maximum compressed buffer size
+            compressedData.resize(dataCompressedSize_uLong);
+
+            int result = compress2(compressedData.data(), &dataCompressedSize_uLong, reinterpret_cast<const Bytef*>(data_.data()), dataOriginalByteSize, 1); //Compress buffer
+            compressedData.resize(dataCompressedSize_uLong); //Resize the compressed data according to the true compressed size
+
+        }
+
+        size_t dataCompressedSize = dataCompressedSize_uLong; //Convert uLong to size_t to stay consistent
+
+        stream.write(reinterpret_cast<const char*>(&dataOriginalSize), sizeof(size_t));
+        stream.write(reinterpret_cast<const char*>(&dataCompressedSize), sizeof(size_t));
+        stream.write(reinterpret_cast<const char*>(compressedData.data()), sizeof(unsigned char) * dataCompressedSize);
+
+        //Save uncompressed freeDataChunk vector
         size_t freeDataChunkSize = freeDataChunk_.size();
         stream.write(reinterpret_cast<const char*>(&freeDataChunkSize), sizeof(size_t));
         stream.write(reinterpret_cast<const char*>(freeDataChunk_.data()), sizeof(size_t) * freeDataChunk_.size());
@@ -306,16 +333,30 @@ namespace mav {
 
     void SparseVoxelOctree::readFromFile(std::ifstream& stream) {
         
-        size_t dataSize;
-        stream.read(reinterpret_cast<char*>(&dataSize), sizeof(size_t));
+        //1 - Read original size
+        size_t dataOriginalSize;
+        stream.read(reinterpret_cast<char*>(&dataOriginalSize), sizeof(size_t));
 
-        data_.resize(dataSize);
-        stream.read(reinterpret_cast<char*>(data_.data()), sizeof(int32_t) * dataSize);
+        //2 - Read compressed size
+        size_t dataCompressedSize;
+        stream.read(reinterpret_cast<char*>(&dataCompressedSize), sizeof(size_t));
 
+        //3 - Read compressed octree
+        std::vector<unsigned char> compressedData;
+        compressedData.resize(dataCompressedSize); //Prepare buffer to receive data
 
+        stream.read(reinterpret_cast<char*>(compressedData.data()), sizeof(unsigned char) * dataCompressedSize);
+
+        // Uncompress octree into data member
+        data_.resize(dataOriginalSize);
+        uLong originalULongSize = dataOriginalSize * sizeof(size_t);
+        uncompress(reinterpret_cast<Bytef*>(&data_[0]), &originalULongSize, compressedData.data(), dataCompressedSize);
+
+        //4 - Read free chunk size
         size_t freeDataChunkSize;
         stream.read(reinterpret_cast<char*>(&freeDataChunkSize), sizeof(size_t));
 
+        //5 - Read free chunk vector
         freeDataChunk_.resize(freeDataChunkSize);
         stream.read(reinterpret_cast<char*>(freeDataChunk_.data()), sizeof(int32_t) * freeDataChunkSize);
 
