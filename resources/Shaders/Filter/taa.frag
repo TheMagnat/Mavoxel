@@ -132,8 +132,13 @@ vec4 taa() {
     // }
     //END NEW
 
-    float testValue = length(velocity) * 100;
-    testValue = clamp(testValue, 0.0, 1.0) * 0.9;
+    // Based on velocity texture
+    // float testValue = length(velocity) * 100;
+    // testValue = clamp(testValue, 0.0, 1.0) * 0.9;
+
+    // Based on velocity scalar
+    float testValue = velocityScalar * 0.9;
+
     // testValue = 0.0;
     
     vec3 outputColor = currentColor.rgb * (0.1 + testValue) + previousColorClamped.rgb * (0.9 - testValue);

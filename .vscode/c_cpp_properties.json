@@ -18,14 +18,20 @@
         },
         {
             "name": "Windows",
-            "includePath": [],
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/app",
+                "${workspaceFolder}/vulkan_wrapper",
+                "C:/Libraries/Include",
+                "C:/VulkanSDK/1.3.250.0/Include"
+            ],
             "defines": [],
             "windowsSdkVersion": "10.0.22000.0",
             "compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.35.32215/bin/Hostx64/x64/cl.exe",
             "cStandard": "c17",
             "cppStandard": "c++20",
             "intelliSenseMode": "msvc-x64",
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "configurationProvider": "ms-vscode.cpptools"
         }
     ],
     "version": 4

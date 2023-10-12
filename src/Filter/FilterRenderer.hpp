@@ -73,6 +73,7 @@ namespace mav {
                 filterShaderInformations.view = environment_->camera->GetViewMatrix();
                 filterShaderInformations.oldProjectionView = filterShaderInformations.newProjectionView;
                 filterShaderInformations.newProjectionView = environment_->camera->Projection * filterShaderInformations.view;
+                filterShaderInformations.velocityScalar = environment_->velocityScalar;
                 filterShaderInformations.debug = false;//fmod(environment_->totalElapsedTime, 4) < 2.0;
 
                 glm::vec4 viewPosition = filterShaderInformations.view * glm::vec4(environment_->sun->getPosition(), 1.0);
@@ -81,7 +82,7 @@ namespace mav {
 
                 glm::vec2 screenPosition;
 
-                screenPosition.x = (ndcPosition.x / ndcPosition.w + 1.0) * 0.5;
+                screenPosition.x = (1.0 - ndcPosition.x / ndcPosition.w) * 0.5;
                 screenPosition.y = (1.0 - ndcPosition.y / ndcPosition.w) * 0.5;
 
                 ti.sunScreenPos = viewPosition.z <= 0 ? screenPosition : glm::vec2(300);

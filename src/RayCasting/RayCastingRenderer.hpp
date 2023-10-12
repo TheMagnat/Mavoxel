@@ -7,6 +7,8 @@
 #include <VulkanWrapper/Shader.hpp>
 #include <GraphicObjects/BufferTemplates.hpp>
 
+#include <glm/gtx/vector_angle.hpp>
+
 //RAYTRACING_CHUNK_RANGE is set in the CMAKE
 #define RAYTRACING_CHUNK_PER_AXIS (RAYTRACING_CHUNK_RANGE * 2 + 1)
 #define RAYTRACING_SVO_SIZE (RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS * RAYTRACING_CHUNK_PER_AXIS)
@@ -62,6 +64,27 @@ namespace mav {
 
                 rci.projection = environment_->camera->Projection;
                 rci.view = environment_->camera->GetViewMatrix();
+
+                //Computation for camera velocity...
+                glm::vec3 displacement_vector = rci.camera.position - lastFrameCameraPosition_;
+                float linearVelocity = glm::length(displacement_vector);
+
+                float angularVelocity = glm::angle(lastFrameCameraDirection_, rci.camera.front);
+
+                // Scalar velocity (you can adjust the weights as needed)
+                float velocityScalar = linearVelocity + angularVelocity;
+                velocityScalar = glm::clamp(velocityScalar * 5.0f, 0.0f, 1.0f);
+                // velocityScalar = 0.0f;
+
+                environment_->velocityScalar = velocityScalar;
+
+                rci.velocityScalar = velocityScalar;
+
+                std::cout << "Scalar velocity: " << rci.velocityScalar << std::endl;
+
+                //...
+                lastFrameCameraPosition_ = rci.camera.position;
+                lastFrameCameraDirection_ = rci.camera.front;
 
                 //Sun informations
                 rci.sun.position = environment_->sun->getPosition();
@@ -177,6 +200,10 @@ namespace mav {
             Environment* environment_;
 
             int iteration_ = 0;
+
+            //Save
+            glm::vec3 lastFrameCameraPosition_;
+            glm::vec3 lastFrameCameraDirection_;
 
     };
 

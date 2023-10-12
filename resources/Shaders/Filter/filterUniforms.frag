@@ -9,5 +9,6 @@ layout (set = 0, binding = 1) uniform FilterInformations {
     mat4 oldProjectionViewMat;
     mat4 newProjectionViewMat;
     mat4 view;
+    float velocityScalar;
     int debug;
 };

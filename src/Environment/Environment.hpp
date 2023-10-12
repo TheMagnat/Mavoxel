@@ -14,6 +14,9 @@ namespace mav {
         const Mesh* sun;
         const Camera* camera;
         float totalElapsedTime = 0.0f;
+        
+        //TODO: le calculer avant le render
+        float velocityScalar;
 
         const CollisionInformations* collisionInformations = nullptr;
 

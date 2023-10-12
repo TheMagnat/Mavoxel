@@ -24,7 +24,7 @@ struct MotionBlurResult {
 
 MotionBlurResult motionBlur() {
 
-    int   size       = 30;
+    int   size       = 15;
     float separation = 0.4;
 
     MotionBlurResult result;

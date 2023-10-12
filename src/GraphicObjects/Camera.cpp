@@ -35,7 +35,7 @@ glm::mat4 Camera::GetViewMatrix() const {
 }
 
 void Camera::setPerspectiveProjectionMatrix(float fovY, float aspect, float zNear, float zFar) {
-    Projection = glm::perspective(fovY, aspect, zNear, zFar);
+    Projection = glm::perspective(fovY, -aspect, zNear, zFar);
     frustum.updatePerspective(fovY, aspect, zNear, zFar);
 }
 

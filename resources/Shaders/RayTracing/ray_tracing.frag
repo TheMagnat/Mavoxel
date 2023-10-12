@@ -23,8 +23,7 @@ vec3 createRay(vec2 px, mat4 PInv, mat4 VInv) {
   
     // convert pixel to NDS
     // [0,1] -> [-1,1]
-    px.y = 1 - px.y;
-    vec2 pxNDS = px*2. - 1.;
+    vec2 pxNDS = px*-2. + 1.;
     
     // choose an arbitrary point in the viewing volume
     // z = -1 equals a point on the near plane, i.e. the screen
@@ -73,15 +72,17 @@ void main() {
     vec3 rayDirection = createRay(TexPos, inverse(projection), inverse(view));
     // vec3 rayDirection = getRayDir(rayTarget);
 
-    vec2 jitterMore = jitter * 1;
+    // Take into account the velocity to lower the jitter
+    vec2 jitterFinal = jitter * (1.0 - velocityScalar);
+
     //DEBUG
     // if (TexPos.x > 0.5) {
-    //     jitterMore = vec2(0.0);
+    //     jitterFinal = vec2(0.0);
     // }
 
-    // jitterMore = vec2(0.0);
-    vec3 cameraJittered = camera.position + camera.right * jitterMore.x + camera.up * jitterMore.y;
-    vec3 directionJittered = rayDirection + camera.right * jitterMore.x + camera.up * jitterMore.y;
+    // jitterFinal = vec2(0.0);
+    vec3 cameraJittered = camera.position + camera.right * jitterFinal.x + camera.up * jitterFinal.y;
+    vec3 directionJittered = rayDirection + camera.right * jitterFinal.x + camera.up * jitterFinal.y;
 
     RayTracingResult rayTracingResult = applyRayTracing(camera.position, directionJittered, RAY_DISTANCE);
     outFragColor = vec4(rayTracingResult.color, 1.0);

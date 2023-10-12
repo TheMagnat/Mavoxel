@@ -17,7 +17,7 @@ layout(binding = 4) uniform sampler2D scenePositionTexture;
 layout(binding = 5) uniform sampler2D lastFramePositionTexture;
 
 
-vec2 getVelocity_old(vec2 uv) {
+vec2 getVelocity_very_old(vec2 uv) {
 
     //Velocity
     vec4 currentWorldPosition = texture(scenePositionTexture, uv);
@@ -52,12 +52,10 @@ vec2 getVelocity(vec2 uv) {
     vec4 currentPos = newProjectionViewMat * currentWorldPosition;
     vec4 previousPos = oldProjectionViewMat * currentWorldPosition;
 
-    vec3 currentPosNDC = currentPos.xyz;// / currentPos.w;
-    vec3 previousPosNDC = previousPos.xyz; // / previousPos.w;
+    vec3 currentPosNDC = currentPos.xyz / currentPos.w;
+    vec3 previousPosNDC = previousPos.xyz / previousPos.w;
 
-    //TODO: trouver la bonne formule ?
-    return (previousPosNDC.xy - currentPosNDC.xy) / currentPos.w;
-
+    return currentPosNDC.xy - previousPosNDC.xy;
 
 }
 
