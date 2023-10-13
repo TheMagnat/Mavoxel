@@ -132,9 +132,9 @@ namespace mav {
 
 	}
 
-	void World::bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted) {
+	void World::bulkCreateChunk(glm::vec3 const& position, float createDistance, bool sorted) {
 
-		for (glm::vec3 const& chunkPosition : getAroundChunks(position, createDistance, sorted)) {
+		for (glm::ivec3 const& chunkPosition : getAroundChunks(position, createDistance, sorted)) {
 
 			//Try finding the chunk
 			auto chunkIt = chunks_.find(chunkPosition);
@@ -167,16 +167,14 @@ namespace mav {
 		return foundChunk;
 	}
 
-	Chunk* World::getChunkFromWorldPos(glm::vec3 position) {
+	Chunk* World::getChunkFromWorldPos(glm::vec3 const& position) {
 
 		//Calculate center position		
 		float trueChunkSize = chunkSize_ * voxelSize_;
 
-		int xIndex = floor(position.x / trueChunkSize);
-		int yIndex = floor(position.y / trueChunkSize);
-		int zIndex = floor(position.z / trueChunkSize);
+		glm::ivec3 chunkIndexes = getChunkIndex(position);
 
-		auto chunkIt = chunks_.find(glm::ivec3(xIndex, yIndex, zIndex));
+		auto chunkIt = chunks_.find(chunkIndexes);
 		if (chunkIt == chunks_.end()) return nullptr;
 		
 		Chunk* foundChunk = &chunkIt->second;
@@ -185,52 +183,33 @@ namespace mav {
 		return foundChunk;
 	}
 
-	glm::ivec3 World::getChunkIndex(glm::vec3 position) const {
+	std::vector<glm::ivec3> World::getAroundChunks(glm::vec3 const& position, float distance, bool sorted) const {
 		
-		//Calculate center position		
+		std::vector<glm::ivec3> aroundChunks;
+
 		float trueChunkSize = chunkSize_ * voxelSize_;
 
-		glm::ivec3 ret = glm::floor(position / trueChunkSize);
-
-		return ret;
-
-	}
-
-	std::vector<glm::vec3> World::getAroundChunks(glm::vec3 position, float distance, bool sorted) const {
-		
-		std::vector<glm::vec3> aroundChunks;
-
-		//Calculate center position
-		float xSign = position.x < 0 ? -1 : 1;
-		float ySign = position.y < 0 ? -1 : 1;
-		float zSign = position.z < 0 ? -1 : 1;
-		
-		float trueChunkSize = chunkSize_ * voxelSize_;
-
-		int xIndex = std::floor(position.x / trueChunkSize);
-		int yIndex = std::floor(position.y / trueChunkSize);
-		int zIndex = std::floor(position.z / trueChunkSize);
+		glm::ivec3 center = getDiscretePosition(position, trueChunkSize);
 
 		//Calculate the number of chunk to render
 		int nb_chunk = distance / trueChunkSize;
 
-		
 		for (int x = -nb_chunk, xState = 1; x <= nb_chunk; ++x) {
 			for (int y = -nb_chunk, yState = 1; y <= nb_chunk; ++y) {
 				for (int z = -nb_chunk, zState = 1; z <= nb_chunk; ++z) {
-					aroundChunks.emplace_back(x + xIndex, y + yIndex, z + zIndex);
+					aroundChunks.emplace_back(x + center.x, y + center.y, z + center.z);
 				}
 			}
 		}
 
 		if (sorted) {
 
-			glm::vec3 center(xIndex, yIndex, zIndex);
-
+			glm::vec3 floatCenter(center);
+			
 			// Sort the coordinates vector to have the nearest to the position first
 			std::sort(aroundChunks.begin(), aroundChunks.end(),
-				[&center](glm::vec3 const& coordA, glm::vec3 const& coordB) -> bool {
-					return glm::distance(coordA, center) < glm::distance(coordB, center);
+				[&floatCenter](glm::vec3 const& coordA, glm::vec3 const& coordB) -> bool {
+					return glm::distance(coordA, floatCenter) < glm::distance(coordB, floatCenter);
 				}
 			);
 		}
@@ -267,18 +246,11 @@ namespace mav {
 
 	std::tuple<int32_t, const Chunk*, glm::uvec3> World::getVoxel(float x, float y, float z) const {
 
-		float xSign = x < 0 ? -1 : 1;
-		float ySign = y < 0 ? -1 : 1;
-		float zSign = z < 0 ? -1 : 1;
-
 		float trueChunkSize = chunkSize_ * voxelSize_;
-		//float chunkLen = trueChunkSize - voxelSize_;
 
-		int xIndex = std::floor(x / trueChunkSize);
-		int yIndex = std::floor(y / trueChunkSize);
-		int zIndex = std::floor(z / trueChunkSize);
+		glm::ivec3 chunkIndexes = getDiscretePosition(glm::vec3(x, y, z), trueChunkSize);
 
-		auto chunkIt = chunks_.find(glm::ivec3(xIndex, yIndex, zIndex));
+		auto chunkIt = chunks_.find(chunkIndexes);
 		if (chunkIt == chunks_.end()) return {0, nullptr, glm::uvec3(0)}; //The chunk does not exist
 
 		const Chunk* chunkPtr = &chunkIt->second;
@@ -287,165 +259,13 @@ namespace mav {
 		//TODO: We could return something else to make the user understand the chunk does not exist and make it jump directly to the next chunk
 
 		//TODO: voir si ça marche avec des positions pas pile sur le cube
-		int internalX = (x - xIndex * trueChunkSize) / voxelSize_;
-		int internalY = (y - yIndex * trueChunkSize) / voxelSize_;
-		int internalZ = (z - zIndex * trueChunkSize) / voxelSize_;
+		int internalX = (x - chunkIndexes.x * trueChunkSize) / voxelSize_;
+		int internalY = (y - chunkIndexes.y * trueChunkSize) / voxelSize_;
+		int internalZ = (z - chunkIndexes.z * trueChunkSize) / voxelSize_;
 
 		return {chunkPtr->unsafeGetVoxel(internalX, internalY, internalZ), chunkPtr, glm::uvec3(internalX, internalY, internalZ)};
 
 	}
-
-
-
-	//TODO: tester les perf de cette fonction en utilisant plutôt des array et une boucle sur les 3 axes
-	// std::optional<RayCollisionInformations> World::castRay(glm::vec3 const& startPosition, glm::vec3 const& direction, float maxDistance) const {
-		
-	// 	#ifdef TIME
-	// 		Profiler profiler("Normal Ray");
-	// 	#endif
-
-	// 	glm::vec3 dir = glm::normalize(direction);
-
-	// 	//For processor following the IEC 60559 standard, adding 0.0f will get ride of the negative zero problem.
-	// 	// dir.x += 0.0f;
-	// 	// dir.y += 0.0f;
-	// 	// dir.z += 0.0f;
-
-	// 	//Positive or negative direction
-	// 	float xStep = std::signbit(dir.x) ? -1 : 1;
-	// 	float yStep = std::signbit(dir.y) ? -1 : 1;
-	// 	float zStep = std::signbit(dir.z) ? -1 : 1;
-
-	// 	//Index of the first voxel
-	// 	float x = floor(startPosition.x / voxelSize_) * voxelSize_;
-	// 	float y = floor(startPosition.y / voxelSize_) * voxelSize_;
-	// 	float z = floor(startPosition.z / voxelSize_) * voxelSize_;
-
-	// 	//Required time to exit the full voxel along each axis.
-	// 	float tMaxX = positiveModulo(startPosition.x, voxelSize_);
-	// 	float tMaxY = positiveModulo(startPosition.y, voxelSize_);
-	// 	float tMaxZ = positiveModulo(startPosition.z, voxelSize_);
-		
-	// 	if (xStep == 1) tMaxX = voxelSize_ - tMaxX;
-	// 	if (yStep == 1) tMaxY = voxelSize_ - tMaxY;
-	// 	if (zStep == 1) tMaxZ = voxelSize_ - tMaxZ;
-
-	// 	tMaxX /= dir.x * xStep;
-	// 	tMaxY /= dir.y * yStep;
-	// 	tMaxZ /= dir.z * zStep;
-
-	// 	//Here we verify if our position are in between 2 positions. If so we position the ray casting just before the collision between the 2 positions
-	// 	if (std::fmod(startPosition.x, voxelSize_) == 0 && dir.x != 0.0){
-	// 		tMaxX = 0;
-	// 		//Note: we only need to shift the index if the direction is positive
-	// 		if (xStep == 1) x = x - xStep * voxelSize_;
-	// 	}
-	// 	if (std::fmod(startPosition.y, voxelSize_) == 0 && dir.y != 0.0){
-	// 		tMaxY = 0;
-	// 		if (yStep == 1) y = y - yStep * voxelSize_;
-	// 	}
-	// 	if (std::fmod(startPosition.z, voxelSize_) == 0 && dir.z != 0.0){
-	// 		tMaxZ = 0;
-	// 		if (zStep == 1) z = z - zStep * voxelSize_;
-	// 	}
-
-	// 	//Required time to do a full voxel length along the axis.
-	// 	float tDeltaX = voxelSize_ / dir.x * xStep;
-	// 	float tDeltaY = voxelSize_ / dir.y * yStep;
-	// 	float tDeltaZ = voxelSize_ / dir.z * zStep;
-
-	// 	//This value represent the distance traveled to get to the next voxel along the axis
-	// 	float travelingX = tMaxX;
-	// 	float travelingY = tMaxY;
-	// 	float travelingZ = tMaxZ;
-
-	// 	//TODO: Maybe we could remove this or maybe bot
-	// 	int movingSide = -1;
-	// 	int32_t foundVoxel = 0;
-	// 	Chunk* foundChunk = nullptr;
-	// 	glm::uvec3 localFoundPosition(0.0f);
-	// 	//const SimpleVoxel* foundVoxel = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));		
-
-	// 	glm::vec3 traveledDistanceVector(0.0f);
-	// 	float traveledDistance = 0.0f;
-
-	// 	while(foundVoxel == 0) {
-
-	// 		//bottom = 0, front = 1, right = 2, back = 3, left = 4, top = 5
-
-	// 		if(tMaxX < tMaxY) {
-
-	// 			if (tMaxX < tMaxZ) {
-
-	// 				tMaxX = tMaxX + tDeltaX;
-	// 				x = x + xStep * voxelSize_;
-	// 				movingSide = dir.x < 0 ? 2 : 4; 
-
-	// 				//Update traveled distance and now set traveling to a whole voxel
-	// 				traveledDistanceVector.x += dir.x * travelingX;
-	// 				travelingX = tDeltaX;
-
-	// 			}
-	// 			else {
-
-	// 				tMaxZ = tMaxZ + tDeltaZ;
-	// 				z = z + zStep * voxelSize_;
-	// 				movingSide = dir.z < 0 ? 1 : 3; 
-
-	// 				//Update traveled distance and now set traveling to a whole voxel
-	// 				traveledDistanceVector.z += dir.z * travelingZ;
-	// 				travelingZ = tDeltaZ;
-
-	// 			}
-
-	// 		}
-	// 		else {
-
-	// 			if (tMaxY < tMaxZ) {
-
-	// 				tMaxY = tMaxY + tDeltaY;
-	// 				y = y + yStep * voxelSize_;
-	// 				movingSide = dir.y < 0 ? 5 : 0; 
-
-	// 				//Update traveled distance and now set traveling to a whole voxel
-	// 				traveledDistanceVector.y += dir.y * travelingY;
-	// 				travelingY = tDeltaY;
-
-	// 			}
-	// 			else {
-					
-	// 				tMaxZ = tMaxZ + tDeltaZ;
-	// 				z = z + zStep * voxelSize_;
-	// 				movingSide = dir.z < 0 ? 1 : 3; 
-
-	// 				//Update traveled distance and now set traveling to a whole voxel
-	// 				traveledDistanceVector.z += dir.z * travelingZ;
-	// 				travelingZ = tDeltaZ;
-	// 			}
-
-	// 		}
-
-	// 		traveledDistance = glm::length(traveledDistanceVector);
-
-	// 		if (traveledDistance > maxDistance) break;
-
-	// 		//We add half the voxel size to center it.
-	// 		std::tie(foundVoxel, foundChunk, localFoundPosition) = getVoxel(x + (voxelSize_ / 2.0f), y + (voxelSize_ / 2.0f), z + (voxelSize_ / 2.0f));
-
-	// 	}
-
-	// 	if (foundVoxel) {
-	// 		//TODO: remove this shit
-	// 		//if (movingSide == -1 ) return CollisionFace( foundVoxel->getFace(0), traveledDistance );
-
-	// 		return CollisionFace( foundVoxel, foundChunk, localFoundPosition, std::vector<glm::vec3>{SimpleVoxel::getFaceNormal(movingSide)}, traveledDistance);
-
-	// 	}
-
-	// 	return {};
-
-	// }
-
 
 	std::optional<RayCollisionInformations> World::castRay(glm::vec3 position, glm::vec3 const& inputDirection, float maxDistance) {
 		
@@ -529,6 +349,7 @@ namespace mav {
 
 			totalTraveledDistance += traveledDistance;
 
+			//TODO: Mieux décrire le returnCode
 			if (returnCode == 0) {
 				// glm::vec3 worldPosition = localPosition + glm::vec3(chunkPosition * (int)chunkSize_);
 				return RayCollisionInformations(collisionInformations->id, collisionInformations->position, normals, totalTraveledDistance * voxelSize_, chunkPtr);

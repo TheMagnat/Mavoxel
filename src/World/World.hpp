@@ -29,9 +29,9 @@ namespace mav {
 	class World {
 
 		public:
-			World(const VoxelMapGenerator * voxelMapGenerator, size_t octreeDepth = 5, float voxelSize = 1.0f, std::string const& worldFolderPath = "", bool newWorld = true);
+			World(const VoxelMapGenerator* voxelMapGenerator, size_t octreeDepth = 5, float voxelSize = 1.0f, std::string const& worldFolderPath = "", bool newWorld = true);
 
-			std::vector<glm::vec3> getAroundChunks(glm::vec3 position, float distance, bool sorted) const;
+			std::vector<glm::ivec3> getAroundChunks(glm::vec3 const& position, float distance, bool sorted) const;
 			
 			/**
 			 * Try to load a Chunk from Chunk indexer.
@@ -43,14 +43,14 @@ namespace mav {
 
 			void save();
 
-			void bulkCreateChunk(glm::vec3 position, float createDistance, bool sorted);
+			void bulkCreateChunk(glm::vec3 const& position, float createDistance, bool sorted);
 
 			Chunk* getChunk(int x, int y, int z);
 			Chunk* getChunk(glm::ivec3 const& position);
 			
-			Chunk* getChunkFromWorldPos(glm::vec3 position);
-			glm::ivec3 getChunkIndex(glm::vec3 position) const;
-
+			Chunk* getChunkFromWorldPos(glm::vec3 const& position);
+			
+			inline glm::ivec3 getChunkIndex(glm::vec3 const& position) const { return glm::floor(position / (chunkSize_ * voxelSize_)); }
 			//void drawAll(VkCommandBuffer currentCommandBuffer, uint32_t currentFrame);
 
 			//TODO: Save entre les draw la position de l'utilisateur et garder en mémoir les chunks a draw, et update ce vecteur si l'utilisateur à bougé
@@ -79,6 +79,7 @@ namespace mav {
 			 */
 
 			//TODO: changer le retour ?
+			//TODO: Refacto pour n'avoir plus qu'une fonction ?
 			std::optional<RayCollisionInformations> castRay(glm::vec3 position, glm::vec3 const& inputDirection, float maxDistance = 50);
 			std::optional<RayCollisionInformations> castRay(glm::vec3 position, glm::vec3 const& inputDirection, float maxDistance = 50) const;
 

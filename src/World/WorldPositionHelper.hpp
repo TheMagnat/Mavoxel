@@ -14,16 +14,18 @@ namespace mav {
         // position = round(position * ZERO_TO_ROUND) / ZERO_TO_ROUND;
     }
 
-    inline glm::ivec3 getDiscretePosition(glm::vec3 position, float voxelSize) {
-        //TODO: Voir si il faut pas utiliser floor
-        return glm::ivec3(position/voxelSize);
+    inline glm::ivec3 getDiscretePosition(glm::vec3 const& position, float voxelSize) {
+        return glm::ivec3(glm::floor(position / voxelSize));
     }
 
-    //TODO: le faire avec des glm::vec3
-    //Return the chunk coordinates and it's corresponding local position of the given position
-    inline std::pair<glm::ivec3, glm::vec3> getChunkLocalPosition(glm::vec3 position, float chunkSize) {
+    inline glm::uvec3 getDiscreteUnsignedPosition(glm::vec3 const& position, float voxelSize) {
+        return glm::uvec3(glm::floor(position / voxelSize));
+    }
 
-        glm::ivec3 chunkPosition = glm::ivec3(floor(position / chunkSize));
+    //Return the chunk coordinates and it's corresponding local position of the given position
+    inline std::pair<glm::ivec3, glm::vec3> getChunkLocalPosition(glm::vec3 const& position, float chunkSize) {
+
+        glm::ivec3 chunkPosition = glm::ivec3(glm::floor(position / chunkSize));
         glm::vec3 localPosition = glm::mod(position, chunkSize);
 
         return { chunkPosition, localPosition };
@@ -44,11 +46,6 @@ namespace mav {
         localPosition = localPosition * glm::vec3(glm::uvec3(vec3Not(isGreaterThanMax)) * glm::uvec3(vec3Not(isLessThanMax))) + maxLenVec * glm::vec3(isLessThanMax);
         chunkPosition += glm::ivec3(isGreaterThanMax) * glm::ivec3(1) + glm::ivec3(isLessThanMax) * glm::ivec3(-1);
 
-    }
-
-    
-    inline glm::uvec3 getDiscreteUnsignedPosition(glm::vec3 position, float voxelSize) {
-        return glm::uvec3(position/voxelSize);
     }
 
     inline float positiveModulo (float a, float b) { return a >= 0 ? fmod(a, b) : fmod( fmod(a, b) + b, b); }
