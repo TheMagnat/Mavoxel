@@ -12,6 +12,7 @@
 #include <Entity/Player.hpp>
 #include <World/World.hpp>
 #include <World/EntityManager.hpp>
+#include <World/WorldLoader.hpp>
 
 #include <Mesh/Voxel.hpp>
 #include <Mesh/Face.hpp>
@@ -89,13 +90,14 @@ class Game {
             physicSystem(WORLD_GRAVITY_FORCE), freeFlightPhysicSystem(0),
             world(&generator, SVO_DEPTH, VOXEL_SIZE, "demoWorld", false),
             entityManager(&physicSystem),
+            worldLoader(&world, &player, RAYTRACING_CHUNK_RANGE),
 
             sun(&environment, sunMaterial, 1),
 
             renderChainHandler(true),
 
             //Ray casting
-            RCRenderer(&world, &entityManager, &environment, SVO_DEPTH),
+            RCRenderer(&worldLoader, &entityManager, &environment, SVO_DEPTH, VOXEL_SIZE),
             RCRendererWrapper(&rayCastingShader, &RCRenderer),
 
             //Filter
@@ -458,6 +460,8 @@ class Game {
             player.update(elapsedTime, world);
             entityManager.updateAll(elapsedTime, world);
             entityManager.updateBuffer();
+
+            worldLoader.update(elapsedTime);
                         
             sun.setPosition(-200.f, 100.f, 0.f); // Fix position
             // sun.setPosition(player.getCamera()->Position + player.getCamera()->Front * 50); // Front of player
@@ -569,6 +573,7 @@ class Game {
 
         mav::World world;
         mav::EntityManager entityManager;
+        mav::WorldLoader worldLoader;
 
         mav::LightVoxel sun;
 

@@ -167,10 +167,17 @@ namespace mav {
 		return foundChunk;
 	}
 
-	Chunk* World::getChunkFromWorldPos(glm::vec3 const& position) {
+	const Chunk* World::getChunk(glm::ivec3 const& position) const {
+		auto chunkIt = chunks_.find(position);
+		if (chunkIt == chunks_.end()) return nullptr;
+		
+		const Chunk* foundChunk = &chunkIt->second;
+		if (foundChunk->state == 0) return nullptr;
 
-		//Calculate center position		
-		float trueChunkSize = chunkSize_ * voxelSize_;
+		return foundChunk;
+	}
+
+	Chunk* World::getChunkFromWorldPos(glm::vec3 const& position) {
 
 		glm::ivec3 chunkIndexes = getChunkIndex(position);
 

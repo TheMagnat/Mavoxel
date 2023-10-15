@@ -47,6 +47,7 @@ namespace mav {
 
 			Chunk* getChunk(int x, int y, int z);
 			Chunk* getChunk(glm::ivec3 const& position);
+			const Chunk* getChunk(glm::ivec3 const& position) const;
 			
 			Chunk* getChunkFromWorldPos(glm::vec3 const& position);
 			

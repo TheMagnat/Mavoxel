@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <World/World.hpp>
+#include <World/WorldLoader.hpp>
 #include <World/EntityManager.hpp>
 #include <Mesh/Simple/Quad.hpp>
 #include <VulkanWrapper/Shader.hpp>
@@ -40,8 +40,8 @@ namespace mav {
     class RayCastingRenderer : public Quad {
 
         public:
-            RayCastingRenderer(World* world, EntityManager* entityManager, Environment* environment, size_t svoDepth)
-                : svoDepth_(svoDepth), world_(world), entityManager_(entityManager), environment_(environment) {
+            RayCastingRenderer(const WorldLoader* worldLoader, EntityManager* entityManager, Environment* environment, size_t svoDepth, float voxelSize)
+                : svoDepth_(svoDepth), voxelSize_(voxelSize), worldLoader_(worldLoader), entityManager_(entityManager), environment_(environment) {
 
 
             }
@@ -72,15 +72,15 @@ namespace mav {
                 float angularVelocity = glm::angle(lastFrameCameraDirection_, rci.camera.front);
 
                 // Scalar velocity (you can adjust the weights as needed)
-                float velocityScalar = linearVelocity + angularVelocity;
-                velocityScalar = glm::clamp(velocityScalar * 5.0f, 0.0f, 1.0f);
-                // velocityScalar = 0.0f;
+                float velocityScalar = linearVelocity + angularVelocity * 20.0f;
+                velocityScalar = glm::clamp(velocityScalar * 10.0f, 0.0f, 1.0f);
+                // velocityScalar = 1.0f;
 
                 environment_->velocityScalar = velocityScalar;
 
                 rci.velocityScalar = velocityScalar;
 
-                std::cout << "Scalar velocity: " << rci.velocityScalar << std::endl;
+                // std::cout << "Scalar velocity: " << rci.velocityScalar << std::endl;
 
                 //...
                 lastFrameCameraPosition_ = rci.camera.position;
@@ -95,7 +95,7 @@ namespace mav {
                 if (environment_->collisionInformations) {
                     
                     //TODO: better
-                    rci.voxelCursorPosition = ( glm::vec3(environment_->collisionInformations->voxelLocalPosition) + (glm::vec3(environment_->collisionInformations->chunkPosition) * std::pow(2, svoDepth_)) ) * world_->getVoxelSize();
+                    rci.voxelCursorPosition = ( glm::vec3(environment_->collisionInformations->voxelLocalPosition) + (glm::vec3(environment_->collisionInformations->chunkPosition) * std::pow(2, svoDepth_)) ) * voxelSize_;
                     rci.faceCursorNormal = environment_->collisionInformations->normal;
                 }
                 else {
@@ -109,16 +109,16 @@ namespace mav {
                 float haltonY = 2.0f * halton(iteration_ + 1, 3) - 1.0f;
 
                 //TODO: ne plus mettre en dur la résolution
-                float weight = 3.0f;
+                float weight = 2.5f;
                 rci.jitter.x = (haltonX / (1080 * weight));
                 rci.jitter.y = (haltonY / (1080 * weight));
                 // rci.jitter = glm::vec2(0.0);
 
                 //Current chunk position
-                woi.centerChunkPosition = world_->getChunkIndex(environment_->camera->Position);
+                woi.centerChunkPosition = worldLoader_->getCenterPosition();
                 woi.depth = svoDepth_;
                 woi.len = std::pow(2, svoDepth_);
-                woi.voxelSize = world_->getVoxelSize();
+                woi.voxelSize = voxelSize_;
 
                 //Uniform on binding 0
                 shader->updateUniform(0, currentFrame, &rci, sizeof(rci));
@@ -128,38 +128,8 @@ namespace mav {
 
 
                 //Buffers
-                static const int range = RAYTRACING_CHUNK_RANGE;
-                static const int len = RAYTRACING_CHUNK_PER_AXIS;
-
-                std::vector<const vuw::SSBO*> svoSsboInRange;
-                std::vector<mav::SparseVoxelOctree*> ssboDebug;
-                std::vector<int> svoInformations;
-                svoSsboInRange.reserve(RAYTRACING_SVO_SIZE);
-                
-                unsigned int ssboIndex = 0;
-                for (int x = -range; x <= range; ++x) {
-                for (int y = -range; y <= range; ++y) {
-                for (int z = -range; z <= range; ++z) {
-                    
-                    Chunk* chunkPtr = world_->getChunk(woi.centerChunkPosition.x + x, woi.centerChunkPosition.y + y, woi.centerChunkPosition.z + z);
-                    if (chunkPtr && chunkPtr->state == 2) {
-                        svoSsboInRange.push_back(&chunkPtr->svo_.getSSBO());
-                        svoInformations.push_back(0);
-                        ssboDebug.push_back(&chunkPtr->svo_);
-                    }
-                    else {
-                        svoSsboInRange.push_back(nullptr);
-                        svoInformations.push_back(1);
-                        ssboDebug.push_back(nullptr);
-                    }
-                    
-                }
-                }
-                }
-
-                
-                shader->updateSSBOs(0, svoSsboInRange); //Binding 2
-                shader->updateUniformArray(2, currentFrame, svoInformations, sizeof(int)); //Binding 3
+                shader->updateSSBOs(0, worldLoader_->getAroundChunks().octreeSSBOs); //Binding 2
+                shader->updateUniformArray(2, currentFrame, worldLoader_->getAroundChunks().octreeInformations, sizeof(int)); //Binding 3
                 
                 shader->updateSSBOs(1, std::vector<const vuw::SSBO*>{ &entityManager_->getSSBO() }); //Binding 4
 
@@ -194,8 +164,9 @@ namespace mav {
         private:
 
             size_t svoDepth_;
+            float voxelSize_;
 
-            World* world_;
+            const WorldLoader* worldLoader_;
             EntityManager* entityManager_;
             Environment* environment_;
 

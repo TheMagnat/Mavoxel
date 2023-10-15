@@ -60,7 +60,7 @@ namespace mav {
                 gpuBuffer_.update<int32_t>(data_);
             }
 
-            inline vuw::SSBO const& getSSBO() { return gpuBuffer_; }
+            inline vuw::SSBO const& getSSBO() const { return gpuBuffer_; }
 
             //File handler
             void writeToFile(std::ofstream& stream) const;
