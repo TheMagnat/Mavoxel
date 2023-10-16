@@ -128,8 +128,8 @@ namespace mav {
 
 
                 //Buffers
-                shader->updateSSBOs(0, worldLoader_->getAroundChunks().octreeSSBOs); //Binding 2
-                shader->updateUniformArray(2, currentFrame, worldLoader_->getAroundChunks().octreeInformations, sizeof(int)); //Binding 3
+                shader->updateSSBOs(0, worldLoader_->getSSBOs()); //Binding 2
+                shader->updateUniformArray(2, currentFrame, worldLoader_->getInformations(), sizeof(int)); //Binding 3
                 
                 shader->updateSSBOs(1, std::vector<const vuw::SSBO*>{ &entityManager_->getSSBO() }); //Binding 4
 
